@@ -174,18 +174,18 @@ export default function Jobs() {
         {/* Header & Search */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-deep mb-6">职位搜索</h1>
-          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex items-center">
-            <div className="flex-1 flex items-center pl-4">
-              <Search className="w-5 h-5 text-gray-400 mr-3" />
+          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center gap-2">
+            <div className="w-full flex-1 flex items-center pl-4">
+              <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
               <input
                 type="text"
-                placeholder="搜索职位名称、公司或关键词 (例如: Software Engineer, Google)"
+                placeholder="搜索职位、公司或关键词..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-12 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
               />
             </div>
-            <button className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium transition-colors shadow-sm">
+            <button className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium transition-colors shadow-sm">
               搜索
             </button>
           </div>

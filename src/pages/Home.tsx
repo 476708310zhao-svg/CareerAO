@@ -90,7 +90,7 @@ const HeroMockup = () => (
       {/* Main Content - Job Board Dual Column */}
       <div className="flex-1 flex bg-white overflow-hidden">
         {/* Job List */}
-        <div className="w-[35%] border-r border-gray-100 p-4 flex flex-col h-full">
+        <div className="w-full sm:w-[35%] border-r border-gray-100 p-4 flex flex-col h-full">
           <div className="relative mb-4 shrink-0">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
             <input type="text" disabled placeholder="Software Engineer..." className="w-full h-9 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-md text-sm" />
@@ -209,7 +209,7 @@ const Hero = () => {
             查看演示视频 <Play className="ml-2 w-4 h-4 text-gray-500" />
           </button>
         </div>
-        <div className="mt-8 flex items-center justify-center space-x-6 text-sm text-gray-500">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500">
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 无需信用卡</div>
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 支持微信登录</div>
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 随时取消</div>

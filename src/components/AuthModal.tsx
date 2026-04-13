@@ -101,7 +101,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="p-8">
+              <div className="p-6 sm:p-8">
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     {mode === 'register' ? '注册 CareerAI' : '登录 CareerAI'}
