@@ -194,7 +194,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary">
+        <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary overflow-x-hidden">
           <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />
