@@ -25,10 +25,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install CloudBase SDK
+        run: npm install @cloudbase/node-sdk
+
       - name: Deploy to CloudBase
         env:
-          TENCENTCLOUD_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
-          TENCENTCLOUD_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        run: |
-          npm install -g @cloudbase/cli
-          tcb hosting deploy dist -e cloud1-7gacanhu5aba4520
+          CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
+          CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        run: node scripts/deploy.js
