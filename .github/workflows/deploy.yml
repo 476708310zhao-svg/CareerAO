@@ -26,7 +26,9 @@ jobs:
         run: npm run build
 
       - name: Deploy to CloudBase
-        run: |
-          npm install -g @cloudbase/cli
-          tcb login --apiKeyId ${{ secrets.CLOUDBASE_SECRET_ID }} --apiKey ${{ secrets.CLOUDBASE_SECRET_KEY }}
-          tcb hosting deploy dist -e cloud1-7gacanhu5aba4520
+        uses: TencentCloudBase/cloudbase-action@v1
+        with:
+          secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
+          secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+          envId: cloud1-7gacanhu5aba4520
+          staticSrcPath: dist
