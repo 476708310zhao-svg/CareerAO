@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Bot, 
   Mic, 
@@ -12,16 +13,205 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  BarChart
+  BarChart,
+  User,
+  VideoOff,
+  PhoneOff,
+  Send
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 export default function AIInterview() {
+  const location = useLocation();
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [selectedRole, setSelectedRole] = useState('Software Engineer');
   const [selectedCompany, setSelectedCompany] = useState('Google');
   const [selectedType, setSelectedType] = useState('Behavioral');
+  const [jdContext, setJdContext] = useState('');
 
-  const roles = ['Software Engineer', 'Product Manager', 'Data Scientist', 'UI/UX Designer', 'Quantitative Analyst'];
+  // Media state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+
+  // AI Conversation State
+  const [messages, setMessages] = useState<{role: 'ai'|'user', text: string}[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [textInput, setTextInput] = useState('');
+  
+  const recognitionRef = useRef<any>(null);
+  const synthRef = useRef<SpeechSynthesis>(window.speechSynthesis);
+
+  useEffect(() => {
+    if (location.state) {
+      const { role, company, jd } = location.state as any;
+      if (role) setSelectedRole(role);
+      if (company) setSelectedCompany(company);
+      if (jd) setJdContext(jd);
+    }
+  }, [location.state]);
+
+  // Handle media stream when interview starts/stops
+  useEffect(() => {
+    if (isInterviewStarted) {
+      startMedia();
+      initSpeechRecognition();
+      
+      // Initial greeting if no messages
+      if (messages.length === 0) {
+        const greeting = `Hello! Welcome to your mock interview for the ${selectedRole} position at ${selectedCompany}. I'm your AI interviewer. Are you ready to begin?`;
+        setMessages([{ role: 'ai', text: greeting }]);
+        speak(greeting);
+      }
+    } else {
+      stopMedia();
+      recognitionRef.current?.stop();
+      synthRef.current?.cancel();
+    }
+    return () => {
+      stopMedia();
+      recognitionRef.current?.stop();
+      synthRef.current?.cancel();
+    };
+  }, [isInterviewStarted]);
+
+  const initSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US'; // Default to English for tech interviews
+
+      recognition.onresult = (event: any) => {
+        let current = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          current += event.results[i][0].transcript;
+        }
+        setTranscript(current);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  };
+
+  const speak = (text: string) => {
+    if (!synthRef.current) return;
+    synthRef.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Try to find a good English voice
+    const voices = synthRef.current.getVoices();
+    const englishVoice = voices.find(v => v.lang.startsWith('en-') && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en-'));
+    if (englishVoice) utterance.voice = englishVoice;
+    
+    utterance.onstart = () => setIsAiSpeaking(true);
+    utterance.onend = () => setIsAiSpeaking(false);
+    utterance.onerror = () => setIsAiSpeaking(false);
+    
+    synthRef.current.speak(utterance);
+  };
+
+  const handleSend = async (userText: string) => {
+    if (!userText.trim()) return;
+    
+    const newMessages = [...messages, { role: 'user' as const, text: userText }];
+    setMessages(newMessages);
+    setIsAiThinking(true);
+    
+    try {
+      const response = await apiFetch('/api/ai/interview-chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: newMessages,
+          role: selectedRole,
+          company: selectedCompany,
+          jd: jdContext,
+          type: selectedType
+        })
+      });
+      
+      if (response.reply) {
+        setMessages(prev => [...prev, { role: 'ai', text: response.reply }]);
+        speak(response.reply);
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      if (transcript.trim()) {
+        handleSend(transcript);
+        setTranscript('');
+      }
+    } else {
+      setTranscript('');
+      recognitionRef.current?.start();
+      setIsListening(true);
+      synthRef.current?.cancel(); // Stop AI from speaking if user interrupts
+    }
+  };
+
+  const startMedia = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Error accessing media devices.", err);
+      // Fallback or show error message to user
+    }
+  };
+
+  const stopMedia = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoEnabled(videoTrack.enabled);
+      }
+    }
+  };
+
+  const toggleAudio = () => {
+    if (stream) {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsAudioEnabled(audioTrack.enabled);
+      }
+    }
+  };
+
+  const roles = ['Software Engineer', 'Product Manager', 'Data Scientist', 'UI/UX Designer', 'Quantitative Analyst', 'Software Engineer, New Grad 2026'];
   const companies = ['Google', 'Meta', 'Amazon', 'Apple', 'Netflix', 'Microsoft', 'TikTok', 'Jane Street'];
   const types = [
     { id: 'Behavioral', name: '行为面试 (BQ)', icon: MessageSquare, desc: '考察领导力、团队协作与冲突解决' },
@@ -30,148 +220,188 @@ export default function AIInterview() {
   ];
 
   if (isInterviewStarted) {
+    const latestMessage = messages[messages.length - 1];
+
     return (
-      <div className="pt-16 min-h-screen bg-gray-50 flex flex-col">
+      <div className="pt-16 min-h-screen bg-gray-950 flex flex-col">
         {/* Interview Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0">
+        <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
               <Bot className="text-primary w-6 h-6" />
             </div>
             <div>
-              <h2 className="font-bold text-lg text-deep">AI Interviewer - {selectedCompany}</h2>
-              <p className="text-sm text-gray-500">{selectedRole} • {selectedType} Interview</p>
+              <h2 className="font-bold text-lg text-white">AI Interviewer - {selectedCompany}</h2>
+              <p className="text-sm text-gray-400">{selectedRole} • {selectedType} Interview</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-full text-sm font-medium">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-red-400 bg-red-500/10 px-3 py-1.5 rounded-full text-sm font-medium">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
               <span>Recording</span>
             </div>
-            <span className="text-gray-500 font-mono text-sm">00:14:32</span>
-            <button 
-              onClick={() => setIsInterviewStarted(false)}
-              className="ml-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
-            >
-              <Square className="w-4 h-4" />
-              <span>End Interview</span>
-            </button>
+            <span className="text-gray-400 font-mono text-sm">00:14:32</span>
           </div>
         </div>
 
-        {/* Interview Workspace */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel: Video & Transcript */}
-          <div className="w-1/3 flex flex-col border-r border-gray-200 bg-white">
-            {/* AI Video Placeholder */}
-            <div className="h-64 bg-gray-900 relative flex items-center justify-center shrink-0">
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary to-transparent"></div>
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-800 rounded-full border-4 border-primary/30 flex items-center justify-center mb-4 relative">
-                  <Bot className="w-12 h-12 text-primary" />
-                  {/* Voice wave animation */}
-                  <div className="absolute -inset-4 border border-primary/20 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-                  <div className="absolute -inset-8 border border-primary/10 rounded-full animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+        {/* Active Interview Workspace */}
+        <div className="flex-1 relative flex flex-col md:flex-row overflow-hidden">
+          
+          {/* Main Area: AI Interviewer (Visualizer) */}
+          <div className="flex-1 relative flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-gray-950 z-10">
+             <div className={`w-40 h-40 rounded-full bg-primary/10 flex items-center justify-center ${isAiSpeaking ? 'animate-pulse' : ''}`}>
+               <div className={`w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center ${isAiSpeaking ? 'animate-ping' : ''}`} style={{ animationDuration: '2s' }}>
+                 <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.6)]">
+                   <Bot className="w-12 h-12 text-white" />
+                 </div>
+               </div>
+             </div>
+             
+             {isAiSpeaking && (
+               <div className="mt-8 flex items-center space-x-1.5">
+                  <span className="w-1.5 h-4 bg-primary rounded-full animate-pulse"></span>
+                  <span className="w-1.5 h-8 bg-primary rounded-full animate-pulse delay-75"></span>
+                  <span className="w-1.5 h-5 bg-primary rounded-full animate-pulse delay-150"></span>
+                  <span className="w-1.5 h-10 bg-primary rounded-full animate-pulse delay-200"></span>
+                  <span className="w-1.5 h-6 bg-primary rounded-full animate-pulse delay-300"></span>
+               </div>
+             )}
+             
+             <p className="mt-4 text-gray-400 text-sm font-medium tracking-widest uppercase">
+               {isAiSpeaking ? 'Speaking...' : isAiThinking ? 'Thinking...' : isListening ? 'Listening...' : 'Waiting...'}
+             </p>
+             
+             {/* Transcript Overlay */}
+             <div className="absolute bottom-28 left-0 right-0 flex justify-center pointer-events-none z-20">
+                <div className="max-w-3xl w-full mx-4 bg-black/60 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-2xl">
+                   <p className="text-primary-light text-sm font-medium mb-2 flex items-center">
+                     {isListening ? <User className="w-4 h-4 mr-2" /> : <Bot className="w-4 h-4 mr-2" />} 
+                     {isListening ? "You (Speaking...)" : isAiThinking ? "AI 面试官 (Thinking...)" : (latestMessage?.role === 'ai' ? "AI 面试官" : "You")}
+                   </p>
+                   <p className="text-white text-xl leading-relaxed">
+                     {isListening ? (transcript || "Listening...") : isAiThinking ? "..." : latestMessage?.text}
+                   </p>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <span className="w-1 h-3 bg-primary rounded-full animate-pulse"></span>
-                  <span className="w-1 h-5 bg-primary rounded-full animate-pulse delay-75"></span>
-                  <span className="w-1 h-4 bg-primary rounded-full animate-pulse delay-150"></span>
-                  <span className="w-1 h-6 bg-primary rounded-full animate-pulse delay-200"></span>
-                  <span className="w-1 h-3 bg-primary rounded-full animate-pulse delay-300"></span>
-                </div>
-              </div>
-              <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded">
-                AI Interviewer
-              </div>
-            </div>
-
-            {/* Transcript */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="flex flex-col space-y-1">
-                <span className="text-xs font-medium text-gray-500">AI Interviewer</span>
-                <div className="bg-gray-100 rounded-2xl rounded-tl-none p-3 text-sm text-gray-800">
-                  Welcome to your mock interview for the {selectedRole} position at {selectedCompany}. Let's start with a behavioral question. Can you tell me about a time when you had to deal with a difficult team member?
-                </div>
-              </div>
-              <div className="flex flex-col space-y-1 items-end">
-                <span className="text-xs font-medium text-gray-500">You</span>
-                <div className="bg-primary/10 rounded-2xl rounded-tr-none p-3 text-sm text-primary-dark">
-                  Sure. In my previous role, I worked with a colleague who consistently missed deadlines, which affected our project timeline...
-                </div>
-              </div>
-              <div className="flex flex-col space-y-1">
-                <span className="text-xs font-medium text-gray-500">AI Interviewer</span>
-                <div className="bg-gray-100 rounded-2xl rounded-tl-none p-3 text-sm text-gray-800">
-                  How did you approach them about this issue, and what was the outcome?
-                </div>
-              </div>
-            </div>
-
-            {/* User Controls */}
-            <div className="p-4 bg-white border-t border-gray-200 flex justify-center space-x-4 shrink-0">
-              <button className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
-                <Mic className="w-5 h-5" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
-                <Video className="w-5 h-5" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
-            </div>
+             </div>
           </div>
 
-          {/* Right Panel: Workspace (Code/Whiteboard/Notes) */}
-          <div className="flex-1 bg-gray-50 flex flex-col">
-            <div className="bg-white border-b border-gray-200 px-4 py-2 flex space-x-4 text-sm font-medium">
-              <button className="text-primary border-b-2 border-primary pb-2 -mb-[9px]">Interview Notes</button>
-              {selectedType === 'Technical' && <button className="text-gray-500 hover:text-gray-700 pb-2">Code Editor</button>}
-              {selectedType === 'SystemDesign' && <button className="text-gray-500 hover:text-gray-700 pb-2">Whiteboard</button>}
+          {/* Right Panel: Code Editor / Whiteboard / User Camera */}
+          <div className="w-full md:w-1/3 bg-gray-900 flex flex-col relative border-l border-gray-800">
+            
+            {/* User Camera (PiP) */}
+            <div className="h-64 bg-black relative overflow-hidden border-b border-gray-800 shrink-0">
+               <video 
+                 ref={videoRef} 
+                 autoPlay 
+                 playsInline 
+                 muted 
+                 className={`w-full h-full object-cover ${!isVideoEnabled ? 'hidden' : ''}`} 
+               />
+               {!isVideoEnabled && (
+                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800">
+                   <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-2">
+                     <span className="text-2xl text-gray-400">You</span>
+                   </div>
+                   <span className="text-gray-500 text-sm">Camera Off</span>
+                 </div>
+               )}
+               <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1 rounded-md text-xs font-medium text-white backdrop-blur-sm flex items-center">
+                 You {(!isAudioEnabled) && <span className="ml-1.5 text-red-400">(Muted)</span>}
+               </div>
             </div>
-            <div className="flex-1 p-6">
-              <div className="bg-white rounded-xl border border-gray-200 h-full p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Question Prompt</h3>
-                <p className="text-gray-700 mb-6">
-                  {selectedType === 'Behavioral' 
-                    ? "Tell me about a time when you had to deal with a difficult team member. Focus on your approach, the actions you took, and the final outcome."
-                    : selectedType === 'Technical'
-                    ? "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice."
-                    : "Design a URL shortening service like bit.ly. Consider scalability, high availability, and read/write ratio."}
-                </p>
-                
-                <div className="border-t border-gray-100 pt-6">
-                  <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mr-2" />
-                    Evaluation Criteria
-                  </h4>
-                  <ul className="space-y-2 text-sm text-gray-600 ml-6 list-disc">
-                    {selectedType === 'Behavioral' ? (
-                      <>
-                        <li>STAR Method (Situation, Task, Action, Result)</li>
-                        <li>Empathy and communication skills</li>
-                        <li>Conflict resolution ability</li>
-                        <li>Focus on positive outcomes</li>
-                      </>
-                    ) : selectedType === 'Technical' ? (
-                      <>
-                        <li>Optimal time and space complexity</li>
-                        <li>Handling edge cases</li>
-                        <li>Code readability and structure</li>
-                        <li>Communication of thought process</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>Requirements gathering and capacity estimation</li>
-                        <li>High-level architecture design</li>
-                        <li>Database schema and choice of DB</li>
-                        <li>Handling bottlenecks and scaling strategies</li>
-                      </>
-                    )}
-                  </ul>
+
+            {/* Workspace Area */}
+            {selectedType === 'Technical' ? (
+              <div className="flex-1 flex flex-col">
+                <div className="bg-gray-800 px-4 py-2 flex items-center text-gray-300 text-sm border-b border-gray-700">
+                  <Code2 className="w-4 h-4 mr-2" />
+                  <span>main.py</span>
+                </div>
+                <div className="flex-1 p-6 font-mono text-sm text-gray-300 overflow-y-auto">
+                  <div className="text-gray-500 mb-4"># Write your solution here</div>
+                  <div className="text-blue-400 inline">def</div> <div className="text-yellow-200 inline">solve</div>(nums):<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<div className="text-gray-500 inline"># TODO: implement</div><br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<div className="text-purple-400 inline">pass</div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+                <h3 className="text-white font-medium mb-4 flex items-center">
+                  <MessageSquare className="w-4 h-4 mr-2 text-primary" />
+                  Interview Notes
+                </h3>
+                <textarea 
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-4 text-gray-300 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none mb-4"
+                  placeholder="Use this space to organize your thoughts..."
+                ></textarea>
+                
+                {/* Fallback Text Input */}
+                <div className="mt-auto">
+                  <p className="text-xs text-gray-500 mb-2">Or type your answer here:</p>
+                  <div className="flex space-x-2">
+                    <input 
+                      type="text" 
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && textInput.trim()) {
+                          handleSend(textInput);
+                          setTextInput('');
+                        }
+                      }}
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary outline-none"
+                      placeholder="Type your response..."
+                    />
+                    <button 
+                      onClick={() => {
+                        if (textInput.trim()) {
+                          handleSend(textInput);
+                          setTextInput('');
+                        }
+                      }}
+                      className="bg-primary text-white p-2 rounded-lg hover:bg-primary-hover transition-colors"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Controls Bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gray-900/80 backdrop-blur-xl border-t border-gray-800 flex items-center justify-center space-x-6 z-40">
+            <button 
+              onClick={toggleVideo} 
+              className={`p-4 rounded-full flex items-center justify-center transition-all ${isVideoEnabled ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/50'}`}
+              title={isVideoEnabled ? "Stop Video" : "Start Video"}
+            >
+              {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+            </button>
+            
+            {/* Big Speak Button */}
+            <button
+              onClick={toggleListening}
+              className={`px-8 py-3.5 rounded-full font-bold transition-all flex items-center ${
+                isListening 
+                  ? 'bg-red-500 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)]' 
+                  : 'bg-primary text-white hover:bg-primary-hover shadow-[0_0_20px_rgba(79,70,229,0.3)]'
+              }`}
+            >
+              {isListening ? (
+                <><Square className="w-5 h-5 mr-2 fill-current" /> 结束发言 (Stop)</>
+              ) : (
+                <><Mic className="w-5 h-5 mr-2" /> 开始发言 (Speak)</>
+              )}
+            </button>
+
+            <button 
+              onClick={() => { setIsInterviewStarted(false); synthRef.current?.cancel(); }} 
+              className="p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all flex items-center"
+              title="End Interview"
+            >
+              <PhoneOff className="w-6 h-6 text-red-400" />
+            </button>
           </div>
         </div>
       </div>
@@ -254,6 +484,20 @@ export default function AIInterview() {
                     })}
                   </div>
                 </div>
+
+                {/* JD Context (if passed from Job Detail) */}
+                {jdContext && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mr-1.5" />
+                      已加载职位 JD 上下文
+                    </label>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600 max-h-40 overflow-y-auto">
+                      <div dangerouslySetInnerHTML={{ __html: jdContext }} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">AI 面试官将根据此 JD 的要求为您量身定制面试问题。</p>
+                  </div>
+                )}
 
                 {/* Additional Settings */}
                 <div className="pt-4 border-t border-gray-100">

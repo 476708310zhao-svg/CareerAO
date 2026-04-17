@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Star, 
@@ -13,72 +13,66 @@ import {
   CheckCircle2,
   Building
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 export default function AgencyEvaluation() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [agencies, setAgencies] = useState<any[]>([]);
 
   const filters = ['All', 'CS/Tech', 'Finance/IB', 'Consulting', 'Data Science'];
 
-  const agencies = [
-    {
-      id: 1,
-      name: 'TechCareer Pro',
-      rating: 4.8,
-      reviews: 156,
-      tags: ['CS/Tech', 'Data Science'],
-      priceRange: '$$$',
-      verified: true,
-      aiSummary: {
-        pros: ['导师背景真实 (多为大厂 L5+)', '内推资源丰富', '算法辅导体系完善'],
-        cons: ['价格偏高', '部分热门导师预约困难']
-      },
-      recentReview: '报名了 VIP 项目，匹配的 Google 导师非常负责，Mock Interview 帮我指出了很多沟通上的问题，最后成功拿到了 Meta 的 Offer。'
-    },
-    {
-      id: 2,
-      name: 'WallStreet Pathway',
-      rating: 4.5,
-      reviews: 89,
-      tags: ['Finance/IB', 'Consulting'],
-      priceRange: '$$$$',
-      verified: true,
-      aiSummary: {
-        pros: ['投行/咨询 Network 强大', 'Resume 修改非常专业', 'Behavioral 辅导细致'],
-        cons: ['销售环节承诺过高', '退款流程较慢']
-      },
-      recentReview: 'Networking 资源确实不错，帮我推到了几个 Boutique Bank 的面试。但是价格确实肉疼，建议按需购买单次服务。'
-    },
-    {
-      id: 3,
-      name: 'OfferGo Consulting',
-      rating: 2.4,
-      reviews: 45,
-      tags: ['All'],
-      priceRange: '$$',
-      verified: false,
-      warning: '近期收到多起关于 "保 Offer 虚假宣传" 的投诉，请谨慎选择。',
-      aiSummary: {
-        pros: ['价格相对便宜', '基础求职课程覆盖面广'],
-        cons: ['"保 Offer" 条款存在文字游戏', '导师匹配随机，质量参差不齐', '售后服务差']
-      },
-      recentReview: '签了所谓的保 Offer 协议，结果推的都是外包或者不知名小公司，要求退款时被各种理由推脱，大家避雷！'
-    },
-    {
-      id: 4,
-      name: 'DataCamp Mentorship',
-      rating: 4.7,
-      reviews: 112,
-      tags: ['Data Science', 'CS/Tech'],
-      priceRange: '$$',
-      verified: true,
-      aiSummary: {
-        pros: ['项目实战含金量高', 'SQL/Python 强化训练有效', '性价比高'],
-        cons: ['纯算法辅导较弱', '主要针对初中级岗位']
-      },
-      recentReview: '带做的工业级推荐系统项目直接写进了简历，面试时被问了很久，非常加分。适合缺乏实习经历的同学。'
-    }
-  ];
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          keyword: searchQuery,
+          type: activeFilter === 'All' ? '' : activeFilter,
+          page: '1',
+          pageSize: '10'
+        }).toString();
+        const response = await apiFetch(`/api/proxy/agencies?${params}`);
+        
+        if (!response.useMock && response.data && response.data.list) {
+          const mappedAgencies = response.data.list.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            rating: item.ratingAvg || 0,
+            reviews: item.reviewCount || 0,
+            tags: [item.type, ...(item.specialties || [])],
+            priceRange: '$$$', // API doesn't return exact format, mock for now
+            verified: item.isVerified,
+            aiSummary: {
+              pros: ['服务专业', '导师负责'], // Mock AI summary as API doesn't provide it
+              cons: ['价格较高']
+            },
+            recentReview: item.description || '暂无评价'
+          }));
+          setAgencies(mappedAgencies);
+        } else {
+          // Fallback to mock data
+          setAgencies([
+            { id: 1, name: 'TechCareer Pro', rating: 4.8, reviews: 156, tags: ['CS/Tech', 'Data Science'], priceRange: '$$$', verified: true, aiSummary: { pros: ['导师背景真实 (多为大厂 L5+)', '内推资源丰富', '算法辅导体系完善'], cons: ['价格偏高', '部分热门导师预约困难'] }, recentReview: '报名了 VIP 项目，匹配的 Google 导师非常负责，Mock Interview 帮我指出了很多沟通上的问题，最后成功拿到了 Meta 的 Offer。' },
+            { id: 2, name: 'WallStreet Pathway', rating: 4.5, reviews: 89, tags: ['Finance/IB', 'Consulting'], priceRange: '$$$$', verified: true, aiSummary: { pros: ['投行/咨询 Network 强大', 'Resume 修改非常专业', 'Behavioral 辅导细致'], cons: ['销售环节承诺过高', '退款流程较慢'] }, recentReview: 'Networking 资源确实不错，帮我推到了几个 Boutique Bank 的面试。但是价格确实肉疼，建议按需购买单次服务。' },
+            { id: 3, name: 'OfferGo Consulting', rating: 2.4, reviews: 45, tags: ['All'], priceRange: '$$', verified: false, warning: '近期收到多起关于 "保 Offer 虚假宣传" 的投诉，请谨慎选择。', aiSummary: { pros: ['价格相对便宜', '基础求职课程覆盖面广'], cons: ['"保 Offer" 条款存在文字游戏', '导师匹配随机，质量参差不齐', '售后服务差'] }, recentReview: '签了所谓的保 Offer 协议，结果推的都是外包或者不知名小公司，要求退款时被各种理由推脱，大家避雷！' },
+            { id: 4, name: 'DataCamp Mentorship', rating: 4.7, reviews: 112, tags: ['Data Science', 'CS/Tech'], priceRange: '$$', verified: true, aiSummary: { pros: ['项目实战含金量高', 'SQL/Python 强化训练有效', '性价比高'], cons: ['纯算法辅导较弱', '主要针对初中级岗位'] }, recentReview: '带做的工业级推荐系统项目直接写进了简历，面试时被问了很久，非常加分。适合缺乏实习经历的同学。' }
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agencies:', error);
+        setAgencies([
+          { id: 1, name: 'TechCareer Pro', rating: 4.8, reviews: 156, tags: ['CS/Tech', 'Data Science'], priceRange: '$$$', verified: true, aiSummary: { pros: ['导师背景真实 (多为大厂 L5+)', '内推资源丰富', '算法辅导体系完善'], cons: ['价格偏高', '部分热门导师预约困难'] }, recentReview: '报名了 VIP 项目，匹配的 Google 导师非常负责，Mock Interview 帮我指出了很多沟通上的问题，最后成功拿到了 Meta 的 Offer。' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAgencies();
+  }, [searchQuery, activeFilter]);
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">

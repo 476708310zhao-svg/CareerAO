@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   Plus, 
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function MyResume() {
+  const navigate = useNavigate();
   const [resumes] = useState([
     {
       id: 1,
@@ -124,13 +126,25 @@ export default function MyResume() {
                     <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                       <span className="text-xs text-gray-400">更新于 {resume.lastModified}</span>
                       <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="编辑">
+                        <button 
+                          onClick={() => navigate(`/my-resume/${resume.id}`)}
+                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
+                          title="编辑"
+                        >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="AI 润色">
+                        <button 
+                          onClick={() => navigate(`/my-resume/${resume.id}`)}
+                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
+                          title="AI 润色"
+                        >
                           <Sparkles className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="下载 PDF">
+                        <button 
+                          onClick={() => navigate(`/my-resume/${resume.id}`)}
+                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
+                          title="下载 PDF"
+                        >
                           <Download className="w-4 h-4" />
                         </button>
                       </div>
@@ -139,7 +153,10 @@ export default function MyResume() {
                 ))}
 
                 {/* Create New Card */}
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center text-center hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer min-h-[200px]">
+                <div 
+                  onClick={() => navigate('/my-resume/new')}
+                  className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center text-center hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer min-h-[200px]"
+                >
                   <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-white">
                     <Plus className="w-6 h-6 text-gray-400 group-hover:text-primary" />
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, 
   MapPin, 
@@ -12,71 +12,69 @@ import {
   Briefcase,
   AlertCircle
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 export default function CampusCalendar() {
   const [activeMonth, setActiveMonth] = useState('2026年9月');
   const [activeRegion, setActiveRegion] = useState('North America');
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [events, setEvents] = useState<any[]>([]);
 
   const regions = ['North America', 'APAC', 'EMEA'];
   const months = ['2026年7月', '2026年8月', '2026年9月', '2026年10月', '2026年11月'];
 
-  const events = [
-    {
-      id: 1,
-      date: '9月15日',
-      day: '周二',
-      company: 'Google',
-      title: '2027 Software Engineering Intern (Summer) 申请开启',
-      type: 'Application Open',
-      location: 'US / Canada',
-      status: 'upcoming',
-      urgency: 'high'
-    },
-    {
-      id: 2,
-      date: '9月18日',
-      day: '周五',
-      company: 'Meta',
-      title: 'New Grad 2026 提前批网申截止',
-      type: 'Deadline',
-      location: 'US',
-      status: 'closing-soon',
-      urgency: 'critical'
-    },
-    {
-      id: 3,
-      date: '9月22日',
-      day: '周二',
-      company: 'J.P. Morgan',
-      title: 'Quantitative Finance Campus Recruiting Event',
-      type: 'Career Fair / Event',
-      location: 'Virtual',
-      status: 'upcoming',
-      urgency: 'medium'
-    },
-    {
-      id: 4,
-      date: '9月25日',
-      day: '周五',
-      company: 'Amazon',
-      title: 'SDE Full-Time 2026 OA (Online Assessment) 发放高峰期',
-      type: 'Assessment',
-      location: 'Global',
-      status: 'upcoming',
-      urgency: 'high'
-    },
-    {
-      id: 5,
-      date: '9月30日',
-      day: '周三',
-      company: 'Apple',
-      title: 'Hardware Engineering Intern 简历投递截止',
-      type: 'Deadline',
-      location: 'Cupertino, CA',
-      status: 'upcoming',
-      urgency: 'medium'
-    }
-  ];
+  useEffect(() => {
+    const fetchCampusData = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          region: activeRegion === 'North America' ? '北美' : activeRegion,
+          page: '1',
+          pageSize: '20'
+        }).toString();
+        const response = await apiFetch(`/api/proxy/campus?${params}`);
+        
+        if (!response.useMock && response.data && response.data.list) {
+          const mappedEvents = response.data.list.map((item: any) => {
+            const startDate = new Date(item.startDate);
+            return {
+              id: item.id,
+              date: `${startDate.getMonth() + 1}月${startDate.getDate()}日`,
+              day: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][startDate.getDay()],
+              company: item.company,
+              title: item.positionName,
+              type: item.recruitType,
+              location: item.region,
+              status: 'upcoming', // Could be derived from dates
+              urgency: 'medium',
+              applyUrl: item.applyUrl
+            };
+          });
+          setEvents(mappedEvents);
+        } else {
+          // Fallback to mock data
+          setEvents([
+            { id: 1, date: '9月15日', day: '周二', company: 'Google', title: '2027 Software Engineering Intern (Summer) 申请开启', type: 'Application Open', location: 'US / Canada', status: 'upcoming', urgency: 'high' },
+            { id: 2, date: '9月18日', day: '周五', company: 'Meta', title: 'New Grad 2026 提前批网申截止', type: 'Deadline', location: 'US', status: 'closing-soon', urgency: 'critical' },
+            { id: 3, date: '9月22日', day: '周二', company: 'J.P. Morgan', title: 'Quantitative Finance Campus Recruiting Event', type: 'Career Fair / Event', location: 'Virtual', status: 'upcoming', urgency: 'medium' },
+            { id: 4, date: '9月25日', day: '周五', company: 'Amazon', title: 'SDE Full-Time 2026 OA (Online Assessment) 发放高峰期', type: 'Assessment', location: 'Global', status: 'upcoming', urgency: 'high' },
+            { id: 5, date: '9月30日', day: '周三', company: 'Apple', title: 'Hardware Engineering Intern 简历投递截止', type: 'Deadline', location: 'Cupertino, CA', status: 'upcoming', urgency: 'medium' }
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch campus data:', error);
+        setEvents([
+          { id: 1, date: '9月15日', day: '周二', company: 'Google', title: '2027 Software Engineering Intern (Summer) 申请开启', type: 'Application Open', location: 'US / Canada', status: 'upcoming', urgency: 'high' },
+          { id: 2, date: '9月18日', day: '周五', company: 'Meta', title: 'New Grad 2026 提前批网申截止', type: 'Deadline', location: 'US', status: 'closing-soon', urgency: 'critical' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampusData();
+  }, [activeRegion, activeMonth]);
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
