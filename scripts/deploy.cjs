@@ -1,7 +1,7 @@
-// CloudBase 静态托管部署脚本
-// 使用 @cloudbase/node-sdk 直接上传，无需 tcb login
+'use strict';
 const cloudbase = require('@cloudbase/node-sdk');
 const path = require('path');
+const fs = require('fs');
 
 const ENV_ID = 'cloud1-7gacanhu5aba4520';
 
@@ -10,33 +10,33 @@ async function deploy() {
   const secretKey = process.env.CLOUDBASE_SECRET_KEY;
 
   if (!secretId || !secretKey) {
-    console.error('❌ 缺少 CLOUDBASE_SECRET_ID 或 CLOUDBASE_SECRET_KEY 环境变量');
+    console.error('Missing CLOUDBASE_SECRET_ID or CLOUDBASE_SECRET_KEY');
     process.exit(1);
   }
 
-  console.log('🔑 初始化 CloudBase SDK...');
   const app = cloudbase.init({ secretId, secretKey, env: ENV_ID });
   const hosting = app.hosting();
-
   const distPath = path.resolve(__dirname, '../dist');
-  console.log(`📦 上传 ${distPath} 到 CloudBase 静态托管...`);
 
+  if (!fs.existsSync(distPath)) {
+    console.error('dist/ folder not found');
+    process.exit(1);
+  }
+
+  console.log('Uploading to CloudBase hosting...');
   await hosting.uploadFiles({
     localPath: distPath,
     cloudPath: '/',
     onProgress: ({ loaded, total }) => {
-      const pct = total ? Math.round((loaded / total) * 100) : 0;
-      process.stdout.write(`\r进度: ${pct}%`);
-    },
-    onFileFinish: (err, res, file) => {
-      if (err) console.error(`\n❌ 上传失败: ${file.Key}`, err.message);
+      const pct = total ? Math.round((loaded / total) * 100) : '?';
+      process.stdout.write(`\rProgress: ${pct}%`);
     }
   });
 
-  console.log('\n✅ 部署完成！');
+  console.log('\nDeploy complete!');
 }
 
 deploy().catch(err => {
-  console.error('❌ 部署失败:', err.message || err);
+  console.error('\nDeploy failed:', err.message || err);
   process.exit(1);
 });

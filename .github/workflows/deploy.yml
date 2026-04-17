@@ -32,4 +32,4 @@ jobs:
         env:
           CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
           CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        run: node scripts/deploy.js
+        run: node scripts/deploy.cjs
