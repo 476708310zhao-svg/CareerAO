@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Search, 
@@ -13,6 +14,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+
+import { useFavorites } from '../utils/favorites';
 
 // 模拟数据 (在真实环境中将从 /api/jobs/search 获取)
 const MOCK_JOBS = [
@@ -91,6 +94,7 @@ const FILTER_OPTIONS = {
 };
 
 export default function Jobs() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [jobs, setJobs] = useState(MOCK_JOBS);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,33 +107,67 @@ export default function Jobs() {
     visa: '全部'
   });
 
+  const { isFavorite, toggleFavorite } = useFavorites();
+
   // 模拟从后端获取数据
   useEffect(() => {
     const fetchJobs = async () => {
       setIsLoading(true);
       try {
-        // 真实环境调用:
-        // const queryParams = new URLSearchParams({ q: searchQuery, ...filters }).toString();
-        // const data = await apiFetch(`/api/jobs/search?${queryParams}`);
-        // setJobs(data.jobs);
+        // 构建查询参数
+        const queryParams = new URLSearchParams({ 
+          keyword: searchQuery,
+          region: filters.region !== '全部' ? filters.region : '',
+          jobType: filters.type !== '全部' ? filters.type : '', // 根据文档，参数名为 jobType
+          industry: filters.industry !== '全部' ? filters.industry : '',
+          visa: filters.visa !== '全部' ? filters.visa : '',
+          page: '1',
+          pageSize: '10'
+        }).toString();
+
+        // 调用我们在 server.ts 写的代理接口
+        const response = await apiFetch(`/api/proxy/jobs?${queryParams}`);
         
-        // 模拟网络延迟
-        await new Promise(resolve => setTimeout(resolve, 600));
-        
-        // 简单的本地过滤逻辑 (仅作演示)
-        let filtered = MOCK_JOBS;
-        if (searchQuery) {
-          filtered = filtered.filter(job => 
-            job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            job.company.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+        if (response.useMock) {
+          // 如果没有配置真实 API，使用本地模拟数据并模拟延迟
+          await new Promise(resolve => setTimeout(resolve, 600));
+          
+          let filtered = MOCK_JOBS;
+          if (searchQuery) {
+            filtered = filtered.filter(job => 
+              job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              job.company.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }
+          if (filters.type !== '全部') {
+            filtered = filtered.filter(job => job.type === filters.type);
+          }
+          if (filters.region !== '全部') {
+            filtered = filtered.filter(job => job.location.includes(filters.region.split(' ')[0]));
+          }
+          setJobs(filtered);
+        } else {
+          // 真实接口数据映射 (Data Mapping)
+          // 根据你提供的接口文档进行精准映射
+          const formattedJobs = response.data.list.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            company: item.company,
+            logo: item.companyLogo || item.company.charAt(0), // 如果没有 logo，取公司名首字母
+            location: item.location,
+            salary: item.salary,
+            type: item.jobType,
+            visa: item.visaSponsored ? '支持签证' : '不支持签证',
+            tags: item.requirements || [],
+            postedAt: item.postedAt,
+            isFavorite: false // 列表中未返回是否收藏，默认 false
+          }));
+          setJobs(formattedJobs);
         }
-        if (filters.type !== '全部') {
-          filtered = filtered.filter(job => job.type === filters.type);
-        }
-        setJobs(filtered);
       } catch (error) {
         console.error('Failed to fetch jobs:', error);
+        // 发生错误时降级使用模拟数据
+        setJobs(MOCK_JOBS);
       } finally {
         setIsLoading(false);
       }
@@ -137,14 +175,6 @@ export default function Jobs() {
 
     fetchJobs();
   }, [searchQuery, filters]);
-
-  const toggleFavorite = (id: number) => {
-    setJobs(jobs.map(job => 
-      job.id === id ? { ...job, isFavorite: !job.isFavorite } : job
-    ));
-    // 真实环境调用:
-    // apiFetch(`/api/jobs/${id}/favorite`, { method: 'POST' });
-  };
 
   const FilterSelect = ({ label, options, value, onChange }: { label: string, options: string[], value: string, onChange: (val: string) => void }) => (
     <div className="flex items-center space-x-2">
@@ -174,18 +204,18 @@ export default function Jobs() {
         {/* Header & Search */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-deep mb-6">职位搜索</h1>
-          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex items-center">
-            <div className="flex-1 flex items-center pl-4">
-              <Search className="w-5 h-5 text-gray-400 mr-3" />
+          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center gap-2">
+            <div className="w-full flex-1 flex items-center pl-4">
+              <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
               <input
                 type="text"
-                placeholder="搜索职位名称、公司或关键词 (例如: Software Engineer, Google)"
+                placeholder="搜索职位、公司或关键词..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-12 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
               />
             </div>
-            <button className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium transition-colors shadow-sm">
+            <button className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium transition-colors shadow-sm">
               搜索
             </button>
           </div>
@@ -310,6 +340,7 @@ export default function Jobs() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     key={job.id}
+                    onClick={() => navigate(`/jobs/${job.id}`)}
                     className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
                   >
                     <div className="flex items-start justify-between">
@@ -357,12 +388,12 @@ export default function Jobs() {
                             toggleFavorite(job.id);
                           }}
                           className={`p-2 rounded-full transition-colors ${
-                            job.isFavorite 
+                            isFavorite(job.id) 
                               ? 'text-primary bg-primary/10' 
                               : 'text-gray-400 hover:text-primary hover:bg-gray-50'
                           }`}
                         >
-                          {job.isFavorite ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                          {isFavorite(job.id) ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
                         </button>
                         <span className="flex items-center text-xs text-gray-400">
                           <Clock className="w-3 h-3 mr-1" />

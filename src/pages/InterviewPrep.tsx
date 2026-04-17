@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   BookOpen, 
@@ -14,6 +14,7 @@ import {
   Code,
   MessageSquare
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 export default function InterviewPrep() {
   const [role, setRole] = useState('');
@@ -21,14 +22,41 @@ export default function InterviewPrep() {
   const [region, setRegion] = useState('North America');
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  
+  const [experiences, setExperiences] = useState<any[]>([]);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!role.trim() && !company.trim()) return;
     setIsSearching(true);
-    setTimeout(() => {
+    
+    try {
+      const params = new URLSearchParams({
+        keyword: role,
+        company: company,
+        page: '1',
+        pageSize: '10'
+      }).toString();
+      
+      const response = await apiFetch(`/api/proxy/experiences?${params}`);
+      
+      if (!response.useMock && response.data && response.data.list) {
+        setExperiences(response.data.list);
+      } else {
+        // Fallback mock data
+        setExperiences([
+          { id: 1, title: 'Google SWE L3 面经 (2026 New Grad)', company: 'Google', position: 'Software Engineer', type: '面试', round: '终面', content: '...', tags: ['算法', '系统设计'], likesCount: 120, commentsCount: 45, createdAt: '2026-04-10T00:00:00Z' },
+          { id: 2, title: 'Meta E3 提前批面经总结', company: 'Meta', position: 'Software Engineer', type: '面试', round: '二面', content: '...', tags: ['BQ', '算法'], likesCount: 85, commentsCount: 22, createdAt: '2026-04-08T00:00:00Z' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch experiences:', error);
+      setExperiences([
+        { id: 1, title: 'Google SWE L3 面经 (2026 New Grad)', company: 'Google', position: 'Software Engineer', type: '面试', round: '终面', content: '...', tags: ['算法', '系统设计'], likesCount: 120, commentsCount: 45, createdAt: '2026-04-10T00:00:00Z' }
+      ]);
+    } finally {
       setIsSearching(false);
       setShowResults(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -183,49 +211,27 @@ export default function InterviewPrep() {
                   </div>
                   
                   <div className="space-y-4">
-                    {[
-                      {
-                        title: "2026 NG Software Engineer - Virtual Onsite 完整面经",
-                        company: company || "Google",
-                        date: "2 days ago",
-                        tags: ["Offer", "L3", "North America"],
-                        preview: "第一轮是 Coding，主要考了 Graph 的遍历，题目类似 LC 200。第二轮是 System Design，要求设计一个简单的..."
-                      },
-                      {
-                        title: "Frontend Engineer Phone Screen 挂经",
-                        company: company || "Meta",
-                        date: "1 week ago",
-                        tags: ["Reject", "E3", "React"],
-                        preview: "面试官人很好，上来先聊了 10 分钟过去的实习经历。然后做了一道 React 组件设计的题目，要求实现一个带缓存的..."
-                      },
-                      {
-                        title: "Fullstack Developer OA 笔试题分享",
-                        company: company || "Amazon",
-                        date: "2 weeks ago",
-                        tags: ["OA", "SDE1", "HackerRank"],
-                        preview: "一共两道题，90分钟。第一题是简单的字符串处理，第二题是关于优先队列的变种。做完之后还有一段 Work Style Assessment..."
-                      }
-                    ].map((exp, idx) => (
+                    {experiences.map((exp, idx) => (
                       <div key={idx} className="p-4 border border-gray-100 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all cursor-pointer group">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-bold text-deep group-hover:text-indigo-600 transition-colors text-sm">{exp.title}</h3>
                           <div className="flex items-center text-xs text-gray-400 whitespace-nowrap ml-4">
-                            <Clock className="w-3 h-3 mr-1" /> {exp.date}
+                            <Clock className="w-3 h-3 mr-1" /> {new Date(exp.createdAt).toLocaleDateString()}
                           </div>
                         </div>
                         <div className="flex space-x-2 mb-3">
                           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded font-medium">{exp.company}</span>
-                          {exp.tags.map(tag => (
-                            <span key={tag} className={`px-2 py-0.5 text-[10px] rounded font-medium ${
-                              tag === 'Offer' ? 'bg-green-100 text-green-700' : 
-                              tag === 'Reject' ? 'bg-red-100 text-red-700' : 
-                              'bg-indigo-50 text-indigo-600'
-                            }`}>
+                          {exp.tags && exp.tags.map((tag: string) => (
+                            <span key={tag} className={`px-2 py-0.5 text-[10px] rounded font-medium bg-indigo-50 text-indigo-600`}>
                               {tag}
                             </span>
                           ))}
                         </div>
-                        <p className="text-sm text-gray-500 line-clamp-2">{exp.preview}</p>
+                        <p className="text-sm text-gray-500 line-clamp-2">{exp.content}</p>
+                        <div className="mt-3 flex items-center text-xs text-gray-400 space-x-4">
+                          <span className="flex items-center"><Star className="w-3 h-3 mr-1" /> {exp.likesCount || 0}</span>
+                          <span className="flex items-center"><MessageSquare className="w-3 h-3 mr-1" /> {exp.commentsCount || 0}</span>
+                        </div>
                       </div>
                     ))}
                   </div>

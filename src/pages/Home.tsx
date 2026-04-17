@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
@@ -18,7 +18,8 @@ import {
   Calendar,
   GraduationCap,
   Filter,
-  Building2
+  Building2,
+  Sparkles
 } from 'lucide-react';
 import FeatureShowcase from '../components/FeatureShowcase';
 import AuthModal from '../components/AuthModal';
@@ -90,7 +91,7 @@ const HeroMockup = () => (
       {/* Main Content - Job Board Dual Column */}
       <div className="flex-1 flex bg-white overflow-hidden">
         {/* Job List */}
-        <div className="w-[35%] border-r border-gray-100 p-4 flex flex-col h-full">
+        <div className="w-full sm:w-[35%] border-r border-gray-100 p-4 flex flex-col h-full">
           <div className="relative mb-4 shrink-0">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
             <input type="text" disabled placeholder="Software Engineer..." className="w-full h-9 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-md text-sm" />
@@ -209,7 +210,7 @@ const Hero = () => {
             查看演示视频 <Play className="ml-2 w-4 h-4 text-gray-500" />
           </button>
         </div>
-        <div className="mt-8 flex items-center justify-center space-x-6 text-sm text-gray-500">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500">
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 无需信用卡</div>
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 支持微信登录</div>
           <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 随时取消</div>
@@ -447,6 +448,90 @@ const CTA = ({ onOpenAuth }: { onOpenAuth: (mode: 'login' | 'register') => void 
   );
 };
 
+const RecommendedJobs = () => {
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecommended = async () => {
+      try {
+        // Mocking recommended jobs based on user profile
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setJobs([
+          { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
+          { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
+          { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
+        ]);
+      } catch (error) {
+        console.error('Failed to fetch recommended jobs:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecommended();
+  }, []);
+
+  return (
+    <section className="py-20 bg-gray-50 border-t border-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              <Sparkles className="w-4 h-4 mr-2" />
+              为您推荐
+            </div>
+            <h2 className="text-3xl font-bold text-deep">智能职位推荐</h2>
+            <p className="text-gray-500 mt-2">基于您的简历和求职意向，为您精准匹配的高薪机会</p>
+          </div>
+          <Link to="/jobs" className="hidden sm:flex items-center text-primary hover:text-primary-hover font-medium transition-colors">
+            查看更多 <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse h-48"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {jobs.map(job => (
+              <Link key={job.id} to={`/jobs/${job.id}`} className="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-green-50 text-green-600 px-3 py-1 rounded-bl-xl text-xs font-bold border-b border-l border-green-100">
+                  匹配度 {job.matchScore}%
+                </div>
+                <div className="flex items-start space-x-4 mb-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl font-bold text-gray-400 shrink-0">
+                    {job.company.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors line-clamp-1">{job.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{job.company}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium border border-gray-100">{job.location}</span>
+                  <span className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium border border-gray-100">{job.type}</span>
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+                  <span className="text-primary font-bold text-sm">{job.salary}</span>
+                  <span className="text-xs text-gray-400">刚刚推荐</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+        <div className="mt-8 text-center sm:hidden">
+          <Link to="/jobs" className="inline-flex items-center text-primary font-medium">
+            查看更多 <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -460,6 +545,7 @@ export default function Home() {
     <main>
       <Hero />
       <JobSearchIntro />
+      <RecommendedJobs />
       <Features />
       <FeatureShowcase />
       <CTA onOpenAuth={handleOpenAuth} />

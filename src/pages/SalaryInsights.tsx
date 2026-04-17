@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   MapPin, 
@@ -10,31 +10,108 @@ import {
   Filter,
   ChevronDown,
   Award,
-  Clock
+  Clock,
+  Table as TableIcon
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
+import { apiFetch } from '../lib/api';
 
 export default function SalaryInsights() {
   const [company, setCompany] = useState('Google');
   const [role, setRole] = useState('Software Engineer');
   const [location, setLocation] = useState('San Francisco, CA');
+  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
+  const [selectedLevelIndex, setSelectedLevelIndex] = useState(1); // Default to L4 (index 1)
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [statistics, setStatistics] = useState<any>(null);
+  const [recentOffers, setRecentOffers] = useState<any[]>([]);
 
-  // Mock data for levels
+  // Numeric data for Recharts (Mock data for levels as API doesn't provide level breakdown directly yet)
   const levelData = [
-    { level: 'L3', title: 'Entry Level', tc: '195k', base: '135k', stock: '40k', bonus: '20k' },
-    { level: 'L4', title: 'Mid Level', tc: '285k', base: '170k', stock: '85k', bonus: '30k', active: true },
-    { level: 'L5', title: 'Senior', tc: '390k', base: '210k', stock: '140k', bonus: '40k' },
-    { level: 'L6', title: 'Staff', tc: '540k', base: '250k', stock: '230k', bonus: '60k' },
-    { level: 'L7', title: 'Senior Staff', tc: '750k', base: '290k', stock: '380k', bonus: '80k' },
+    { level: 'L3', title: 'Entry Level', tc: 195, base: 135, stock: 40, bonus: 20 },
+    { level: 'L4', title: 'Mid Level', tc: 285, base: 170, stock: 85, bonus: 30 },
+    { level: 'L5', title: 'Senior', tc: 390, base: 210, stock: 140, bonus: 40 },
+    { level: 'L6', title: 'Staff', tc: 540, base: 250, stock: 230, bonus: 60 },
+    { level: 'L7', title: 'Senior Staff', tc: 750, base: 290, stock: 380, bonus: 80 },
   ];
 
-  // Mock data for recent offers
-  const recentOffers = [
-    { company: 'Google', role: 'SWE', level: 'L4', location: 'San Francisco, CA', tc: '$290,000', yoe: '3 yrs', date: '2天前' },
-    { company: 'Meta', role: 'SWE', level: 'E4', location: 'Menlo Park, CA', tc: '$310,000', yoe: '4 yrs', date: '3天前' },
-    { company: 'Amazon', role: 'SDE II', level: 'L5', location: 'Seattle, WA', tc: '$275,000', yoe: '3.5 yrs', date: '1周前' },
-    { company: 'Apple', role: 'ICT3', level: 'ICT3', location: 'Cupertino, CA', tc: '$260,000', yoe: '2 yrs', date: '1周前' },
-    { company: 'TikTok', role: 'Backend Dev', level: '2-1', location: 'San Jose, CA', tc: '$285,000', yoe: '3 yrs', date: '2周前' },
-  ];
+  const selectedData = levelData[selectedLevelIndex];
+
+  // Calculate percentages for the progress bars
+  const basePct = Math.round((selectedData.base / selectedData.tc) * 100);
+  const stockPct = Math.round((selectedData.stock / selectedData.tc) * 100);
+  const bonusPct = Math.round((selectedData.bonus / selectedData.tc) * 100);
+
+  useEffect(() => {
+    const fetchSalaryData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch Statistics
+        const statsParams = new URLSearchParams({
+          position: role,
+          company: company,
+          region: location
+        }).toString();
+        const statsResponse = await apiFetch(`/api/proxy/salaries/statistics?${statsParams}`);
+        if (!statsResponse.useMock && statsResponse.data) {
+          setStatistics(statsResponse.data);
+        }
+
+        // Fetch Recent Offers (List)
+        const listParams = new URLSearchParams({
+          position: role,
+          company: company,
+          region: location,
+          page: '1',
+          pageSize: '10'
+        }).toString();
+        const listResponse = await apiFetch(`/api/proxy/salaries?${listParams}`);
+        
+        if (!listResponse.useMock && listResponse.data && listResponse.data.list) {
+          const mappedOffers = listResponse.data.list.map((item: any) => ({
+            company: item.company,
+            role: item.position,
+            level: 'N/A', // API doesn't return level currently
+            location: item.location,
+            tc: `$${item.totalCompensation.toLocaleString()}`,
+            yoe: `${item.yearsOfExperience} yrs`,
+            date: new Date(item.createdAt).toLocaleDateString()
+          }));
+          setRecentOffers(mappedOffers);
+        } else {
+          // Fallback to mock data
+          setRecentOffers([
+            { company: 'Google', role: 'SWE', level: 'L4', location: 'San Francisco, CA', tc: '$290,000', yoe: '3 yrs', date: '2天前' },
+            { company: 'Meta', role: 'SWE', level: 'E4', location: 'Menlo Park, CA', tc: '$310,000', yoe: '4 yrs', date: '3天前' },
+            { company: 'Amazon', role: 'SDE II', level: 'L5', location: 'Seattle, WA', tc: '$275,000', yoe: '3.5 yrs', date: '1周前' },
+            { company: 'Apple', role: 'ICT3', level: 'ICT3', location: 'Cupertino, CA', tc: '$260,000', yoe: '2 yrs', date: '1周前' },
+            { company: 'TikTok', role: 'Backend Dev', level: '2-1', location: 'San Jose, CA', tc: '$285,000', yoe: '3 yrs', date: '2周前' },
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch salary data:', error);
+        // Fallback to mock data
+        setRecentOffers([
+          { company: 'Google', role: 'SWE', level: 'L4', location: 'San Francisco, CA', tc: '$290,000', yoe: '3 yrs', date: '2天前' },
+          { company: 'Meta', role: 'SWE', level: 'E4', location: 'Menlo Park, CA', tc: '$310,000', yoe: '4 yrs', date: '3天前' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSalaryData();
+  }, [company, role, location]);
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
@@ -98,14 +175,15 @@ export default function SalaryInsights() {
           <div className="lg:col-span-2 space-y-8">
             
             {/* Overview Cards */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-all">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-deep flex items-center">
                     {company} <span className="text-gray-400 mx-2">|</span> {role}
                   </h2>
                   <p className="text-gray-500 mt-1 flex items-center">
-                    <MapPin className="w-4 h-4 mr-1" /> {location} • L4 (Mid Level)
+                    <MapPin className="w-4 h-4 mr-1" /> {location} 
+                    {statistics ? ` • 样本数: ${statistics.count}` : ` • ${selectedData.level} (${selectedData.title})`}
                   </p>
                 </div>
                 <div className="bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-medium flex items-center">
@@ -120,30 +198,38 @@ export default function SalaryInsights() {
                     <DollarSign className="w-4 h-4 mr-1" />
                     Total Compensation
                   </div>
-                  <div className="text-4xl font-bold text-deep mb-2">$285,000</div>
+                  <div className="text-4xl font-bold text-deep mb-2">
+                    ${statistics ? (statistics.avgTotal / 1000).toFixed(0) : selectedData.tc}k
+                  </div>
                   <div className="text-sm text-gray-500">平均总包 (TC)</div>
                 </div>
                 
                 <div className="md:col-span-2 grid grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col justify-center">
                     <div className="text-gray-500 text-sm mb-1">Base Salary</div>
-                    <div className="text-xl font-bold text-deep">$170k</div>
+                    <div className="text-xl font-bold text-deep">
+                      ${statistics ? (statistics.avgBase / 1000).toFixed(0) : selectedData.base}k
+                    </div>
                     <div className="w-full bg-gray-200 h-1.5 rounded-full mt-3">
-                      <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '60%' }}></div>
+                      <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${statistics ? Math.round((statistics.avgBase / statistics.avgTotal) * 100) : basePct}%` }}></div>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col justify-center">
                     <div className="text-gray-500 text-sm mb-1">Stock (/yr)</div>
-                    <div className="text-xl font-bold text-deep">$85k</div>
+                    <div className="text-xl font-bold text-deep">
+                      ${statistics ? (statistics.avgStock / 1000).toFixed(0) : selectedData.stock}k
+                    </div>
                     <div className="w-full bg-gray-200 h-1.5 rounded-full mt-3">
-                      <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: '30%' }}></div>
+                      <div className="bg-purple-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${statistics ? Math.round((statistics.avgStock / statistics.avgTotal) * 100) : stockPct}%` }}></div>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col justify-center">
                     <div className="text-gray-500 text-sm mb-1">Bonus</div>
-                    <div className="text-xl font-bold text-deep">$30k</div>
+                    <div className="text-xl font-bold text-deep">
+                      ${statistics ? (statistics.avgBonus / 1000).toFixed(0) : selectedData.bonus}k
+                    </div>
                     <div className="w-full bg-gray-200 h-1.5 rounded-full mt-3">
-                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '10%' }}></div>
+                      <div className="bg-green-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${statistics ? Math.round((statistics.avgBonus / statistics.avgTotal) * 100) : bonusPct}%` }}></div>
                     </div>
                   </div>
                 </div>
@@ -153,46 +239,111 @@ export default function SalaryInsights() {
             {/* Level Breakdown */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-deep flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2 text-primary" />
-                  职级薪资对比 (Level Breakdown)
-                </h3>
-                <button className="text-gray-500 hover:text-primary flex items-center text-sm font-medium transition-colors">
-                  <Filter className="w-4 h-4 mr-1" />
-                  筛选
-                </button>
+                <div>
+                  <h3 className="text-xl font-bold text-deep flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2 text-primary" />
+                    职级薪资对比 (Level Breakdown)
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">点击图表柱子或表格行查看详细薪资构成</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button 
+                      onClick={() => setViewMode('chart')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center ${viewMode === 'chart' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      <BarChart3 className="w-4 h-4 mr-1.5" />
+                      图表
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('table')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center ${viewMode === 'table' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      <TableIcon className="w-4 h-4 mr-1.5" />
+                      表格
+                    </button>
+                  </div>
+                  <button className="text-gray-500 hover:text-primary flex items-center text-sm font-medium transition-colors">
+                    <Filter className="w-4 h-4 mr-1" />
+                    筛选
+                  </button>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-gray-500 text-sm">
-                      <th className="pb-3 font-medium px-4">Level</th>
-                      <th className="pb-3 font-medium px-4">Total Comp</th>
-                      <th className="pb-3 font-medium px-4">Base</th>
-                      <th className="pb-3 font-medium px-4">Stock (/yr)</th>
-                      <th className="pb-3 font-medium px-4">Bonus</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {levelData.map((data, index) => (
-                      <tr 
-                        key={index} 
-                        className={`border-b border-gray-50 last:border-none transition-colors ${data.active ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
-                      >
-                        <td className="py-4 px-4">
-                          <div className="font-bold text-deep">{data.level}</div>
-                          <div className="text-xs text-gray-500">{data.title}</div>
-                        </td>
-                        <td className="py-4 px-4 font-bold text-deep">${data.tc}</td>
-                        <td className="py-4 px-4 text-gray-600">${data.base}</td>
-                        <td className="py-4 px-4 text-gray-600">${data.stock}</td>
-                        <td className="py-4 px-4 text-gray-600">${data.bonus}</td>
+              {viewMode === 'chart' ? (
+                <div className="h-[400px] w-full mt-8">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={levelData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      onClick={(state) => {
+                        if (state && state.activeTooltipIndex !== undefined) {
+                          setSelectedLevelIndex(state.activeTooltipIndex);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis 
+                        dataKey="level" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }} 
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#6b7280', fontSize: 12 }} 
+                        tickFormatter={(value) => `$${value}k`}
+                        dx={-10}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: '#f9fafb' }}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                        formatter={(value: number, name: string) => [`$${value}k`, name]}
+                        labelStyle={{ fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                      <Bar dataKey="base" name="Base Salary" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} maxBarSize={60} />
+                      <Bar dataKey="stock" name="Stock (/yr)" stackId="a" fill="#a855f7" maxBarSize={60} />
+                      <Bar dataKey="bonus" name="Bonus" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-gray-500 text-sm">
+                        <th className="pb-3 font-medium px-4">Level</th>
+                        <th className="pb-3 font-medium px-4">Total Comp</th>
+                        <th className="pb-3 font-medium px-4">Base</th>
+                        <th className="pb-3 font-medium px-4">Stock (/yr)</th>
+                        <th className="pb-3 font-medium px-4">Bonus</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {levelData.map((data, index) => (
+                        <tr 
+                          key={index} 
+                          onClick={() => setSelectedLevelIndex(index)}
+                          className={`border-b border-gray-50 last:border-none transition-colors cursor-pointer ${selectedLevelIndex === index ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                        >
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-deep">{data.level}</div>
+                            <div className="text-xs text-gray-500">{data.title}</div>
+                          </td>
+                          <td className="py-4 px-4 font-bold text-deep">${data.tc}k</td>
+                          <td className="py-4 px-4 text-gray-600">${data.base}k</td>
+                          <td className="py-4 px-4 text-gray-600">${data.stock}k</td>
+                          <td className="py-4 px-4 text-gray-600">${data.bonus}k</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
 

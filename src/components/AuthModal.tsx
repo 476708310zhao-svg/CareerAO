@@ -17,9 +17,9 @@ const WeChatIcon = ({ className }: { className?: string }) => (
 );
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
-  const { login, register } = useAuth();
+  const { login, register, sendPhoneCode, loginWithPhone, getWeChatQRCode, checkWeChatLoginStatus } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
-  const [loginMethod, setLoginMethod] = useState<'account' | 'wechat'>('account');
+  const [loginMethod, setLoginMethod] = useState<'account' | 'phone' | 'wechat'>('account');
   
   // Form fields
   const [account, setAccount] = useState('');
@@ -27,16 +27,103 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  
+  // Phone login state
+  const [countdown, setCountdown] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+
+  // WeChat login state
+  const [weChatQrUrl, setWeChatQrUrl] = useState('');
+  const [weChatTicket, setWeChatTicket] = useState('');
+  const [weChatStatus, setWeChatStatus] = useState<'pending' | 'success' | 'expired'>('pending');
   
   const [agreed, setAgreed] = useState(false);
   const [showError, setShowError] = useState(false);
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Reset state when modal opens/closes
   useEffect(() => {
-    setMode(defaultMode);
+    if (isOpen) {
+      setMode(defaultMode);
+      setApiError('');
+      if (loginMethod === 'wechat') {
+        initWeChatLogin();
+      }
+    } else {
+      setWeChatStatus('pending');
+      setWeChatTicket('');
+    }
+  }, [defaultMode, isOpen, loginMethod]);
+
+  // Handle phone verification code countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // Handle WeChat login polling
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isOpen && loginMethod === 'wechat' && weChatTicket && weChatStatus === 'pending') {
+      timer = setInterval(async () => {
+        try {
+          const result = await checkWeChatLoginStatus(weChatTicket);
+          if (result.status === 'success') {
+            setWeChatStatus('success');
+            clearInterval(timer);
+            setTimeout(() => {
+              onClose();
+            }, 1000); // Close after showing success briefly
+          } else if (result.status === 'expired') {
+            setWeChatStatus('expired');
+            clearInterval(timer);
+          }
+        } catch (error) {
+          console.error("WeChat polling error:", error);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+    return () => clearInterval(timer);
+  }, [isOpen, loginMethod, weChatTicket, weChatStatus]);
+
+  const initWeChatLogin = async () => {
+    try {
+      setWeChatStatus('pending');
+      // In a real app, this fetches the QR code URL from your backend
+      // const { ticket, url } = await getWeChatQRCode();
+      // setWeChatTicket(ticket);
+      // setWeChatQrUrl(url);
+      
+      // Mocking the response for demonstration:
+      setWeChatTicket('mock_ticket_123');
+      setWeChatQrUrl('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://careerai.com/wechat-login-mock');
+    } catch (err: any) {
+      setApiError('获取微信登录二维码失败');
+    }
+  };
+
+  const handleSendCode = async () => {
+    if (!phone || phone.length < 11) {
+      setApiError('请输入有效的手机号');
+      return;
+    }
+    setIsSendingCode(true);
     setApiError('');
-  }, [defaultMode, isOpen]);
+    try {
+      // await sendPhoneCode(phone);
+      // Mock success
+      setCountdown(60);
+    } catch (err: any) {
+      setApiError(err.message || '发送验证码失败');
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +137,13 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
     
     try {
       if (mode === 'login') {
-        await login(account, password);
+        if (loginMethod === 'phone') {
+          // await loginWithPhone(phone, verifyCode);
+          // Mock success
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          await login(account, password);
+        }
       } else {
         await register({ nickname, email, phone, password });
       }
@@ -62,8 +155,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
     }
   };
 
-  const toggleMethod = () => {
-    setLoginMethod(prev => prev === 'account' ? 'wechat' : 'account');
+  const toggleMethod = (method: 'account' | 'phone' | 'wechat') => {
+    setLoginMethod(method);
+    setApiError('');
   };
 
   const toggleMode = () => {
@@ -101,13 +195,17 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="p-8">
+              <div className="p-6 sm:p-8">
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     {mode === 'register' ? '注册 CareerAI' : '登录 CareerAI'}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {loginMethod === 'account' ? (mode === 'login' ? '使用邮箱或手机号登录' : '创建您的账号') : '使用微信扫一扫快速安全登录'}
+                    {loginMethod === 'wechat' 
+                      ? '使用微信扫一扫快速安全登录' 
+                      : (mode === 'login' 
+                          ? (loginMethod === 'phone' ? '使用手机号和验证码登录' : '使用邮箱或手机号登录') 
+                          : '创建您的账号')}
                   </p>
                 </div>
 
@@ -117,7 +215,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                   </div>
                 )}
 
-                {loginMethod === 'account' ? (
+                {loginMethod !== 'wechat' ? (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {mode === 'register' && (
                       <>
@@ -154,34 +252,83 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                             className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                           />
                         </div>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="请输入密码"
+                            required
+                            className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
                       </>
                     )}
 
-                    {mode === 'login' && (
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="text"
-                          value={account}
-                          onChange={(e) => setAccount(e.target.value)}
-                          placeholder="请输入邮箱或手机号"
-                          required
-                          className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-                        />
-                      </div>
+                    {mode === 'login' && loginMethod === 'account' && (
+                      <>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <input
+                            type="text"
+                            value={account}
+                            onChange={(e) => setAccount(e.target.value)}
+                            placeholder="请输入邮箱或手机号"
+                            required
+                            className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="请输入密码"
+                            required
+                            className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
+                      </>
                     )}
 
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="请输入密码"
-                        required
-                        className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-                      />
-                    </div>
+                    {mode === 'login' && loginMethod === 'phone' && (
+                      <>
+                        <div className="relative">
+                          <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="请输入手机号"
+                            required
+                            className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                          />
+                        </div>
+                        <div className="relative flex space-x-2">
+                          <div className="relative flex-1">
+                            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                              type="text"
+                              value={verifyCode}
+                              onChange={(e) => setVerifyCode(e.target.value)}
+                              placeholder="请输入验证码"
+                              required
+                              className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleSendCode}
+                            disabled={countdown > 0 || isSendingCode || !phone}
+                            className="h-12 px-4 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                          >
+                            {countdown > 0 ? `${countdown}s 后重试` : '获取验证码'}
+                          </button>
+                        </div>
+                      </>
+                    )}
 
                     <button
                       type="submit"
@@ -203,25 +350,42 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                     </div>
                   </form>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-4">
-                    <div className="w-48 h-48 bg-gray-50 border border-gray-200 rounded-2xl p-2 mb-6 relative group">
-                      {/* Placeholder for actual QR Code */}
-                      <img 
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://careerai.com/login" 
-                        alt="WeChat Login QR" 
-                        className="w-full h-full rounded-xl opacity-90 group-hover:opacity-100 transition-opacity"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow-sm">
-                          刷新二维码
-                        </button>
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <div className="w-48 h-48 bg-gray-50 border border-gray-200 rounded-2xl p-2 mb-6 relative group">
+                        {weChatQrUrl ? (
+                          <img 
+                            src={weChatQrUrl} 
+                            alt="WeChat Login QR" 
+                            className={`w-full h-full rounded-xl transition-opacity ${weChatStatus === 'expired' ? 'opacity-30' : 'opacity-90 group-hover:opacity-100'}`}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                        
+                        {weChatStatus === 'expired' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-2xl">
+                            <button onClick={initWeChatLogin} className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg shadow-sm">
+                              二维码已过期，点击刷新
+                            </button>
+                          </div>
+                        )}
+                        
+                        {weChatStatus === 'success' && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm rounded-2xl">
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
+                              <Check className="w-6 h-6 text-green-600" />
+                            </div>
+                            <span className="text-sm font-medium text-green-600">登录成功</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-full">
+                        <WeChatIcon className="w-5 h-5 text-[#07C160] mr-2" />
+                        打开微信扫一扫
                       </div>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-full">
-                      <WeChatIcon className="w-5 h-5 text-[#07C160] mr-2" />
-                      打开微信扫一扫
-                    </div>
-                  </div>
                 )}
 
                 {/* Agreement Checkbox */}
@@ -254,23 +418,34 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                 )}
 
                 {/* Switch Method */}
-                <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
-                  <button
-                    onClick={toggleMethod}
-                    className="flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                  >
-                    {loginMethod === 'account' ? (
-                      <>
-                        <WeChatIcon className="w-5 h-5 text-[#07C160] mr-2" />
-                        微信扫码登录
-                      </>
-                    ) : (
-                      <>
-                        <User className="w-5 h-5 mr-2" />
-                        账号密码登录
-                      </>
-                    )}
-                  </button>
+                <div className="mt-8 pt-6 border-t border-gray-100 flex flex-wrap justify-center gap-4">
+                  {loginMethod !== 'wechat' && (
+                    <button
+                      onClick={() => toggleMethod('wechat')}
+                      className="flex items-center text-sm text-gray-500 hover:text-[#07C160] transition-colors"
+                    >
+                      <WeChatIcon className="w-5 h-5 mr-1.5" />
+                      微信登录
+                    </button>
+                  )}
+                  {loginMethod !== 'phone' && mode === 'login' && (
+                    <button
+                      onClick={() => toggleMethod('phone')}
+                      className="flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
+                    >
+                      <Smartphone className="w-4 h-4 mr-1.5" />
+                      手机号登录
+                    </button>
+                  )}
+                  {loginMethod !== 'account' && (
+                    <button
+                      onClick={() => toggleMethod('account')}
+                      className="flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
+                    >
+                      <User className="w-4 h-4 mr-1.5" />
+                      账号密码登录
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

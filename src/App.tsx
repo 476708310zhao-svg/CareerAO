@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu,
   X,
   GraduationCap,
-  Globe
+  Globe,
+  User,
+  LogOut,
+  Bookmark,
+  ChevronDown
 } from 'lucide-react';
 
 import Home from './pages/Home';
@@ -13,37 +17,96 @@ import InterviewPrep from './pages/InterviewPrep';
 import AIInterview from './pages/AIInterview';
 import SalaryInsights from './pages/SalaryInsights';
 import MyResume from './pages/MyResume';
+import ResumeEditor from './pages/ResumeEditor';
+import JobDetail from './pages/JobDetail';
 import CareerPlanning from './pages/CareerPlanning';
 import AgencyEvaluation from './pages/AgencyEvaluation';
 import CampusCalendar from './pages/CampusCalendar';
 import Membership from './pages/Membership';
 import Jobs from './pages/Jobs';
+import CompanyDetail from './pages/CompanyDetail';
+import Search from './pages/Search';
+import JobMap from './pages/JobMap';
 import AuthModal from './components/AuthModal';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout, openAuthModal, isAuthModalOpen, closeAuthModal, authMode } = useAuth();
+  const { showToast } = useToast();
 
-  const openAuth = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setIsAuthModalOpen(true);
-    setIsOpen(false); // close mobile menu if open
+  const navCategories = [
+    {
+      title: '产品功能',
+      links: [
+        { name: '职位搜索', href: '/jobs' },
+        { name: '求职地图', href: '/job-map' },
+        { name: '网申助手', href: '/application-assistant' },
+        { name: '笔经面经', href: '/interview-prep' },
+        { name: 'AI 面试', href: '/ai-interview' },
+        { name: '薪资查询', href: '/salary-insights' },
+        { name: '我的简历', href: '/my-resume' },
+        { name: '求职规划', href: '/career-planning' },
+        { name: '机构测评', href: '/agency-evaluation' },
+        { name: '校招日历', href: '/campus-calendar' },
+      ]
+    },
+    {
+      title: '资源中心',
+      links: [
+        { name: '求职干货博客', href: '#' },
+        { name: '大厂面经库', href: '#' },
+        { name: '签证政策解读', href: '#' },
+        { name: '帮助中心', href: '#' },
+      ]
+    },
+    {
+      title: '关于我们',
+      links: [
+        { name: '团队介绍', href: '#' },
+        { name: '联系我们', href: '#' },
+        { name: '隐私政策', href: '#' },
+        { name: '服务条款', href: '#' },
+        { name: '会员权益', href: '/membership' },
+      ]
+    }
+  ];
+
+  const [activeNavDropdown, setActiveNavDropdown] = useState<string | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setActiveNavDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setIsDropdownOpen(false);
+    showToast('已成功退出登录', 'success');
   };
 
-  const navLinks = [
-    { name: '职位搜索', href: '/jobs', isRoute: true },
-    { name: '网申助手', href: '/application-assistant', isRoute: true },
-    { name: '笔经面经', href: '/interview-prep', isRoute: true },
-    { name: 'AI 面试', href: '/ai-interview', isRoute: true },
-    { name: '薪资查询', href: '/salary-insights', isRoute: true },
-    { name: '我的简历', href: '/my-resume', isRoute: true },
-    { name: '求职规划', href: '/career-planning', isRoute: true },
-    { name: '机构测评', href: '/agency-evaluation', isRoute: true },
-    { name: '校招日历', href: '/campus-calendar', isRoute: true },
-    { name: '会员权益', href: '/membership', isRoute: true },
-  ];
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   return (
     <>
@@ -57,29 +120,125 @@ const Navbar = () => {
             <span className="font-bold text-xl text-deep tracking-tight">CareerAI</span>
           </Link>
           
-          <div className="hidden lg:flex items-center space-x-6 overflow-x-auto">
-            {navLinks.map((link, index) => {
-              const isActive = location.pathname === link.href;
-              if (link.isRoute) {
-                return (
-                  <Link key={index} to={link.href} className={`transition-colors text-sm font-medium whitespace-nowrap ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>
-                    {link.name}
-                  </Link>
-                );
-              }
+          <div className="hidden lg:flex items-center space-x-8" ref={navRef}>
+            {navCategories.map((category, index) => {
+              const isActiveDropdown = activeNavDropdown === category.title;
+              const hasActiveLink = category.links.some(link => location.pathname === link.href);
+
               return (
-                <a key={index} href={link.href} className="text-gray-600 hover:text-primary transition-colors text-sm font-medium whitespace-nowrap">
-                  {link.name}
-                </a>
+                <div 
+                  key={index} 
+                  className="relative"
+                  onMouseEnter={() => setActiveNavDropdown(category.title)}
+                  onMouseLeave={() => setActiveNavDropdown(null)}
+                >
+                  <button 
+                    onClick={() => setActiveNavDropdown(isActiveDropdown ? null : category.title)}
+                    className={`flex items-center space-x-1 transition-colors text-sm font-medium whitespace-nowrap py-2 ${hasActiveLink || isActiveDropdown ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}
+                  >
+                    <span>{category.title}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isActiveDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isActiveDropdown && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {/* Invisible bridge to prevent hover gap issues */}
+                      <div className="absolute -top-3 left-0 w-full h-3 bg-transparent border-none"></div>
+                      
+                      <ul className="space-y-1">
+                        {category.links.map((link, linkIdx) => {
+                          const isLinkActive = location.pathname === link.href;
+                          return (
+                            <li key={linkIdx}>
+                              {link.href.startsWith('/') ? (
+                                <Link 
+                                  to={link.href}
+                                  onClick={() => setActiveNavDropdown(null)}
+                                  className={`block px-5 py-2 text-sm transition-colors ${isLinkActive ? 'text-primary bg-primary/5 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'}`}
+                                >
+                                  {link.name}
+                                </Link>
+                              ) : (
+                                <a 
+                                  href={link.href}
+                                  onClick={() => setActiveNavDropdown(null)}
+                                  className="block px-5 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
+                                >
+                                  {link.name}
+                                </a>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
 
           <div className="hidden md:flex items-center space-x-4 shrink-0 pl-4">
-            <button onClick={() => openAuth('login')} className="text-deep font-medium text-sm hover:text-primary transition-colors">登录</button>
-            <button onClick={() => openAuth('register')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">
-              免费注册
-            </button>
+            <form onSubmit={handleSearch} className="relative hidden xl:block">
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索职位、公司..." 
+                className="w-48 h-9 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-full text-sm focus:w-64 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </form>
+
+            {isAuthenticated && user ? (
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center space-x-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
+                >
+                  <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
+                    {user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">{user.nickname || 'User'}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                    <div className="px-4 py-3 border-b border-gray-50">
+                      <p className="text-sm font-medium text-gray-900 truncate">{user.nickname}</p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{user.email || user.phone || '已登录'}</p>
+                    </div>
+                    <div className="py-1">
+                      <Link to="/my-resume" onClick={() => setIsDropdownOpen(false)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+                        <User className="w-4 h-4 mr-2" />
+                        个人中心
+                      </Link>
+                      <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+                        <Bookmark className="w-4 h-4 mr-2" />
+                        我的收藏
+                      </button>
+                    </div>
+                    <div className="py-1 border-t border-gray-50">
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        退出登录
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button onClick={() => openAuthModal('login')} className="text-deep font-medium text-sm hover:text-primary transition-colors">登录</button>
+                <button onClick={() => openAuthModal('register')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">
+                  免费注册
+                </button>
+              </>
+            )}
           </div>
 
           <div className="lg:hidden flex items-center">
@@ -92,24 +251,65 @@ const Navbar = () => {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="lg:hidden bg-white border-b border-gray-100 px-4 pt-2 pb-4 space-y-1 shadow-lg max-h-[80vh] overflow-y-auto">
-          {navLinks.map((link, index) => {
-            if (link.isRoute) {
-              return (
-                <Link key={index} to={link.href} onClick={() => setIsOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md">
-                  {link.name}
+        <div className="lg:hidden bg-white border-b border-gray-100 px-4 pt-4 pb-6 space-y-6 shadow-lg max-h-[80vh] overflow-y-auto">
+          {navCategories.map((category, idx) => (
+            <div key={idx} className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 px-2">{category.title}</h3>
+              <div className="space-y-1">
+                {category.links.map((link, linkIdx) => {
+                  const isLinkActive = location.pathname === link.href;
+                  if (link.href.startsWith('/')) {
+                    return (
+                      <Link 
+                        key={linkIdx} 
+                        to={link.href} 
+                        onClick={() => setIsOpen(false)} 
+                        className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${isLinkActive ? 'text-primary bg-primary/5' : 'text-gray-600 hover:text-primary hover:bg-gray-50'}`}
+                      >
+                        {link.name}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <a 
+                      key={linkIdx} 
+                      href={link.href} 
+                      onClick={() => setIsOpen(false)} 
+                      className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      {link.name}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div className="pt-4 border-t border-gray-100 flex flex-col space-y-3">
+            {isAuthenticated && user ? (
+              <>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg mb-2">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user.nickname}</p>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{user.email || user.phone || '已登录'}</p>
+                </div>
+                <Link to="/my-resume" onClick={() => setIsOpen(false)} className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
+                  <User className="w-5 h-5 mr-3 text-gray-400" />
+                  个人中心
                 </Link>
-              );
-            }
-            return (
-              <a key={index} href={link.href} onClick={() => setIsOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md">
-                {link.name}
-              </a>
-            );
-          })}
-          <div className="pt-4 flex flex-col space-y-2">
-            <button onClick={() => openAuth('login')} className="w-full text-center px-4 py-2 border border-gray-200 rounded-md text-deep font-medium bg-white">登录</button>
-            <button onClick={() => openAuth('register')} className="w-full text-center px-4 py-2 rounded-md text-white font-medium bg-primary">免费注册</button>
+                <button className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
+                  <Bookmark className="w-5 h-5 mr-3 text-gray-400" />
+                  我的收藏
+                </button>
+                <button onClick={() => { handleLogout(); setIsOpen(false); }} className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium">
+                  <LogOut className="w-5 h-5 mr-3 text-red-400" />
+                  退出登录
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { openAuthModal('login'); setIsOpen(false); }} className="w-full text-center px-4 py-2 border border-gray-200 rounded-md text-deep font-medium bg-white">登录</button>
+                <button onClick={() => { openAuthModal('register'); setIsOpen(false); }} className="w-full text-center px-4 py-2 rounded-md text-white font-medium bg-primary">免费注册</button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -117,7 +317,7 @@ const Navbar = () => {
 
       <AuthModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        onClose={closeAuthModal} 
         defaultMode={authMode} 
       />
     </>
@@ -188,30 +388,35 @@ const Footer = () => {
   );
 };
 
-import { AuthProvider } from './contexts/AuthContext';
-
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/application-assistant" element={<ApplicationAssistant />} />
-            <Route path="/interview-prep" element={<InterviewPrep />} />
-            <Route path="/ai-interview" element={<AIInterview />} />
-            <Route path="/salary-insights" element={<SalaryInsights />} />
-            <Route path="/my-resume" element={<MyResume />} />
-            <Route path="/career-planning" element={<CareerPlanning />} />
-            <Route path="/agency-evaluation" element={<AgencyEvaluation />} />
-            <Route path="/campus-calendar" element={<CampusCalendar />} />
-            <Route path="/membership" element={<Membership />} />
-          </Routes>
-          <Footer />
-        </div>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary overflow-x-hidden">
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/jobs/:id" element={<JobDetail />} />
+              <Route path="/job-map" element={<JobMap />} />
+              <Route path="/companies/:id" element={<CompanyDetail />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/application-assistant" element={<ApplicationAssistant />} />
+              <Route path="/interview-prep" element={<InterviewPrep />} />
+              <Route path="/ai-interview" element={<AIInterview />} />
+              <Route path="/salary-insights" element={<SalaryInsights />} />
+              <Route path="/my-resume" element={<MyResume />} />
+              <Route path="/my-resume/:id" element={<ResumeEditor />} />
+              <Route path="/career-planning" element={<CareerPlanning />} />
+              <Route path="/agency-evaluation" element={<AgencyEvaluation />} />
+              <Route path="/campus-calendar" element={<CampusCalendar />} />
+              <Route path="/membership" element={<Membership />} />
+            </Routes>
+            <Footer />
+          </div>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }
