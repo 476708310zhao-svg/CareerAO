@@ -2,11 +2,8 @@
 const COS = require('cos-nodejs-sdk-v5');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const crypto = require('crypto');
 
 const ENV_ID = 'cloud1-7gacanhu5aba4520';
-const HOSTING_DOMAIN = `${ENV_ID}.tcloudbaseapp.com`;
 
 function getAllFiles(dir, base, result = []) {
   for (const name of fs.readdirSync(dir)) {
@@ -48,76 +45,19 @@ async function deploy() {
   console.log(`Uploading ${files.length} files...`);
 
   for (const { full, key } of files) {
+    // index.html must never be cached so browsers always get the latest version
+    const cacheControl = key === 'index.html'
+      ? 'no-cache, no-store, must-revalidate'
+      : 'public, max-age=31536000, immutable';
     await new Promise((res, rej) =>
-      cos.putObject({ Bucket, Region, Key: key, Body: fs.createReadStream(full) },
+      cos.putObject({ Bucket, Region, Key: key, Body: fs.createReadStream(full), CacheControl: cacheControl },
         (e, d) => e ? rej(e) : res(d))
     );
     console.log(`✓ ${key}`);
   }
-  console.log('Upload complete! Purging CDN cache...');
-  await purgeCdn(secretId, secretKey);
   console.log('Deploy complete!');
 }
 
-function tencentApiRequest(secretId, secretKey, service, action, payload) {
-  return new Promise((resolve, reject) => {
-    const host = `${service}.tencentcloudapi.com`;
-    const body = JSON.stringify(payload);
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
-
-    const signedHeaders = 'content-type;host';
-    const hashedPayload = crypto.createHash('sha256').update(body).digest('hex');
-    const canonicalRequest = ['POST', '/', '', `content-type:application/json\nhost:${host}\n`, signedHeaders, hashedPayload].join('\n');
-    const credentialScope = `${date}/${service}/tc3_request`;
-    const stringToSign = ['TC3-HMAC-SHA256', timestamp, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
-
-    const hmac = (key, msg) => crypto.createHmac('sha256', key).update(msg).digest();
-    const secretDate = hmac(`TC3${secretKey}`, date);
-    const secretService = hmac(secretDate, service);
-    const secretSigning = hmac(secretService, 'tc3_request');
-    const signature = crypto.createHmac('sha256', secretSigning).update(stringToSign).digest('hex');
-
-    const authorization = `TC3-HMAC-SHA256 Credential=${secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-    const options = {
-      hostname: host, path: '/', method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Host': host,
-        'X-TC-Action': action,
-        'X-TC-Version': '2018-06-06',
-        'X-TC-Timestamp': timestamp,
-        'Authorization': authorization,
-      }
-    };
-
-    const req = https.request(options, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(JSON.parse(data)));
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-async function purgeCdn(secretId, secretKey) {
-  try {
-    const result = await tencentApiRequest(secretId, secretKey, 'cdn', 'PurgePathCache', {
-      Paths: [`https://${HOSTING_DOMAIN}/`],
-      FlushType: 'flush',
-    });
-    if (result.Response && result.Response.Error) {
-      console.warn('CDN purge warning:', result.Response.Error.Message);
-    } else {
-      console.log('CDN cache purged, TaskId:', result.Response && result.Response.TaskId);
-    }
-  } catch (e) {
-    console.warn('CDN purge failed (non-fatal):', e.message);
-  }
-}
 
 deploy().catch(err => {
   console.error('Deploy failed:', err.message || err);
