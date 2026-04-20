@@ -203,17 +203,17 @@ const Hero = () => {
           专为留学生打造的全链路求职神器。从网申助手、笔经面经到 AI 模拟面试，再到专属求职规划与校招日历，8大核心功能助你高效斩获 Dream Offer。
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <button className="w-full sm:w-auto px-8 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-base font-medium transition-all shadow-lg shadow-primary/30 flex items-center justify-center">
-            免费开始使用 <ArrowRight className="ml-2 w-5 h-5" />
-          </button>
-          <button className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-deep rounded-lg text-base font-medium transition-all flex items-center justify-center">
-            查看演示视频 <Play className="ml-2 w-4 h-4 text-gray-500" />
-          </button>
+          <Link to="/jobs" className="w-full sm:w-auto px-8 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-base font-medium transition-all shadow-lg shadow-primary/30 flex items-center justify-center">
+            开始搜索职位 <ArrowRight className="ml-2 w-5 h-5" />
+          </Link>
+          <Link to="/ai-interview" className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-deep rounded-lg text-base font-medium transition-all flex items-center justify-center">
+            体验 AI 模拟面试 <Bot className="ml-2 w-4 h-4 text-gray-500" />
+          </Link>
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500">
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 无需信用卡</div>
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 支持微信登录</div>
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 随时取消</div>
+          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 实时职位数据</div>
+          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 专属面经题库</div>
+          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 全流程 AI 辅助</div>
         </div>
       </motion.div>
 
