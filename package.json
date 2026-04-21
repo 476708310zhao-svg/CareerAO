@@ -23,6 +23,7 @@
     "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-is": "^19.2.5",
     "react-router-dom": "^7.14.0",
     "react-simple-maps": "^3.0.0",
     "react-to-print": "^3.3.0",
