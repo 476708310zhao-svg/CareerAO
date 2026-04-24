@@ -1,3 +1,8 @@
+# ⚠️  CRITICAL: DO NOT DELETE OR MODIFY THIS FILE
+# This workflow auto-deploys to the production VPS (49.233.163.175) on every push to main.
+# Deleting this file will break the CI/CD pipeline and require manual re-setup.
+# If you need to change deployment config, discuss with the repo owner first.
+
 name: Build & Deploy to Server
 
 on:
