@@ -13,7 +13,9 @@ import {
   Target,
   FileSearch,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  Crown,
+  Send
 } from 'lucide-react';
 
 export default function MyResume() {
@@ -51,6 +53,9 @@ export default function MyResume() {
     }
   ]);
 
+  const maxFreeResumes = 3;
+  const currentResumes = resumes.length;
+
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,11 +88,24 @@ export default function MyResume() {
           {/* Left Column: Resume List */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">简历库 ({resumes.length})</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                  简历库 
+                  <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                    {currentResumes} / {maxFreeResumes} 个版本
+                  </span>
+                </h2>
+                {currentResumes >= maxFreeResumes && (
+                  <button className="text-sm text-amber-600 font-medium hover:text-amber-700 flex items-center bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 transition-colors">
+                    <Crown className="w-4 h-4 mr-1.5" />
+                    升级 PRO 解锁无限版本
+                  </button>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {resumes.map((resume) => (
-                  <div key={resume.id} className="border border-gray-200 rounded-xl p-5 hover:border-primary/40 hover:shadow-md transition-all group relative bg-white">
+                  <div key={resume.id} className="border border-gray-200 rounded-xl p-5 hover:border-primary/40 hover:shadow-md transition-all flex flex-col bg-white group relative">
                     {resume.isDefault && (
                       <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl">
                         默认投递
@@ -123,29 +141,17 @@ export default function MyResume() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                      <span className="text-xs text-gray-400">更新于 {resume.lastModified}</span>
-                      <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                      <button className="px-3 py-1.5 flex items-center justify-center text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-black transition-colors w-full mr-3 shadow-sm">
+                        <Send className="w-3.5 h-3.5 mr-1.5" /> 一键网申投递
+                      </button>
+                      <div className="flex items-center space-x-1">
                         <button 
                           onClick={() => navigate(`/my-resume/${resume.id}`)}
-                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
-                          title="编辑"
+                          className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20" 
+                          title="编辑 & AI润色"
                         >
                           <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/my-resume/${resume.id}`)}
-                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
-                          title="AI 润色"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/my-resume/${resume.id}`)}
-                          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-md transition-colors" 
-                          title="下载 PDF"
-                        >
-                          <Download className="w-4 h-4" />
                         </button>
                       </div>
                     </div>

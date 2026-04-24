@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Bot,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import { useFavorites } from '../utils/favorites';
 
@@ -165,9 +166,15 @@ export default function JobDetail() {
               </div>
 
               <div className="flex gap-4">
-                <button className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold transition-colors shadow-sm">
-                  立即投递 (Apply Now)
-                </button>
+                <a 
+                  href="https://careers.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold transition-colors shadow-sm flex items-center justify-center"
+                >
+                  前往官网投递
+                  <ExternalLink className="w-4 h-4 ml-2 opacity-80" />
+                </a>
                 <button 
                   onClick={handleStartInterview}
                   className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center"

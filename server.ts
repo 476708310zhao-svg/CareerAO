@@ -26,6 +26,66 @@ async function startServer() {
     res.json({ status: 'ok' });
   });
 
+  // Proxy Campus Calendar Endpoint
+  // This forwards the request to your real backend to bypass browser CORS errors in AI Studio Dev Env
+  app.get('/api/campus', async (req, res) => {
+    try {
+      const BASE_URL = process.env.VITE_API_BASE_URL || process.env.REAL_API_BASE_URL;
+      
+      if (BASE_URL && !BASE_URL.includes('localhost')) {
+        const queryParams = new URLSearchParams(req.query as Record<string, string>).toString();
+        // Forward to the real backend location
+        let url = `${BASE_URL}/api/campus${queryParams ? `?${queryParams}` : ''}`;
+        
+        // If the BASE_URL already ends with /api, avoid double /api
+        if (BASE_URL.endsWith('/api')) {
+           url = `${BASE_URL}/campus${queryParams ? `?${queryParams}` : ''}`;
+        }
+        
+        const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (req.headers.authorization) {
+          fetchHeaders['Authorization'] = req.headers.authorization;
+        }
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: fetchHeaders
+        });
+
+        const data = await response.json();
+        return res.status(response.status).json(data);
+      }
+
+      // -------------------------------------------------------------
+      // Fallback: If no real backend is configured, return Mock Data
+      // -------------------------------------------------------------
+      const { region, type, role, gradYear } = req.query;
+      
+      let mockData = [
+        { id: 101, date: '今日开启', day: 'Sep 15', company: 'Google', title: '2027 Software Engineering Intern', type: 'Internship (暑期)', role: 'SDE / Tech', gradYear: '2027届', location: 'US / Canada', status: 'upcoming', applyUrl: 'https://careers.google.com/' },
+        { id: 102, date: '3天后截止', day: 'Sep 18', company: 'Meta', title: 'New Grad 2026 - Software Engineer', type: 'Full-time (秋招)', role: 'SDE / Tech', gradYear: '2026届', location: 'US', status: 'closing-soon', applyUrl: 'https://metacareers.com/' },
+        { id: 103, date: '下周', day: 'Sep 22', company: 'Jane Street', title: 'Quantitative Researcher Campus Hire', type: 'Full-time (秋招)', role: 'Finance / Quant', gradYear: '2026届', location: 'Hong Kong / NY', status: 'upcoming', applyUrl: 'https://janestreet.com/' },
+        { id: 104, date: '本月末', day: 'Sep 30', company: 'Tencent 腾讯', title: '2026届产品经理培训生 (提前批)', type: 'Full-time (秋招)', role: 'PM / Operations', gradYear: '2026届', location: 'Shenzhen / Beijing', status: 'upcoming', applyUrl: 'https://join.qq.com/' },
+        { id: 105, date: 'Oct 01', day: 'Oct 01', company: 'Apple', title: 'Hardware Engineering Intern', type: 'Internship (暑期)', role: 'SDE / Tech', gradYear: '2027届', location: 'Cupertino, CA', status: 'upcoming', applyUrl: 'https://apple.com/jobs' },
+        { id: 106, date: 'Oct 05', day: 'Oct 05', company: 'ByteDance', title: 'Research Scientist - Gen AI', type: 'Full-time (秋招)', role: 'Data / AI', gradYear: '2025届', location: 'Singapore / US', status: 'upcoming', applyUrl: 'https://jobs.bytedance.com/' }
+      ];
+
+      if (region && region !== 'All') mockData = mockData.filter(d => d.location.includes(region as string));
+      if (type && type !== 'All') mockData = mockData.filter(d => d.type === type);
+      if (role && role !== 'All') mockData = mockData.filter(d => d.role === role);
+      if (gradYear && gradYear !== 'All') mockData = mockData.filter(d => d.gradYear === gradYear);
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+      res.json({ data: mockData });
+
+    } catch (error) {
+      console.error('Campus Calendar Proxy error:', error);
+      res.status(500).json({ error: 'Failed to proxy request', useMock: true });
+    }
+  });
+
+
+
   // Generic Proxy endpoint for real Mini-Program API
   app.all('/api/proxy/*', async (req, res) => {
     try {

@@ -17,17 +17,31 @@ import {
   User,
   VideoOff,
   PhoneOff,
-  Send
+  Send,
+  Crown,
+  AlertCircle,
+  Target,
+  FileText
 } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { apiFetch } from '../lib/api';
 
 export default function AIInterview() {
   const location = useLocation();
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const [isInterviewEnded, setIsInterviewEnded] = useState(false);
+  
+  // Settings State
   const [selectedRole, setSelectedRole] = useState('Software Engineer');
   const [selectedCompany, setSelectedCompany] = useState('Google');
   const [selectedType, setSelectedType] = useState('Behavioral');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('Medium');
+  const [questionCount, setQuestionCount] = useState(3);
   const [jdContext, setJdContext] = useState('');
+  
+  // User limits mock
+  const dailyUses = 2;
+  const maxFreeUses = 3;
 
   // Media state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -219,6 +233,135 @@ export default function AIInterview() {
     { id: 'SystemDesign', name: '系统设计', icon: Layout, desc: '高并发、分布式系统架构设计' }
   ];
 
+  const mockRadarData = [
+    { subject: '逻辑结构 (Logic)', A: 85, fullMark: 100 },
+    { subject: '表达流畅度 (Fluency)', A: 92, fullMark: 100 },
+    { subject: '专业深度 (Depth)', A: 78, fullMark: 100 },
+    { subject: 'STAR法则执行', A: 88, fullMark: 100 },
+    { subject: '岗位匹配度', A: 90, fullMark: 100 },
+  ];
+
+  if (isInterviewEnded) {
+    return (
+      <div className="pt-24 pb-16 min-h-screen bg-gray-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">面试结束！这是您的评估报告</h1>
+            <p className="text-gray-500">
+              {selectedCompany} • {selectedRole} • {selectedDifficulty}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Total Score & Radar */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+              <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                <Target className="w-5 h-5 text-primary mr-2" />
+                综合能力评估
+              </h3>
+              
+              <div className="text-center mb-4">
+                <div className="text-6xl font-black text-primary mb-2">87</div>
+                <div className="text-sm font-medium text-gray-400 uppercase tracking-widest">综合得分</div>
+                <p className="text-sm text-gray-600 mt-3 bg-primary/5 py-2 px-3 rounded-lg">
+                  表现超越了 <span className="font-bold text-primary">76%</span> 的同类测评者
+                </p>
+              </div>
+
+              <div className="flex-1 w-full min-h-[250px] mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mockRadarData}>
+                    <PolarGrid stroke="#e5e7eb" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 11 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar name="本人得分" dataKey="A" stroke="#4f46e5" strokeWidth={2} fill="#4f46e5" fillOpacity={0.2} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Detailed Feedback */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 text-indigo-500 mr-2" />
+                  AI 面试官评语
+                </h3>
+                <p className="text-gray-700 leading-relaxed text-sm mb-4">
+                  "你在这场行为面试中展现了不错的团队协作和冲突解决能力。在讲述过往项目经验时，STAR 法则使用得很规范，背景 (Situation) 和任务 (Task) 阐述得很清晰。但在行动 (Action) 环节，对于你是如何主导解决技术难点的细节稍微有些欠缺。建议下次在体现个人贡献时更有进攻性。"
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                    <h4 className="font-bold text-green-800 text-sm mb-2 flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> 亮点 (Strengths)</h4>
+                    <ul className="text-green-700 text-xs space-y-1 pl-4 list-disc marker:text-green-400">
+                      <li>沟通连贯，自信心强</li>
+                      <li>能快速理解问题的核心痛点</li>
+                      <li>STAR 结构完整</li>
+                    </ul>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    <h4 className="font-bold text-amber-800 text-sm mb-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1"/> 待提升 (Needs Work)</h4>
+                    <ul className="text-amber-700 text-xs space-y-1 pl-4 list-disc marker:text-amber-400">
+                      <li>个人贡献 (Action) 细节偏枯燥</li>
+                      <li>语速偏快，句间停顿不足</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
+                  <FileText className="w-5 h-5 text-gray-500 mr-2" />
+                  Q&A 回顾与改进范例
+                </h3>
+                <div className="space-y-4">
+                  <div className="border border-gray-100 rounded-xl p-4">
+                    <div className="flex mb-2">
+                       <span className="font-bold text-primary mr-2">Q:</span>
+                       <span className="text-sm font-medium text-gray-800">Tell me about a time you had to deal with an underperforming team member.</span>
+                    </div>
+                    <div className="pl-6 border-l-2 border-gray-200 ml-1.5 space-y-3">
+                      <div>
+                        <div className="text-xs font-bold text-gray-500 mb-1">您的回答：</div>
+                        <p className="text-sm text-gray-600 italic">"I talked to them and asked what's wrong. Found out they were stressed, so I reassigned some tasks."</p>
+                      </div>
+                      <div className="bg-indigo-50/50 rounded-lg p-3">
+                        <div className="text-xs font-bold text-indigo-700 mb-1 flex items-center"><Bot className="w-3 h-3 mr-1"/> AI 优化解答：</div>
+                        <p className="text-sm text-indigo-800">
+                          "I first scheduled a 1-on-1 to understand their blockers in a non-judgmental way. It turned out they lacked context on a new tech stack. I then paired them with a senior engineer and adjusted deadlines, which increased their velocity by 40% in two weeks."
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <button 
+                  onClick={() => setIsInterviewEnded(false)}
+                  className="px-6 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium transition-colors"
+                >
+                  返回设置页
+                </button>
+                <div className="space-x-3">
+                  <button className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium transition-colors">
+                    回顾面试录像
+                  </button>
+                  <button className="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary-hover font-medium transition-colors shadow-sm">
+                    再练一次
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isInterviewStarted) {
     const latestMessage = messages[messages.length - 1];
 
@@ -396,9 +539,9 @@ export default function AIInterview() {
             </button>
 
             <button 
-              onClick={() => { setIsInterviewStarted(false); synthRef.current?.cancel(); }} 
-              className="p-4 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all flex items-center"
-              title="End Interview"
+              onClick={() => { setIsInterviewStarted(false); setIsInterviewEnded(true); stopMedia(); synthRef.current?.cancel(); }} 
+              className="p-4 rounded-full bg-gray-800 text-white hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center"
+              title="End Interview & View Report"
             >
               <PhoneOff className="w-6 h-6 text-red-400" />
             </button>
@@ -452,6 +595,41 @@ export default function AIInterview() {
                     >
                       {companies.map(company => <option key={company} value={company}>{company}</option>)}
                     </select>
+                  </div>
+                </div>
+
+                {/* Difficulty & Question Count */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">面试难度 (Difficulty)</label>
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                      {['Easy', 'Medium', 'Hard'].map(level => (
+                        <button
+                          key={level}
+                          onClick={() => setSelectedDifficulty(level)}
+                          className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                            selectedDifficulty === level 
+                              ? 'bg-white text-gray-900 shadow-sm border border-gray-200' 
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">题量设置 (Questions)</label>
+                    <div className="flex items-center space-x-4">
+                      <input 
+                        type="range" 
+                        min="1" max="10" 
+                        value={questionCount} 
+                        onChange={(e) => setQuestionCount(Number(e.target.value))}
+                        className="flex-1 accent-primary"
+                      />
+                      <span className="w-12 text-center font-medium text-gray-900 bg-gray-100 py-1 rounded-md text-sm">{questionCount} 题</span>
+                    </div>
                   </div>
                 </div>
 
@@ -515,14 +693,24 @@ export default function AIInterview() {
               </div>
             </div>
 
-            <button 
-              onClick={() => setIsInterviewStarted(true)}
-              className="w-full bg-primary hover:bg-primary-hover text-white text-lg font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center space-x-2"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              <span>开始面试 (Start Interview)</span>
-            </button>
-          </div>
+              <div className="flex flex-col space-y-3">
+                <button 
+                  onClick={() => setIsInterviewStarted(true)}
+                  className="w-full bg-primary hover:bg-primary-hover text-white text-lg font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center space-x-2"
+                >
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>开始面试 (Start Interview)</span>
+                </button>
+                <div className="flex items-center justify-center text-sm">
+                  <span className="text-gray-500">今日免费评估次数:</span>
+                  <span className="ml-2 font-bold text-gray-900">{dailyUses} / {maxFreeUses}</span>
+                  <div className="mx-3 w-px h-3 bg-gray-300"></div>
+                  <button className="flex items-center text-amber-500 hover:text-amber-600 font-medium">
+                    <Crown className="w-4 h-4 mr-1" /> 解锁无限制刷题
+                  </button>
+                </div>
+              </div>
+            </div>
 
           {/* Right Sidebar: Stats & History */}
           <div className="space-y-6">

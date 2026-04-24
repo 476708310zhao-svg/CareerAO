@@ -11,7 +11,10 @@ import {
   ChevronDown,
   Award,
   Clock,
-  Table as TableIcon
+  Table as TableIcon,
+  X,
+  GitCompare,
+  LineChart as LineChartIcon
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -21,7 +24,11 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area
 } from 'recharts';
 import { apiFetch } from '../lib/api';
 
@@ -35,6 +42,8 @@ export default function SalaryInsights() {
   const [isLoading, setIsLoading] = useState(false);
   const [statistics, setStatistics] = useState<any>(null);
   const [recentOffers, setRecentOffers] = useState<any[]>([]);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState(false);
 
   // Numeric data for Recharts (Mock data for levels as API doesn't provide level breakdown directly yet)
   const levelData = [
@@ -51,6 +60,25 @@ export default function SalaryInsights() {
   const basePct = Math.round((selectedData.base / selectedData.tc) * 100);
   const stockPct = Math.round((selectedData.stock / selectedData.tc) * 100);
   const bonusPct = Math.round((selectedData.bonus / selectedData.tc) * 100);
+
+  // Mock data for 5-year trend
+  const trendData = [
+    { year: '2022', 'Google': 260, 'Meta': 255, 'Amazon': 230 },
+    { year: '2023', 'Google': 275, 'Meta': 280, 'Amazon': 245 },
+    { year: '2024', 'Google': 285, 'Meta': 310, 'Amazon': 260 },
+    { year: '2025', 'Google': 290, 'Meta': 315, 'Amazon': 275 },
+    { year: '2026', 'Google': 305, 'Meta': 330, 'Amazon': 290 }
+  ];
+
+  // Mock data for Percentiles (based on selected data)
+  const percentiles = {
+    p25: Math.round(selectedData.tc * 0.85),
+    p50: selectedData.tc,
+    p75: Math.round(selectedData.tc * 1.2)
+  };
+
+  // Mock data for submit form
+  const [submitForm, setSubmitForm] = useState({ company: '', role: '', level: '', base: '', stock: '', bonus: '' });
 
   useEffect(() => {
     const fetchSalaryData = async () => {
@@ -234,6 +262,39 @@ export default function SalaryInsights() {
                   </div>
                 </div>
               </div>
+
+              {/* Percentiles */}
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <h4 className="text-sm font-bold text-gray-900 mb-4">当前职级薪资分位数 (Percentiles)</h4>
+                <div className="relative pt-6 pb-2">
+                   {/* Track */}
+                   <div className="absolute top-1/2 left-0 w-full h-1.5 bg-gray-200 rounded-full -translate-y-1/2"></div>
+                   
+                   {/* P25 Marker */}
+                   <div className="absolute top-1/2 left-[25%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group">
+                     <div className="w-3 h-3 bg-gray-400 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></div>
+                     <span className="absolute -top-7 text-xs font-bold text-gray-500">P25</span>
+                     <span className="absolute -bottom-6 text-xs text-gray-500 whitespace-nowrap">${percentiles.p25}k</span>
+                   </div>
+
+                   {/* P50 Marker */}
+                   <div className="absolute top-1/2 left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group">
+                     <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-md group-hover:scale-125 transition-transform"></div>
+                     <span className="absolute -top-7 text-sm font-black text-primary">P50 (中位数)</span>
+                     <span className="absolute -bottom-6 text-sm font-bold text-gray-900 whitespace-nowrap">${percentiles.p50}k</span>
+                   </div>
+
+                   {/* P75 Marker */}
+                   <div className="absolute top-1/2 left-[75%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group">
+                     <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></div>
+                     <span className="absolute -top-7 text-xs font-bold text-green-600">P75</span>
+                     <span className="absolute -bottom-6 text-xs text-gray-500 whitespace-nowrap">${percentiles.p75}k</span>
+                   </div>
+
+                   {/* Active Range Highlight */}
+                   <div className="absolute top-1/2 left-[25%] w-[50%] h-1.5 bg-primary/20 rounded-full -translate-y-1/2 pointer-events-none"></div>
+                </div>
+              </div>
             </div>
 
             {/* Level Breakdown */}
@@ -345,6 +406,48 @@ export default function SalaryInsights() {
                 </div>
               )}
             </div>
+
+            {/* 5-Year Trend & Company Comparison */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Trend Chart */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-deep flex items-center mb-6">
+                  <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
+                  薪资增长趋势 (5-Year Trend)
+                </h3>
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis dataKey="year" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(val) => `$${val}k`} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                      <Line type="monotone" dataKey="Google" stroke="#4285F4" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="Meta" stroke="#0668E1" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="Amazon" stroke="#FF9900" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Company Comparison CTA */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center text-center">
+                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                  <GitCompare className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">横向对比大厂包裹</h3>
+                <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
+                  想知道 {role} 岗位在 Google, Apple 和 Meta 哪家的 TC 更有竞争力？支持最多对比 5 家公司。
+                </p>
+                <button 
+                  onClick={() => setComparisonMode(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl transition-colors shadow-sm w-full max-w-xs mx-auto"
+                >
+                  开启公司对比
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Right Sidebar */}
@@ -357,7 +460,10 @@ export default function SalaryInsights() {
               <p className="text-gray-300 text-sm mb-6 relative z-10">
                 匿名分享你的 Offer 信息，帮助更多留学生打破信息差，获取更公平的薪资待遇。
               </p>
-              <button className="w-full bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-medium transition-colors relative z-10">
+              <button 
+                onClick={() => setShowSubmitModal(true)}
+                className="w-full bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-medium transition-colors relative z-10"
+              >
                 匿名添加薪资
               </button>
             </div>
@@ -406,6 +512,188 @@ export default function SalaryInsights() {
           </div>
         </div>
       </div>
+
+      {/* Submit Salary Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto w-full">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <Award className="w-5 h-5 mr-2 text-primary" />
+                匿名分享 Offer
+              </h2>
+              <button onClick={() => setShowSubmitModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-xl flex items-start">
+                <div className="mr-2 mt-0.5">💡</div>
+                <p>你的提交将被完全匿名化处理，仅用于汇总和生成统计数据，帮助完善薪资透明度。</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">入职公司</label>
+                  <input type="text" placeholder="e.g. Google" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">岗位</label>
+                  <input type="text" placeholder="e.g. Software Engineer" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">职级</label>
+                  <input type="text" placeholder="e.g. L4" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">地区</label>
+                  <input type="text" placeholder="e.g. SF Bay Area" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="font-bold text-gray-900 mb-4">包裹明细 (年度)</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Base Salary (基本薪资)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input type="number" placeholder="170,000" className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Stock/RSU (年度股票)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input type="number" placeholder="85,000" className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Target Bonus (目标奖金)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input type="number" placeholder="30,000" className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowSubmitModal(false)}
+                className="w-full bg-primary hover:bg-primary-hover text-white py-3.5 rounded-xl font-bold mt-4 shadow-lg shadow-primary/20"
+              >
+                提交包裹详情
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comparison Modal (Max 5 companies mock) */}
+      {comparisonMode && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                  <GitCompare className="w-6 h-6 mr-2 text-indigo-600" />
+                  公司薪资对比图谱: Software Engineer (L4/Mid-Level)
+                </h2>
+                <p className="text-gray-500 mt-1">San Francisco Bay Area • 最多支持对比 5 家大厂</p>
+              </div>
+              <button onClick={() => setComparisonMode(false)} className="text-gray-400 hover:text-gray-600 bg-white p-2 rounded-full shadow-sm">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-8 overflow-y-auto bg-white flex-1">
+              {/* Add company selector mock */}
+              <div className="flex gap-3 mb-8">
+                {['Google', 'Meta', 'Apple', 'Amazon'].map(c => (
+                  <div key={c} className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-2 rounded-lg font-medium flex items-center">
+                    {c} <X className="w-3 h-3 ml-2 cursor-pointer hover:text-indigo-900" />
+                  </div>
+                ))}
+                <button className="border border-dashed border-gray-300 text-gray-500 px-4 py-2 rounded-lg font-medium flex items-center hover:bg-gray-50">
+                  + 添加对比 (4/5)
+                </button>
+              </div>
+
+              {/* Comparison Bar Chart */}
+              <div className="h-[350px] w-full mb-8">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: 'Google (L4)', base: 170, stock: 85, bonus: 30, tc: 285 },
+                      { name: 'Meta (E4)', base: 180, stock: 105, bonus: 25, tc: 310 },
+                      { name: 'Apple (ICT3)', base: 165, stock: 75, bonus: 20, tc: 260 },
+                      { name: 'Amazon (SDE II)', base: 175, stock: 100, bonus: 0, tc: 275 },
+                    ]}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="name" tick={{ fill: '#4b5563', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `$${val}k`} tick={{ fill: '#6b7280' }} />
+                    <Tooltip cursor={{ fill: '#f9fafb' }} formatter={(val) => `$${val}k`} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="base" name="Base Salary" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} maxBarSize={40} />
+                    <Bar dataKey="stock" name="Stock/RSU" stackId="a" fill="#a855f7" maxBarSize={40} />
+                    <Bar dataKey="bonus" name="Bonus" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Data Table */}
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-y border-gray-100">
+                  <tr>
+                    <th className="py-3 px-4 text-sm font-medium text-gray-500">Company & Level</th>
+                    <th className="py-3 px-4 text-sm font-medium text-gray-500">Base</th>
+                    <th className="py-3 px-4 text-sm font-medium text-gray-500">Stock (yr)</th>
+                    <th className="py-3 px-4 text-sm font-medium text-gray-500">Bonus</th>
+                    <th className="py-3 px-4 text-sm font-bold text-gray-900 border-l border-gray-200">Total Comp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-50">
+                    <td className="py-4 px-4 font-bold text-gray-900">Meta (E4)</td>
+                    <td className="py-4 px-4 text-gray-600">$180k</td>
+                    <td className="py-4 px-4 text-gray-600">$105k</td>
+                    <td className="py-4 px-4 text-gray-600">$25k</td>
+                    <td className="py-4 px-4 font-black text-indigo-600 border-l border-gray-100 bg-indigo-50/30">$310,000</td>
+                  </tr>
+                  <tr className="border-b border-gray-50">
+                    <td className="py-4 px-4 font-bold text-gray-900">Google (L4)</td>
+                    <td className="py-4 px-4 text-gray-600">$170k</td>
+                    <td className="py-4 px-4 text-gray-600">$85k</td>
+                    <td className="py-4 px-4 text-gray-600">$30k</td>
+                    <td className="py-4 px-4 font-black text-indigo-600 border-l border-gray-100 bg-indigo-50/30">$285,000</td>
+                  </tr>
+                  <tr className="border-b border-gray-50">
+                    <td className="py-4 px-4 font-bold text-gray-900">Amazon (SDE II)</td>
+                    <td className="py-4 px-4 text-gray-600">$175k</td>
+                    <td className="py-4 px-4 text-gray-600">$100k</td>
+                    <td className="py-4 px-4 text-gray-600">$0k</td>
+                    <td className="py-4 px-4 font-black text-indigo-600 border-l border-gray-100 bg-indigo-50/30">$275,000</td>
+                  </tr>
+                  <tr>
+                    <td className="py-4 px-4 font-bold text-gray-900">Apple (ICT3)</td>
+                    <td className="py-4 px-4 text-gray-600">$165k</td>
+                    <td className="py-4 px-4 text-gray-600">$75k</td>
+                    <td className="py-4 px-4 text-gray-600">$20k</td>
+                    <td className="py-4 px-4 font-black text-indigo-600 border-l border-gray-100 bg-indigo-50/30">$260,000</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="mt-6 bg-yellow-50 text-yellow-800 p-4 rounded-xl text-sm border border-yellow-100">
+                <span className="font-bold flex items-center mb-1">📌 Offer 决策建议：</span>
+                 Meta 的整体包裹目前最具竞争力，且股票授予部分（105k）占比最高，如果看好后期涨幅建议优先考虑。Amazon 虽然 Base 最高（175k），但第二年以后缺乏明确的 Target Bonus，需关注 sign-on bonus 结构。
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,9 @@ import {
   Filter, 
   Building2, 
   Clock,
-  ChevronDown
+  ChevronDown,
+  Sparkles,
+  Target
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 
@@ -106,6 +108,7 @@ export default function Jobs() {
     type: '全部',
     visa: '全部'
   });
+  const [activeTab, setActiveTab] = useState<'all' | 'recommended'>('all');
 
   const { isFavorite, toggleFavorite } = useFavorites();
 
@@ -125,18 +128,25 @@ export default function Jobs() {
           pageSize: '10'
         }).toString();
 
-        // 调用我们在 server.ts 写的代理接口
-        const response = await apiFetch(`/api/proxy/jobs?${queryParams}`);
+        // 模拟延时
+        await new Promise(resolve => setTimeout(resolve, 600));
         
-        if (response.useMock) {
-          // 如果没有配置真实 API，使用本地模拟数据并模拟延迟
-          await new Promise(resolve => setTimeout(resolve, 600));
-          
-          let filtered = MOCK_JOBS;
+        let filtered = MOCK_JOBS.map(job => ({
+          ...job,
+          // 模拟 AI 匹配度分数和难度
+          matchScore: Math.floor(Math.random() * 40) + 60, // 60-99
+          difficulty: ['简单', '中等', '困难'][Math.floor(Math.random() * 3)]
+        }));
+        
+        if (activeTab === 'recommended') {
+          // AI 推荐模式，按匹配度排序，忽略部分基础过滤以展示 AI 效果
+          filtered = filtered.sort((a, b) => b.matchScore - a.matchScore).slice(0, 4);
+        } else {
           if (searchQuery) {
             filtered = filtered.filter(job => 
               job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              job.company.toLowerCase().includes(searchQuery.toLowerCase())
+              job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              job.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) // 增强的关键词搜索
             );
           }
           if (filters.type !== '全部') {
@@ -145,36 +155,18 @@ export default function Jobs() {
           if (filters.region !== '全部') {
             filtered = filtered.filter(job => job.location.includes(filters.region.split(' ')[0]));
           }
-          setJobs(filtered);
-        } else {
-          // 真实接口数据映射 (Data Mapping)
-          // 根据你提供的接口文档进行精准映射
-          const formattedJobs = response.data.list.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            company: item.company,
-            logo: item.companyLogo || item.company.charAt(0), // 如果没有 logo，取公司名首字母
-            location: item.location,
-            salary: item.salary,
-            type: item.jobType,
-            visa: item.visaSponsored ? '支持签证' : '不支持签证',
-            tags: item.requirements || [],
-            postedAt: item.postedAt,
-            isFavorite: false // 列表中未返回是否收藏，默认 false
-          }));
-          setJobs(formattedJobs);
         }
+        
+        setJobs(filtered as any);
       } catch (error) {
         console.error('Failed to fetch jobs:', error);
-        // 发生错误时降级使用模拟数据
-        setJobs(MOCK_JOBS);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchJobs();
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, activeTab]);
 
   const FilterSelect = ({ label, options, value, onChange }: { label: string, options: string[], value: string, onChange: (val: string) => void }) => (
     <div className="flex items-center space-x-2">
@@ -300,16 +292,37 @@ export default function Jobs() {
 
           {/* Job List */}
           <div className="w-full lg:w-3/4">
-            <div className="mb-4 flex justify-between items-center">
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-6 w-full sm:w-fit">
+              <button 
+                onClick={() => setActiveTab('all')}
+                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-white text-deep shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                全部职位
+              </button>
+              <button 
+                onClick={() => setActiveTab('recommended')}
+                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center ${activeTab === 'recommended' ? 'bg-primary text-white shadow-sm shadow-primary/20' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                <Sparkles className={`w-4 h-4 mr-1.5 ${activeTab === 'recommended' ? 'text-amber-300' : 'text-gray-400'}`} />
+                AI 智能匹配
+              </button>
+            </div>
+
+            <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <p className="text-gray-500 text-sm">
-                找到 <span className="font-bold text-deep">{jobs.length}</span> 个相关职位
+                找到 <span className="font-bold text-deep">{jobs.length}</span> 个{activeTab === 'recommended' ? '高匹配度' : '相关'}职位
               </p>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <span>排序方式:</span>
                 <select className="bg-transparent font-medium text-deep outline-none cursor-pointer">
-                  <option>最新发布</option>
-                  <option>相关度最高</option>
-                  <option>薪资最高</option>
+                  {activeTab === 'recommended' ? (
+                    <option>匹配度最高</option>
+                  ) : (
+                    <>
+                      <option>最新发布</option>
+                      <option>薪资最高</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -349,9 +362,27 @@ export default function Jobs() {
                           {job.logo}
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-deep group-hover:text-primary transition-colors mb-1">
-                            {job.title}
-                          </h3>
+                          <div className="flex items-center space-x-3 mb-1">
+                            <h3 className="text-lg font-bold text-deep group-hover:text-primary transition-colors">
+                              {job.title}
+                            </h3>
+                            {activeTab === 'recommended' && job.matchScore && (
+                              <div className="flex items-center bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full text-xs font-bold border border-indigo-100">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                匹配度 {job.matchScore}%
+                              </div>
+                            )}
+                            {job.difficulty && (
+                              <div className={`flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                                job.difficulty === '困难' ? 'bg-red-50 text-red-600 border-red-100' :
+                                job.difficulty === '中等' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                'bg-emerald-50 text-emerald-600 border-emerald-100'
+                              }`}>
+                                <Target className="w-3 h-3 mr-1" />
+                                难度 {job.difficulty}
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center text-gray-500 text-sm mb-3 space-x-4">
                             <span className="flex items-center">
                               <Building2 className="w-4 h-4 mr-1" />

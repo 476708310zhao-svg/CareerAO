@@ -200,7 +200,7 @@ const Hero = () => {
           留学生求职，<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-500">一站式通关</span>
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed">
-          专为留学生打造的全链路求职神器。从网申助手、笔经面经到 AI 模拟面试，再到专属求职规划与校招日历，8大核心功能助你高效斩获 Dream Offer。✓
+          专为留学生打造的全链路求职神器。从网申助手、笔经面经到 AI 模拟面试，再到专属求职规划与校招日历，8大核心功能助你高效斩获 Dream Offer。
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
           <Link to="/jobs" className="w-full sm:w-auto px-8 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-base font-medium transition-all shadow-lg shadow-primary/30 flex items-center justify-center">
