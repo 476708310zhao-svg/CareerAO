@@ -23,6 +23,14 @@ import CareerPlanning from './pages/CareerPlanning';
 import AgencyEvaluation from './pages/AgencyEvaluation';
 import CampusCalendar from './pages/CampusCalendar';
 import Membership from './pages/Membership';
+import Blog from './pages/Blog';
+import InterviewExperiences from './pages/InterviewExperiences';
+import VisaPolicies from './pages/VisaPolicies';
+import HelpCenter from './pages/HelpCenter';
+import AboutTeam from './pages/AboutTeam';
+import ContactUs from './pages/ContactUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import Jobs from './pages/Jobs';
 import CompanyDetail from './pages/CompanyDetail';
 import Search from './pages/Search';
@@ -60,19 +68,19 @@ const Navbar = () => {
     {
       title: '资源中心',
       links: [
-        { name: '求职干货博客', href: '#' },
-        { name: '大厂面经库', href: '#' },
-        { name: '签证政策解读', href: '#' },
-        { name: '帮助中心', href: '#' },
+        { name: '求职干货博客', href: '/blog' },
+        { name: '大厂面经库', href: '/interview-experiences' },
+        { name: '签证政策解读', href: '/visa-policies' },
+        { name: '帮助中心', href: '/help-center' },
       ]
     },
     {
       title: '关于我们',
       links: [
-        { name: '团队介绍', href: '#' },
-        { name: '联系我们', href: '#' },
-        { name: '隐私政策', href: '#' },
-        { name: '服务条款', href: '#' },
+        { name: '团队介绍', href: '/team' },
+        { name: '联系我们', href: '/contact' },
+        { name: '隐私政策', href: '/privacy' },
+        { name: '服务条款', href: '/terms' },
         { name: '会员权益', href: '/membership' },
       ]
     }
@@ -356,19 +364,19 @@ const Footer = () => {
           <div>
             <h4 className="font-bold text-deep mb-4">资源中心</h4>
             <ul className="space-y-3 text-sm text-gray-500">
-              <li><a href="#" className="hover:text-primary transition-colors">求职干货博客</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">大厂面经库</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">签证政策解读</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">帮助中心</a></li>
+              <li><Link to="/blog" className="hover:text-primary transition-colors">求职干货博客</Link></li>
+              <li><Link to="/interview-experiences" className="hover:text-primary transition-colors">大厂面经库</Link></li>
+              <li><Link to="/visa-policies" className="hover:text-primary transition-colors">签证政策解读</Link></li>
+              <li><Link to="/help-center" className="hover:text-primary transition-colors">帮助中心</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-bold text-deep mb-4">关于我们</h4>
             <ul className="space-y-3 text-sm text-gray-500">
-              <li><a href="#" className="hover:text-primary transition-colors">团队介绍</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">联系我们</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">隐私政策</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">服务条款</a></li>
+              <li><Link to="/team" className="hover:text-primary transition-colors">团队介绍</Link></li>
+              <li><Link to="/contact" className="hover:text-primary transition-colors">联系我们</Link></li>
+              <li><Link to="/privacy" className="hover:text-primary transition-colors">隐私政策</Link></li>
+              <li><Link to="/terms" className="hover:text-primary transition-colors">服务条款</Link></li>
             </ul>
           </div>
         </div>
@@ -412,6 +420,14 @@ export default function App() {
               <Route path="/agency-evaluation" element={<AgencyEvaluation />} />
               <Route path="/campus-calendar" element={<CampusCalendar />} />
               <Route path="/membership" element={<Membership />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/interview-experiences" element={<InterviewExperiences />} />
+              <Route path="/visa-policies" element={<VisaPolicies />} />
+              <Route path="/help-center" element={<HelpCenter />} />
+              <Route path="/team" element={<AboutTeam />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
             </Routes>
             <Footer />
           </div>
