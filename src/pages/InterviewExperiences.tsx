@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Search, 
@@ -77,7 +77,7 @@ const INITIAL_POSTS = [
 ];
 
 export default function InterviewExperiences() {
-  const [posts, setPosts] = useState(INITIAL_POSTS);
+  const [posts, setPosts] = useState<any[]>(INITIAL_POSTS);
   const [activeCompany, setActiveCompany] = useState('全部');
   const [activeRole, setActiveRole] = useState('全部');
   const [activeRound, setActiveRound] = useState('全部');
@@ -87,31 +87,80 @@ export default function InterviewExperiences() {
   const [newPost, setNewPost] = useState({ title: '', company: '字节跳动', role: '前端开发', round: '一面', content: '', tags: '' });
   const { showToast } = useToast();
 
-  const handlePublish = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadExperiences = async () => {
+      try {
+        const { fetchExperiencesList } = await import('../lib/firestore_api');
+        const dbExps = await fetchExperiencesList();
+        if (dbExps && dbExps.length > 0) {
+          const formattedDbExps = dbExps.map((exp: any) => ({
+            id: exp.id,
+            title: exp.title || `${exp.company || ''} ${exp.role || ''} ${exp.round || ''}`,
+            author: exp.userId || 'Anonymous user',
+            company: exp.company || 'Unknown',
+            role: exp.role || 'Unknown role',
+            round: exp.round || 'Unknown round',
+            date: '今天',
+            content: exp.content || '',
+            likes: Math.floor(Math.random() * 50) + 1,
+            comments: Math.floor(Math.random() * 20),
+            tags: [exp.role, exp.company].filter(Boolean)
+          }));
+          setPosts([...formattedDbExps, ...INITIAL_POSTS] as any[]);
+        }
+      } catch (error) {
+        console.error('Failed to load experiences', error);
+      }
+    };
+    loadExperiences();
+  }, []);
+
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPost.title || !newPost.content) {
       showToast('标题和内容不能为空', 'error');
       return;
     }
 
-    const post = {
-      id: posts.length + 1,
-      title: newPost.title,
-      author: '匿名用户', // In a real app, this would be the logged-in user
-      company: newPost.company,
-      role: newPost.role,
-      round: newPost.round,
-      date: new Date().toISOString().split('T')[0],
-      content: newPost.content,
-      likes: 0,
-      comments: 0,
-      tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
-    };
+    try {
+      const { db } = await import('../lib/firebase');
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+      
+      const newId = 'exp_' + Math.floor(Math.random() * 1000000);
+      await setDoc(doc(db, 'interview_experiences', newId), {
+         title: newPost.title,
+         company: newPost.company,
+         role: newPost.role,
+         round: newPost.round,
+         content: newPost.content,
+         userId: 'You', // Since Auth might be active or not
+         status: 'published',
+         createdAt: serverTimestamp(),
+         updatedAt: serverTimestamp()
+      });
 
-    setPosts([post, ...posts]);
-    setIsModalOpen(false);
-    setNewPost({ title: '', company: '字节跳动', role: '前端开发', round: '一面', content: '', tags: '' });
-    showToast('面经发布成功！积分+50', 'success');
+      const post = {
+        id: newId,
+        title: newPost.title,
+        author: 'You', 
+        company: newPost.company,
+        role: newPost.role,
+        round: newPost.round,
+        date: new Date().toISOString().split('T')[0],
+        content: newPost.content,
+        likes: 0,
+        comments: 0,
+        tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+      };
+
+      setPosts([post, ...posts] as any[]);
+      setIsModalOpen(false);
+      setNewPost({ title: '', company: '字节跳动', role: '前端开发', round: '一面', content: '', tags: '' });
+      showToast('面经发布成功！积分+50', 'success');
+    } catch (e: any) {
+       console.error("Error publishing", e);
+       showToast('发布失败 ' + e.message, 'error');
+    }
   };
 
   const filteredPosts = posts.filter(post => {

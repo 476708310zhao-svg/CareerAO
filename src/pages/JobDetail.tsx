@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft, 
@@ -73,6 +73,50 @@ export default function JobDetail() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const jobId = id ? parseInt(id, 10) : MOCK_JOB_DETAIL.id;
 
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJob = async () => {
+      try {
+        if (!id) {
+          setJob(MOCK_JOB_DETAIL);
+          setLoading(false);
+          return;
+        }
+
+        const { db } = await import('../lib/firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const jobDoc = await getDoc(doc(db, 'jobs', id));
+        
+        if (jobDoc.exists()) {
+          const data = jobDoc.data();
+          setJob({
+            id: jobDoc.id,
+            title: data.title || '',
+            company: data.companyName || '',
+            logo: data.companyName?.charAt(0) || 'C',
+            location: data.location || '',
+            salary: data.salary || '',
+            type: data.type || '全职',
+            visa: data.visa ? '支持 H1B/OPT' : '不限身份',
+            tags: [],
+            postedAt: '刚发布',
+            description: data.description || ''
+          });
+        } else {
+          setJob(MOCK_JOB_DETAIL);
+        }
+      } catch (error) {
+        console.error('Error fetching job', error);
+        setJob(MOCK_JOB_DETAIL);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJob();
+  }, [id]);
+
   const handleAnalyzeJD = () => {
     setIsAnalyzing(true);
     // Simulate API call
@@ -86,12 +130,16 @@ export default function JobDetail() {
     // Navigate to AI Interview page with context
     navigate('/ai-interview', { 
       state: { 
-        role: MOCK_JOB_DETAIL.title, 
-        company: MOCK_JOB_DETAIL.company,
-        jd: MOCK_JOB_DETAIL.description
+        role: job?.title, 
+        company: job?.company,
+        jd: job?.description
       } 
     });
   };
+
+  if (loading || !job) {
+    return <div className="min-h-screen pt-24 pb-16 bg-gray-50 flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
@@ -115,22 +163,22 @@ export default function JobDetail() {
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center space-x-5">
                   <div className="w-16 h-16 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center text-3xl font-bold text-primary shrink-0">
-                    {MOCK_JOB_DETAIL.logo}
+                    {job.logo}
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-deep mb-2">{MOCK_JOB_DETAIL.title}</h1>
+                    <h1 className="text-2xl font-bold text-deep mb-2">{job.title}</h1>
                     <div className="flex flex-wrap items-center text-gray-600 text-sm gap-4">
                       <span className="flex items-center font-medium text-gray-900">
                         <Building2 className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {MOCK_JOB_DETAIL.company}
+                        {job.company}
                       </span>
                       <span className="flex items-center">
                         <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {MOCK_JOB_DETAIL.location}
+                        {job.location}
                       </span>
                       <span className="flex items-center text-green-600 font-medium">
                         <DollarSign className="w-4 h-4 mr-1 text-green-500" />
-                        {MOCK_JOB_DETAIL.salary}
+                        {job.salary}
                       </span>
                     </div>
                   </div>
@@ -154,14 +202,14 @@ export default function JobDetail() {
 
               <div className="flex flex-wrap gap-2 mb-6">
                 <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-                  {MOCK_JOB_DETAIL.type}
+                  {job.type}
                 </span>
                 <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">
-                  {MOCK_JOB_DETAIL.visa}
+                  {job.visa}
                 </span>
                 <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm flex items-center">
                   <Clock className="w-4 h-4 mr-1.5" />
-                  {MOCK_JOB_DETAIL.postedAt}
+                  {job.postedAt}
                 </span>
               </div>
 
@@ -190,7 +238,7 @@ export default function JobDetail() {
               <h2 className="text-xl font-bold text-deep mb-6">职位描述 (Job Description)</h2>
               <div 
                 className="prose prose-gray max-w-none prose-h3:text-lg prose-h3:font-bold prose-h3:mb-3 prose-h3:mt-6 prose-li:text-gray-600 prose-p:text-gray-600"
-                dangerouslySetInnerHTML={{ __html: MOCK_JOB_DETAIL.description }}
+                dangerouslySetInnerHTML={{ __html: job.description }}
               />
             </div>
           </div>
@@ -326,11 +374,11 @@ export default function JobDetail() {
               <h3 className="font-bold text-deep mb-4">关于公司</h3>
               <div className="flex items-center space-x-4 mb-4">
                 <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-xl font-bold text-primary shrink-0">
-                  {MOCK_JOB_DETAIL.logo}
+                  {job.logo}
                 </div>
                 <div>
-                  <div className="font-bold text-gray-900">{MOCK_JOB_DETAIL.company}</div>
-                  <a href="#" className="text-sm text-blue-600 hover:underline">查看公司主页</a>
+                  <div className="font-bold text-gray-900">{job.company}</div>
+                  <Link to="/companies/1" className="text-sm text-blue-600 hover:underline">查看公司主页</Link>
                 </div>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">

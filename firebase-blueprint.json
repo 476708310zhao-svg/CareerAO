@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "nickname": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["email", "role", "createdAt"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Job listing",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "companyId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "location": { "type": "string" },
+        "salary": { "type": "string" },
+        "type": { "type": "string" },
+        "visa": { "type": "boolean" },
+        "description": { "type": "string" },
+        "postedAt": { "type": "string", "format": "timestamp" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["title", "companyId", "companyName", "description", "createdAt"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Company profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "website": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "InterviewExperience": {
+      "title": "InterviewExperience",
+      "description": "User submitted interview experience",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "company": { "type": "string" },
+        "role": { "type": "string" },
+        "round": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "company", "role", "round", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/Job" },
+      "description": "Job listings"
+    },
+    "companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Companies"
+    },
+    "interview_experiences/{experienceId}": {
+      "schema": { "$ref": "#/entities/InterviewExperience" },
+      "description": "Interview experiences shared by users"
+    }
+  }
+}

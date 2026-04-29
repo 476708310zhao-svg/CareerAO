@@ -33,12 +33,56 @@ export default function CompanyDetail() {
     const fetchCompany = async () => {
       setIsLoading(true);
       try {
-        const response = await apiFetch(`/api/proxy/companies/${id}`);
-        if (response.useMock) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        if (!id) {
           setCompany(MOCK_COMPANY);
+          setIsLoading(false);
+          return;
+        }
+
+        const { db } = await import('../lib/firebase');
+        const { doc, getDoc, collection, query, where, getDocs } = await import('firebase/firestore');
+        const companyDoc = await getDoc(doc(db, 'companies', id));
+
+        if (companyDoc.exists()) {
+          const compData = companyDoc.data();
+          
+          // Try fetching jobs for this company
+          const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', id));
+          const jobsSnap = await getDocs(jobsQuery);
+          let relatedJobs = jobsSnap.docs.map(jd => ({
+             id: jd.id,
+             title: jd.data().title || '',
+             location: jd.data().location || '',
+             type: jd.data().type || '全职',
+             postedAt: '刚发布'
+          }));
+
+          // Try fetching experiences for this company
+          const expQuery = query(collection(db, 'interview_experiences'), where('company', '==', compData.name));
+          const expSnap = await getDocs(expQuery);
+          let relatedExps = expSnap.docs.map(ed => ({
+             id: ed.id,
+             title: `${ed.data().round} - ${ed.data().role}`,
+             author: ed.data().userId || 'Anonymous',
+             date: '刚刚',
+             tags: [ed.data().role, ed.data().round]
+          }));
+
+          setCompany({
+            id: companyDoc.id,
+            name: compData.name || '',
+            logo: compData.name?.charAt(0) || 'C',
+            industry: '科技/互联网', // Default if not provided
+            location: compData.location || 'Unknown',
+            website: compData.website || '#',
+            size: '10000+ 人', // Default mock info
+            rating: 4.8,
+            description: compData.description || '',
+            jobs: relatedJobs.length > 0 ? relatedJobs : MOCK_COMPANY.jobs,
+            experiences: relatedExps.length > 0 ? relatedExps : MOCK_COMPANY.experiences
+          });
         } else {
-          setCompany(response.data);
+          setCompany(MOCK_COMPANY);
         }
       } catch (error) {
         console.error('Failed to fetch company details:', error);

@@ -45,8 +45,8 @@ export default function ContactUs() {
               <h3 className="text-lg font-bold text-gray-900 mb-2">电子邮件</h3>
               <p className="text-gray-600 text-sm mb-4">通常我们会在 24 小时内给您回复。</p>
               <div className="space-y-2 text-sm">
-                <p><span className="text-gray-500">商务合作：</span> <a href="mailto:bd@careerai.com" className="text-primary hover:underline">bd@careerai.com</a></p>
-                <p><span className="text-gray-500">用户支持：</span> <a href="mailto:support@careerai.com" className="text-primary hover:underline">support@careerai.com</a></p>
+                <p><span className="text-gray-500">商务合作：</span> <a href="mailto:bd@zhiyin.com" className="text-primary hover:underline">bd@zhiyin.com</a></p>
+                <p><span className="text-gray-500">用户支持：</span> <a href="mailto:support@zhiyin.com" className="text-primary hover:underline">support@zhiyin.com</a></p>
               </div>
             </div>
 

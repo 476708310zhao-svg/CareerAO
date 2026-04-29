@@ -1,497 +1,337 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Calendar as CalendarIcon,
-  MapPin,
-  Building2,
-  Clock,
-  Bell,
-  Filter,
-  Search,
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar as CalendarIcon, 
+  MapPin, 
+  Building2, 
+  Clock, 
+  Bell, 
+  ChevronRight, 
   ExternalLink,
   Briefcase,
-  ChevronDown,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
+  Search,
+  Link as LinkIcon,
+  Bookmark
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-
-// ── 筛选常量 ──────────────────────────────────────────────────────────────────
-const REGION_LIST     = ['全部', '中国内地', '北美', '英国', '澳洲/新加坡'];
-const TYPE_LIST       = ['全部', '秋招', '春招', '暑期实习'];
-const INDUSTRY_LIST   = ['全部', '互联网', '金融', '国央企', '事业单位', '新能源', '通信/硬件', '咨询', '生物医药', '快消零售', '教育', '其他'];
-const WRITTEN_LIST    = ['全部', '含免笔试', '需要笔试'];
-
-// 招聘类型颜色
-const TYPE_COLORS: Record<string, string> = {
-  '秋招':   'bg-orange-50 text-orange-700 border-orange-200',
-  '春招':   'bg-indigo-50 text-indigo-700 border-indigo-200',
-  '暑期实习': 'bg-green-50 text-green-700 border-green-200',
-};
-
-// 行业颜色（前几个）
-const INDUSTRY_COLORS: Record<string, string> = {
-  '互联网':   'bg-blue-50 text-blue-700',
-  '金融':     'bg-amber-50 text-amber-700',
-  '国央企':   'bg-red-50 text-red-700',
-  '新能源':   'bg-emerald-50 text-emerald-700',
-  '通信/硬件': 'bg-purple-50 text-purple-700',
-  '咨询':     'bg-pink-50 text-pink-700',
-};
-
-interface CampusItem {
-  id: number;
-  company: string;
-  industry: string;
-  recruitType: string;
-  locations: string[];
-  positionName: string;
-  startDate: string;
-  deadlineDate: string;
-  writtenTest: string;
-  applyUrl: string;
-  announceUrl: string;
-  gradYear: number;
-  region: string;
-  notes: string;
-  isHot: boolean;
-  isVerified: boolean;
-}
-
-function FilterChip({
-  label, active, onClick,
-}: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap ${
-        active
-          ? 'bg-gray-900 text-white border-gray-900'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function CampusCard({ item }: { item: CampusItem }) {
-  const typeClass = TYPE_COLORS[item.recruitType] || 'bg-gray-50 text-gray-700 border-gray-200';
-  const industryClass = INDUSTRY_COLORS[item.industry] || 'bg-gray-50 text-gray-700';
-  const locations = Array.isArray(item.locations) ? item.locations : [];
-  const hasUrl = item.applyUrl || item.announceUrl;
-
-  return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all group">
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold border ${typeClass}`}>
-            {item.recruitType}
-          </span>
-          {item.industry && (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${industryClass}`}>
-              {item.industry}
-            </span>
-          )}
-          {item.writtenTest === '免笔试' && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-sky-50 text-sky-700">
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              免笔试
-            </span>
-          )}
-          {item.isHot && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-red-50 text-red-600">
-              🔥 热门
-            </span>
-          )}
-        </div>
-        {item.gradYear && (
-          <span className="text-xs text-gray-400 shrink-0">{item.gradYear}届</span>
-        )}
-      </div>
-
-      {/* Company */}
-      <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-        <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
-        {item.company}
-      </h3>
-
-      {/* Position */}
-      {item.positionName && (
-        <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.positionName}</p>
-      )}
-
-      {/* Meta row */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
-        {locations.length > 0 && (
-          <span className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5" />
-            {locations.slice(0, 3).join(' / ')}
-            {locations.length > 3 && ` +${locations.length - 3}`}
-          </span>
-        )}
-        {item.deadlineDate && (
-          <span className="flex items-center gap-1 text-orange-600 font-medium">
-            <Clock className="w-3.5 h-3.5" />
-            截止 {item.deadlineDate}
-          </span>
-        )}
-        {item.startDate && !item.deadlineDate && (
-          <span className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            {item.startDate}
-          </span>
-        )}
-      </div>
-
-      {/* Notes preview */}
-      {item.notes && (
-        <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2 mb-4 line-clamp-2">
-          {item.notes}
-        </p>
-      )}
-
-      {/* Actions */}
-      {hasUrl && (
-        <div className="flex items-center gap-2 mt-auto">
-          {item.announceUrl && (
-            <a
-              href={item.announceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 text-center bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              查看公告
-            </a>
-          )}
-          {item.applyUrl && (
-            <a
-              href={item.applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 text-center bg-white border border-gray-200 hover:border-gray-400 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              立即投递
-            </a>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import { useToast } from '../contexts/ToastContext';
 
 export default function CampusCalendar() {
-  const [region,      setRegion]      = useState('中国内地');
-  const [recruitType, setRecruitType] = useState('全部');
-  const [industry,    setIndustry]    = useState('全部');
-  const [writtenTest, setWrittenTest] = useState('全部');
-  const [keyword,     setKeyword]     = useState('');
-  const [inputKw,     setInputKw]     = useState('');
-  const [showFilter,  setShowFilter]  = useState(false);
+  const { showToast } = useToast();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterRegion, setFilterRegion] = useState('All');
+  const [filterType, setFilterType] = useState('All');
+  const [filterRole, setFilterRole] = useState('All');
+  const [filterGradYear, setFilterGradYear] = useState('All');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [events, setEvents] = useState<any[]>([]);
 
-  const [list,     setList]     = useState<CampusItem[]>([]);
-  const [total,    setTotal]    = useState(0);
-  const [page,     setPage]     = useState(0);
-  const [hasMore,  setHasMore]  = useState(true);
-  const [loading,  setLoading]  = useState(false);
-  const [initDone, setInitDone] = useState(false);
+  const regions = ['All', 'North America', 'Mainland China', 'APAC', 'EMEA'];
+  const types = ['All', 'Full-time (秋招)', 'Full-time (春招)', 'Internship (暑期)'];
+  const roles = ['All', 'SDE / Tech', 'Data / AI', 'PM / Operations', 'Finance / Quant'];
+  const gradYears = ['All', '2025届', '2026届', '2027届'];
 
-  const PAGE_SIZE = 20;
-  const loadingRef = useRef(false);
-
-  const buildParams = useCallback((p: number) => {
-    const params: Record<string, string> = {
-      page: String(p),
-      pageSize: String(PAGE_SIZE),
-    };
-    if (region      !== '全部') params.region      = region;
-    if (recruitType !== '全部') params.recruit_type = recruitType;
-    if (industry    !== '全部') params.industry     = industry;
-    if (writtenTest !== '全部') params.written_test = writtenTest === '含免笔试' ? '免笔试' : writtenTest;
-    if (keyword)                params.keyword      = keyword;
-    return new URLSearchParams(params).toString();
-  }, [region, recruitType, industry, writtenTest, keyword]);
-
-  const loadData = useCallback(async (reset: boolean) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-
-    const targetPage = reset ? 0 : page;
-    try {
-      const qs = buildParams(targetPage);
-      const res = await apiFetch(`/api/proxy/campus?${qs}`);
-
-      if (res?.useMock || res?.code !== 0) {
-        // backend not reachable or error
-        setList([]);
-        setTotal(0);
-        setHasMore(false);
-      } else {
-        // 服务器返回格式: { code: 0, data: [...], total: N }
-        const rawList = Array.isArray(res.data) ? res.data
-          : Array.isArray(res.data?.list) ? res.data.list : [];
-        const totalCount = typeof res.total === 'number' ? res.total
-          : typeof res.data?.total === 'number' ? res.data.total : 0;
-
-        const items: CampusItem[] = rawList.map((item: any) => ({
-          ...item,
-          locations: Array.isArray(item.locations) ? item.locations
-            : (() => { try { return JSON.parse(item.locations || '[]'); } catch { return []; } })(),
-        }));
-        setList(prev => reset ? items : [...prev, ...items]);
-        setTotal(totalCount);
-        setPage(targetPage + 1);
-        setHasMore(items.length === PAGE_SIZE);
-      }
-    } catch (e) {
-      console.error('campus fetch error:', e);
-    } finally {
-      setLoading(false);
-      setInitDone(true);
-      loadingRef.current = false;
-    }
-  }, [buildParams, page]);
-
-  // 筛选条件变化时重置
   useEffect(() => {
-    setPage(0);
-    setList([]);
-    setHasMore(true);
-    loadData(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [region, recruitType, industry, writtenTest, keyword]);
+    const fetchCampusData = async () => {
+      setIsLoading(true);
+      try {
+        const queryParams = new URLSearchParams();
+        if (filterRegion !== 'All') queryParams.append('region', filterRegion);
+        if (filterType !== 'All') queryParams.append('recruit_type', filterType);
+        if (filterRole !== 'All') queryParams.append('industry', filterRole);
+        if (filterGradYear !== 'All') {
+          // Send pure numbers, e.g. "2026" instead of "2026届"
+          queryParams.append('grad_year', filterGradYear.replace('届', ''));
+        }
+        // Backend pagination is 0-indexed
+        queryParams.append('page', (currentPage - 1).toString());
+        queryParams.append('pageSize', '10');
 
-  const handleSearch = () => setKeyword(inputKw.trim());
+        // Fetch data from real backend directly using apiFetch
+        const result = await apiFetch(`/api/campus?${queryParams.toString()}`);
+        
+        let fetchedEvents = [];
+        if (result.data?.list) {
+          fetchedEvents = result.data.list;
+        } else if (result.data) {
+          fetchedEvents = result.data;
+        } else if (Array.isArray(result)) {
+          fetchedEvents = result;
+        }
 
-  // 统计数字（近似展示）
-  const totalDisplay = total >= 1000 ? `${(total / 1000).toFixed(1)}k+` : String(total);
+        // Map backend fields to frontend expected fields
+        const mappedEvents = fetchedEvents.map((evt: any) => ({
+          ...evt,
+          title: evt.positionName || evt.title,
+          type: evt.recruitType || evt.type,
+          role: evt.industry || evt.role,
+          location: Array.isArray(evt.locations) ? evt.locations.join(' / ') : (evt.locations || evt.location),
+          day: evt.startDate ? new Date(evt.startDate).toLocaleDateString((typeof navigator !== 'undefined' && navigator.language) || 'zh-CN', { month: 'short', day: 'numeric' }) : evt.day,
+          date: evt.deadlineDate === '尽快投递' ? '尽快投递' : (evt.deadlineDate || evt.date || '即将开启'),
+          gradYear: evt.gradYear ? (String(evt.gradYear).includes('届') ? evt.gradYear : `${evt.gradYear}届`) : evt.gradYear,
+        }));
+
+        setEvents(mappedEvents);
+        if (result.data?.total) {
+          setTotalPages(Math.ceil(result.data.total / 10));
+        }
+      } catch (error) {
+        console.error("Failed to fetch campus data", error);
+        showToast('获取校招数据失败', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampusData();
+  }, [filterRegion, filterType, filterRole, filterGradYear, currentPage]);
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    showToast('投递链接已复制到剪贴板！', 'success');
+  };
+
+  const handleApply = (url: string) => {
+    window.open(url, '_blank');
+  };
+
+  const handleBookmark = () => {
+    showToast('已收藏该校招职位！', 'success');
+  };
 
   return (
-    <div className="pt-24 pb-16 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* ── Hero ── */}
-        <div className="bg-deep rounded-3xl p-8 md:p-12 mb-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl" />
-
+    <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
+        
+        {/* Header Section */}
+        <div className="bg-deep rounded-3xl p-8 md:p-12 mb-8 text-white shadow-xl relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-primary/20 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl"></div>
+          
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="max-w-2xl">
               <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/10">
                 <CalendarIcon className="w-4 h-4 text-orange-400" />
-                <span>实时同步飞书校招日历 · 8000+ 条招聘信息</span>
+                <span>实时追踪全球名企校招动态</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                校招日历 Campus Calendar
+                校招日历 (Campus Hiring)
               </h1>
               <p className="text-gray-300 text-lg mb-6">
-                国内外秋招/春招/暑期实习一站汇总，覆盖互联网、金融、国央企、新能源等热门行业，网申链接直达。
+                网申开启、绝密提前批、截止日期一网打尽。筛选适合你的岗位，一键跳转投递或订阅日历提醒。
               </p>
-              <div className="flex flex-wrap gap-3">
-                <div className="bg-white/10 rounded-xl px-4 py-2 text-center">
-                  <div className="text-2xl font-bold">{totalDisplay}</div>
-                  <div className="text-xs text-gray-300">招聘条目</div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-6 shrink-0 w-full md:w-64">
+              <div className="text-gray-300 text-sm mb-4">今日校招动态</div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-medium">新增网申开启</span>
+                  <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-sm font-bold">+12</span>
                 </div>
-                <div className="bg-white/10 rounded-xl px-4 py-2 text-center">
-                  <div className="text-2xl font-bold">10+</div>
-                  <div className="text-xs text-gray-300">覆盖行业</div>
-                </div>
-                <div className="bg-white/10 rounded-xl px-4 py-2 text-center">
-                  <div className="text-2xl font-bold">每日</div>
-                  <div className="text-xs text-gray-300">同步更新</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-medium">即将截止 (48h)</span>
+                  <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-sm font-bold">5 个</span>
                 </div>
               </div>
-            </div>
-
-            {/* Quick stats card */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-6 shrink-0 w-full md:w-60 space-y-3">
-              <div className="text-gray-300 text-sm font-medium mb-2">招聘类型分布</div>
-              {[
-                { label: '秋招', color: 'bg-orange-400', pct: 52 },
-                { label: '春招', color: 'bg-indigo-400', pct: 41 },
-                { label: '暑期实习', color: 'bg-green-400', pct: 7 },
-              ].map(({ label, color, pct }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
-                  <span className="text-white text-sm flex-1">{label}</span>
-                  <span className="text-gray-300 text-sm">{pct}%</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
 
-        {/* ── Filters + Search ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 space-y-4">
-          {/* Search row */}
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={inputKw}
-                onChange={e => setInputKw(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="搜索公司、岗位、行业..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus:border-gray-400"
-              />
-              {inputKw && (
-                <button onClick={() => { setInputKw(''); setKeyword(''); }} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-gray-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            {/* Main Content: Campus Hiring List */}
+            <div className="lg:col-span-2 flex flex-col">
+              
+              {/* Comprehensive Filters */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 relative overflow-visible z-20">
+                 {/* Search */}
+                 <div className="relative mb-5">
+                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                   <input 
+                     type="text" 
+                     placeholder="搜索公司名称或岗位 (e.g. Google, Data Scientist)..." 
+                     value={searchQuery} 
+                     onChange={e=>setSearchQuery(e.target.value)} 
+                     className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all font-medium text-gray-900" 
+                   />
+                 </div>
+                 
+                 {/* Dropdown Filters */}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">地区 Region</label>
+                      <div className="relative">
+                        <select value={filterRegion} onChange={(e)=>setFilterRegion(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary appearance-none pr-8">
+                          {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <ChevronRight className="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">类型 Type</label>
+                      <div className="relative">
+                        <select value={filterType} onChange={(e)=>setFilterType(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary appearance-none pr-8">
+                          {types.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <ChevronRight className="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">岗位 Role</label>
+                      <div className="relative">
+                        <select value={filterRole} onChange={(e)=>setFilterRole(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary appearance-none pr-8">
+                          {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <ChevronRight className="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">届次 Grad Year</label>
+                      <div className="relative">
+                        <select value={filterGradYear} onChange={(e)=>setFilterGradYear(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary appearance-none pr-8">
+                          {gradYears.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <ChevronRight className="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                      </div>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Event List */}
+              <div className="space-y-4 flex-1 z-10">
+                {isLoading ? (
+                   <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                     <div className="w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+                     <p className="font-medium">加载校招职位中...</p>
+                   </div>
+                ) : events.map((event) => (
+                  <div key={event.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-5">
+                    {/* Left Date Block */}
+                    <div className="w-full md:w-32 bg-blue-50/50 rounded-xl flex flex-col items-center justify-center p-4:md:p-0 py-4 shrink-0 border border-blue-100/50">
+                       <span className="text-xl font-bold text-blue-700 leading-none">{event.day}</span>
+                       <span className={`text-[11px] font-bold mt-2 text-center w-full px-2 ${event.status === 'closing-soon' ? 'text-red-600 bg-red-100 py-1 rounded shadow-sm' : 'text-blue-500'}`}>
+                         {event.date}
+                       </span>
+                    </div>
+                    
+                    {/* Center Info */}
+                    <div className="flex-1 flex flex-col justify-center">
+                       <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center flex-wrap gap-y-1">
+                          <Building2 className="w-4 h-4 mr-1.5 text-gray-400" />
+                          <span className="mr-2">{event.company}</span>
+                          <span className="hidden md:inline mx-2 text-gray-300">|</span>
+                          <span className="text-[17px] text-gray-800 break-words">{event.title}</span>
+                       </h3>
+                       <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
+                          <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.type}</span>
+                          <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.role}</span>
+                          <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded text-xs font-bold">{event.gradYear}</span>
+                          <span className="flex items-center text-gray-500 text-xs font-medium ml-1">
+                            <MapPin className="w-3.5 h-3.5 mr-1" /> {event.location}
+                          </span>
+                       </div>
+                    </div>
+             
+                    {/* Right Actions */}
+                    <div className="flex md:flex-col items-center justify-center gap-3 shrink-0 md:w-36 md:border-l border-gray-100 md:pl-5">
+                        <button onClick={() => handleApply(event.applyUrl)} className="w-full bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg shadow-black/10 hover:-translate-y-0.5">
+                          去网申 <ExternalLink className="w-4 h-4 ml-1.5" />
+                        </button>
+                        <div className="flex w-full gap-2">
+                          <button onClick={() => handleCopyLink(event.applyUrl)} className="flex-1 justify-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="复制投递链接">
+                            <LinkIcon className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleBookmark()} className="flex-1 justify-center bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-200 hover:text-amber-600 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="收藏职位">
+                            <Bookmark className="w-4 h-4" />
+                          </button>
+                        </div>
+                    </div>
+                 </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm z-10 w-full shrink-0">
+                 <span className="text-sm text-gray-500 font-medium">第 {currentPage} 页，共 {totalPages} 页</span>
+                 <div className="flex space-x-2">
+                    <button 
+                       disabled={currentPage === 1}
+                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                       className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                    >
+                       上一页
+                    </button>
+                    <button 
+                       disabled={currentPage === totalPages}
+                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                       className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                    >
+                       下一页
+                    </button>
+                 </div>
+              </div>
+            </div>
+
+            {/* Right Sidebar */}
+            <div className="space-y-6">
+              
+              {/* My Tracked Events */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
+                  <span>我的提醒与收藏</span>
+                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">3 个提醒</span>
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="border-l-4 border-red-500 pl-3 py-1">
+                    <div className="text-xs text-red-500 font-bold mb-0.5">明天截止</div>
+                    <div className="font-medium text-sm text-gray-900">Meta New Grad 网申</div>
+                  </div>
+                  <div className="border-l-4 border-primary pl-3 py-1">
+                    <div className="text-xs text-primary font-bold mb-0.5 flex items-center"><Clock className="w-3 h-3 mr-1" />本月末开启</div>
+                    <div className="font-medium text-sm text-gray-900">J.P. Morgan Quantitative Finance</div>
+                  </div>
+                  <div className="border-l-4 border-emerald-500 pl-3 py-1">
+                    <div className="text-xs text-emerald-500 font-bold mb-0.5 flex items-center"><Bookmark className="w-3 h-3 mr-1" /> 已收藏</div>
+                    <div className="font-medium text-sm text-gray-900">Apple Hardware Engineering Intern</div>
+                  </div>
+                </div>
+                
+                <button className="w-full mt-5 bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center group">
+                  <Bell className="w-4 h-4 mr-2 text-gray-400 group-hover:text-amber-500 transition-colors" />
+                  配置微信截止提醒
                 </button>
-              )}
+              </div>
+
+              {/* Hiring Trends */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-100">
+                <div className="flex items-center mb-4">
+                  <Briefcase className="w-5 h-5 text-indigo-500 mr-2" />
+                  <h3 className="font-bold text-indigo-900">求职节奏指导</h3>
+                </div>
+                <p className="text-sm text-indigo-800/80 mb-4 leading-relaxed">
+                  科技大厂全职校招 (New Grad) 通常仅向毕业半年内的学生开放。暑期实习 (Summer Intern) 普遍会在前一年 8 月就开始滚动招募。
+                </p>
+                <div className="bg-white/60 p-4 rounded-xl space-y-3">
+                   <div className="flex items-center justify-between text-sm">
+                      <span className="font-bold text-gray-700">2026届 全职</span>
+                      <span className="text-indigo-600 font-medium">立刻投递</span>
+                   </div>
+                   <div className="w-full bg-gray-200 h-px"></div>
+                   <div className="flex items-center justify-between text-sm">
+                      <span className="font-bold text-gray-700">2027届 暑期实习</span>
+                      <span className="text-indigo-600 font-medium">黄金窗口期</span>
+                   </div>
+                </div>
+              </div>
+
             </div>
-            <button
-              onClick={handleSearch}
-              className="px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-colors"
-            >
-              搜索
-            </button>
-            <button
-              onClick={() => setShowFilter(v => !v)}
-              className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
-                showFilter ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              筛选
-            </button>
           </div>
-
-          {/* Filter chips — 地区 always shown */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-gray-400 self-center mr-1">地区</span>
-            {REGION_LIST.map(r => (
-              <FilterChip key={r} label={r} active={region === r} onClick={() => setRegion(r)} />
-            ))}
-          </div>
-
-          {/* Expandable filters */}
-          {showFilter && (
-            <div className="space-y-3 pt-2 border-t border-gray-100">
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-400 self-center mr-1 w-10">类型</span>
-                {TYPE_LIST.map(t => (
-                  <FilterChip key={t} label={t} active={recruitType === t} onClick={() => setRecruitType(t)} />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-400 self-center mr-1 w-10">行业</span>
-                {INDUSTRY_LIST.map(i => (
-                  <FilterChip key={i} label={i} active={industry === i} onClick={() => setIndustry(i)} />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-400 self-center mr-1 w-10">笔试</span>
-                {WRITTEN_LIST.map(w => (
-                  <FilterChip key={w} label={w} active={writtenTest === w} onClick={() => setWrittenTest(w)} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Active filters summary */}
-          {(recruitType !== '全部' || industry !== '全部' || writtenTest !== '全部' || keyword) && (
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
-              <span className="text-xs text-gray-500">已筛选：</span>
-              {recruitType !== '全部' && <span className="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">{recruitType}</span>}
-              {industry    !== '全部' && <span className="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">{industry}</span>}
-              {writtenTest !== '全部' && <span className="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">{writtenTest}</span>}
-              {keyword     &&           <span className="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">"{keyword}"</span>}
-              <button
-                onClick={() => { setRecruitType('全部'); setIndustry('全部'); setWrittenTest('全部'); setKeyword(''); setInputKw(''); }}
-                className="text-xs text-red-500 hover:text-red-700 ml-1"
-              >
-                清除全部
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Result count ── */}
-        <div className="flex items-center justify-between mb-4 px-1">
-          <span className="text-sm text-gray-500">
-            {initDone ? `共找到 ${total.toLocaleString()} 条校招信息` : '加载中...'}
-          </span>
-          <button
-            onClick={() => { setPage(0); setList([]); setHasMore(true); loadData(true); }}
-            className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            刷新
-          </button>
-        </div>
-
-        {/* ── Card Grid ── */}
-        {!initDone && (
-          <div className="flex items-center justify-center py-24 text-gray-400">
-            <Loader2 className="w-8 h-8 animate-spin mr-3" />
-            <span>正在加载校招数据...</span>
-          </div>
-        )}
-
-        {initDone && list.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400">
-            <AlertCircle className="w-12 h-12 mb-4 opacity-40" />
-            <p className="text-lg font-medium">暂无匹配的校招信息</p>
-            <p className="text-sm mt-2">尝试调整筛选条件或搜索关键词</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {list.map(item => (
-            <CampusCard key={item.id} item={item} />
-          ))}
-        </div>
-
-        {/* ── Load More ── */}
-        {initDone && hasMore && list.length > 0 && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => loadData(false)}
-              disabled={loading}
-              className="px-8 py-3 bg-white border border-gray-200 hover:border-gray-400 text-gray-700 rounded-2xl font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow"
-            >
-              {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> 加载中...</>
-              ) : (
-                <><ChevronDown className="w-4 h-4" /> 加载更多</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {initDone && !hasMore && list.length > 0 && (
-          <p className="text-center text-sm text-gray-400 mt-8">已显示全部 {total.toLocaleString()} 条结果</p>
-        )}
-
-        {/* ── Bottom Info ── */}
-        <div className="mt-12 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
-          <div className="flex items-center mb-3">
-            <Briefcase className="w-5 h-5 text-orange-500 mr-2" />
-            <h3 className="font-bold text-orange-900">校招节奏参考</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            {[
-              { title: '暑期实习', time: '3月 - 6月', tip: '互联网、金融大厂 5-6 月截止，尽早投递' },
-              { title: '秋招提前批', time: '6月 - 8月', tip: '大厂提前批 7-8 月开放，性价比极高' },
-              { title: '秋招正式批', time: '9月 - 11月', tip: '国央企、事业单位集中在 10-11 月' },
-            ].map(({ title, time, tip }) => (
-              <div key={title} className="bg-white/70 rounded-xl p-4">
-                <div className="font-bold text-orange-900 mb-1">{title}</div>
-                <div className="text-orange-700 font-medium text-xs mb-1">{time}</div>
-                <div className="text-orange-800/70 text-xs">{tip}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
     </div>
   );

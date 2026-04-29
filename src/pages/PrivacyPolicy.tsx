@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
 
         <div className="prose prose-blue max-w-none text-gray-600 prose-headings:text-gray-900 prose-a:text-primary">
           <p>
-            欢迎您使用职引前程 (CareerAI)（以下简称“本平台”）。我们深知个人信息对您的重要性，并会尽全力保护您的个人信息安全可靠。本《隐私政策》旨在向您说明我们在您使用本平台服务时如何收集、使用、保存、共享和转让这些信息，以及我们为您提供的访问、更新、删除和保护这些信息的方式。
+            欢迎您使用职引（以下简称“本平台”）。我们深知个人信息对您的重要性，并会尽全力保护您的个人信息安全可靠。本《隐私政策》旨在向您说明我们在您使用本平台服务时如何收集、使用、保存、共享和转让这些信息，以及我们为您提供的访问、更新、删除和保护这些信息的方式。
           </p>
 
           <h2 className="text-xl font-bold mt-10 mb-4 text-gray-900">1. 我们如何收集您的个人信息</h2>
@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
 
           <h2 className="text-xl font-bold mt-10 mb-4 text-gray-900">5. 联系我们</h2>
           <p>
-            当您对本隐私政策有任何疑问、意见或建议，请通过发送邮件至 <a href="mailto:privacy@careerai.com">privacy@careerai.com</a> 与我们联系。
+            当您对本隐私政策有任何疑问、意见或建议，请通过发送邮件至 <a href="mailto:privacy@zhiyin.com">privacy@zhiyin.com</a> 与我们联系。
           </p>
         </div>
       </div>

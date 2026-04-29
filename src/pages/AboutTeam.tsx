@@ -34,7 +34,7 @@ export default function AboutTeam() {
             科技赋能，让每一次对视都充满期待
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            职引前程 (CareerAI) 创立于 2024 年，是一支由资深技术专家、前大厂HR高级总监以及AI算法工程师组成的充满激情的团队。我们致力于用先进的人工智能技术，打破信息差，让天下没有难找的工作。
+            职引 创立于 2024 年，是一支由资深技术专家、前大厂HR高级总监以及AI算法工程师组成的充满激情的团队。我们致力于用先进的人工智能技术，打破信息差，让天下没有难找的工作。
           </p>
         </div>
       </section>

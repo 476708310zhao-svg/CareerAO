@@ -340,19 +340,19 @@ export default function VisaPolicies() {
               <h3 className="text-sm font-bold text-emerald-900 mb-4 uppercase tracking-wider">官方资源链接</h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
+                  <a href="https://www.uscis.gov/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
                     USCIS (美国移民局) 官网
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
+                  <a href="https://www.gov.uk/government/organisations/uk-visas-and-immigration" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
                     Gov.uk UKVI 官网
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
+                  <a href="https://www.ailalawyer.com/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
                     寻找持牌移民律师
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>

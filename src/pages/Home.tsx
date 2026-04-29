@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import Logo from '../components/Logo';
 import { 
   Search, 
   FileEdit, 
@@ -38,7 +39,7 @@ const HeroMockup = () => (
       <div className="w-3 h-3 rounded-full bg-green-400"></div>
       <div className="ml-4 flex-1 flex justify-center">
         <div className="h-5 w-1/2 max-w-sm bg-white border border-gray-200 rounded text-[10px] text-gray-400 flex items-center justify-center">
-          <Search className="w-3 h-3 mr-1" /> app.careerai.com
+          <Search className="w-3 h-3 mr-1" /> app.zhiyin.com
         </div>
       </div>
     </div>
@@ -47,10 +48,8 @@ const HeroMockup = () => (
       {/* Sidebar */}
       <div className="w-48 border-r border-gray-100 bg-gray-50 p-3 hidden md:flex flex-col">
         <div className="flex items-center space-x-2 mb-4 px-2 shrink-0">
-          <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-            <GraduationCap className="text-white w-3 h-3" />
-          </div>
-          <span className="font-bold text-sm text-deep">CareerAI</span>
+          <Logo className="w-6 h-6" />
+          <span className="font-bold text-sm text-deep">职引</span>
         </div>
         <div className="space-y-0.5 flex-1 overflow-y-auto pr-1">
           <div className="h-8 bg-primary/10 rounded-md text-primary flex items-center px-2.5 text-xs font-medium">
@@ -455,13 +454,29 @@ const RecommendedJobs = () => {
   useEffect(() => {
     const fetchRecommended = async () => {
       try {
-        // Mocking recommended jobs based on user profile
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setJobs([
-          { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
-          { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
-          { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
-        ]);
+        const { fetchJobsList } = await import('../lib/firestore_api');
+        const dbJobs = await fetchJobsList();
+        
+        let allJobs: any[] = [];
+        if (dbJobs && dbJobs.length > 0) {
+          const formattedDbJobs = dbJobs.map((j: any) => ({
+            id: j.id,
+            title: j.title || '',
+            company: j.companyName || '',
+            location: j.location || '',
+            salary: j.salary || '',
+            type: j.type || '全职',
+            matchScore: Math.floor(Math.random() * 20) + 80
+          }));
+          allJobs = formattedDbJobs.slice(0, 3);
+        } else {
+          allJobs = [
+            { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
+            { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
+            { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
+          ];
+        }
+        setJobs(allJobs);
       } catch (error) {
         console.error('Failed to fetch recommended jobs:', error);
       } finally {

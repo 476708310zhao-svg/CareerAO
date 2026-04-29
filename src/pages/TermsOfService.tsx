@@ -9,7 +9,7 @@ export default function TermsOfService() {
 
         <div className="prose prose-blue max-w-none text-gray-600 prose-headings:text-gray-900">
           <p>
-            欢迎使用 职引前程 (CareerAI)。本《服务条款》（以下简称“本条款”）是您与职引前程平台之间关于使用本平台各项服务所订立的协议。请您在注册、登录或使用本平台服务前，仔细阅读本条款的全部内容。
+            欢迎使用 职引。本《服务条款》（以下简称“本条款”）是您与职引平台之间关于使用本平台各项服务所订立的协议。请您在注册、登录或使用本平台服务前，仔细阅读本条款的全部内容。
           </p>
 
           <h2 className="text-xl font-bold mt-10 mb-4 text-gray-900">一、 账号注册与使用说明</h2>

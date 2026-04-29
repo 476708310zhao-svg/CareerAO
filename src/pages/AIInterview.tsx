@@ -460,12 +460,11 @@ export default function AIInterview() {
                   <Code2 className="w-4 h-4 mr-2" />
                   <span>main.py</span>
                 </div>
-                <div className="flex-1 p-6 font-mono text-sm text-gray-300 overflow-y-auto">
-                  <div className="text-gray-500 mb-4"># Write your solution here</div>
-                  <div className="text-blue-400 inline">def</div> <div className="text-yellow-200 inline">solve</div>(nums):<br/>
-                  &nbsp;&nbsp;&nbsp;&nbsp;<div className="text-gray-500 inline"># TODO: implement</div><br/>
-                  &nbsp;&nbsp;&nbsp;&nbsp;<div className="text-purple-400 inline">pass</div>
-                </div>
+                <textarea 
+                  className="flex-1 bg-gray-900 border-none rounded-b-xl p-4 text-gray-300 text-sm font-mono focus:ring-0 focus:outline-none resize-none"
+                  placeholder="# Write your Python solution here&#10;def solve(nums):&#10;    # Write your code here&#10;    pass"
+                  defaultValue="def solve(nums):&#10;    # TODO: implement&#10;    pass"
+                />
               </div>
             ) : (
               <div className="flex-1 flex flex-col p-6 overflow-y-auto">

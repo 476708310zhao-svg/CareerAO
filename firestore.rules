@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAdmin() { return false; /* To be implemented */ }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt']) &&
+        data.email is string && data.email.size() <= 200 &&
+        data.role in ['user', 'admin'] &&
+        data.createdAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidUser(incoming()) && incoming().email == request.auth.token.email;
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['nickname', 'updatedAt'])) &&
+        incoming().updatedAt == request.time &&
+        incoming().nickname is string && incoming().nickname.size() <= 100
+      );
+    }
+    
+    function isValidJob(data) {
+      return data.keys().hasAll(['title', 'companyId', 'companyName', 'description', 'createdAt']) &&
+        data.title is string && data.title.size() <= 200 &&
+        data.companyId is string && data.companyId.size() <= 128 &&
+        data.companyName is string && data.companyName.size() <= 200 &&
+        data.description is string && data.description.size() <= 10000 &&
+        data.createdAt == request.time;
+    }
+
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isAdmin();
+    }
+
+    function isValidCompany(data) {
+      return data.keys().hasAll(['name', 'createdAt']) &&
+        data.name is string && data.name.size() <= 200 &&
+        data.createdAt == request.time;
+    }
+
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isAdmin();
+    }
+
+    function isValidInterviewExperience(data) {
+      return data.keys().hasAll(['userId', 'company', 'role', 'round', 'content', 'createdAt']) &&
+        data.userId is string &&
+        data.company is string && data.company.size() <= 200 &&
+        data.role is string && data.role.size() <= 200 &&
+        data.round is string && data.round.size() <= 100 &&
+        data.content is string && data.content.size() <= 10000 &&
+        data.createdAt == request.time;
+    }
+
+    match /interview_experiences/{experienceId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+  }
+}

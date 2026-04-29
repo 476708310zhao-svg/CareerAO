@@ -31,13 +31,20 @@ import AboutTeam from './pages/AboutTeam';
 import ContactUs from './pages/ContactUs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import NotFound from './pages/NotFound';
 import Jobs from './pages/Jobs';
 import CompanyDetail from './pages/CompanyDetail';
 import Search from './pages/Search';
 import JobMap from './pages/JobMap';
 import AuthModal from './components/AuthModal';
+import Logo from './components/Logo';
+import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+
+import { db } from './lib/firebase';
+import { doc, getDocFromServer } from 'firebase/firestore';
+import { seedMockData } from './lib/firestore_api';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,18 +58,28 @@ const Navbar = () => {
 
   const navCategories = [
     {
-      title: '产品功能',
+      title: '找工作',
       links: [
         { name: '职位搜索', href: '/jobs' },
         { name: '求职地图', href: '/job-map' },
-        { name: '网申助手', href: '/application-assistant' },
+        { name: '薪资查询', href: '/salary-insights' },
+        { name: '校招日历', href: '/campus-calendar' },
+      ]
+    },
+    {
+      title: '面试备考',
+      links: [
         { name: '笔经面经', href: '/interview-prep' },
         { name: 'AI 面试', href: '/ai-interview' },
-        { name: '薪资查询', href: '/salary-insights' },
+        { name: '机构测评', href: '/agency-evaluation' },
+      ]
+    },
+    {
+      title: '求职工具',
+      links: [
+        { name: '网申助手', href: '/application-assistant' },
         { name: '我的简历', href: '/my-resume' },
         { name: '求职规划', href: '/career-planning' },
-        { name: '机构测评', href: '/agency-evaluation' },
-        { name: '校招日历', href: '/campus-calendar' },
       ]
     },
     {
@@ -122,10 +139,8 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2 shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <GraduationCap className="text-white w-5 h-5" />
-            </div>
-            <span className="font-bold text-xl text-deep tracking-tight">CareerAI</span>
+            <Logo className="w-8 h-8" />
+            <span className="font-bold text-xl text-deep tracking-tight text-primary">职引</span>
           </Link>
           
           <div className="hidden lg:flex items-center space-x-8" ref={navRef}>
@@ -322,12 +337,6 @@ const Navbar = () => {
         </div>
       )}
       </nav>
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={closeAuthModal} 
-        defaultMode={authMode} 
-      />
     </>
   );
 };
@@ -336,29 +345,39 @@ const Footer = () => {
   return (
     <footer className="bg-white border-t border-gray-200 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-8 mb-12">
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="text-white w-5 h-5" />
-              </div>
-              <span className="font-bold text-xl text-deep tracking-tight">CareerAI</span>
+              <Logo className="w-8 h-8" />
+              <span className="font-bold text-xl text-deep tracking-tight text-primary">职引</span>
             </div>
             <p className="text-gray-500 text-sm mb-6 max-w-md leading-relaxed">
               为留学生提供一站式全流程求职辅助，依托智能算法打造网申助手、笔经面经、AI 模拟面试、薪资查询、简历优化、求职规划、机构测评、校招日历八大核心功能，从网申填写、笔试面试备考、模拟面试演练，到简历优化、职业路线规划、薪资参考、机构甄别与校招信息追踪，全方位覆盖求职各环节，精准匹配岗位需求，高效助力用户轻松应对求职全流程。
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-deep mb-4">产品功能</h4>
+            <h4 className="font-bold text-deep mb-4">找工作</h4>
             <ul className="space-y-3 text-sm text-gray-500">
-              <li><Link to="/application-assistant" className="hover:text-primary transition-colors">网申助手</Link></li>
+              <li><Link to="/jobs" className="hover:text-primary transition-colors">职位搜索</Link></li>
+              <li><Link to="/job-map" className="hover:text-primary transition-colors">求职地图</Link></li>
+              <li><Link to="/salary-insights" className="hover:text-primary transition-colors">薪资查询</Link></li>
+              <li><Link to="/campus-calendar" className="hover:text-primary transition-colors">校招日历</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold text-deep mb-4">面试备考</h4>
+            <ul className="space-y-3 text-sm text-gray-500">
               <li><Link to="/interview-prep" className="hover:text-primary transition-colors">笔经面经</Link></li>
               <li><Link to="/ai-interview" className="hover:text-primary transition-colors">AI 面试</Link></li>
-              <li><Link to="/salary-insights" className="hover:text-primary transition-colors">薪资查询</Link></li>
+              <li><Link to="/agency-evaluation" className="hover:text-primary transition-colors">机构测评</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold text-deep mb-4">求职工具</h4>
+            <ul className="space-y-3 text-sm text-gray-500">
+              <li><Link to="/application-assistant" className="hover:text-primary transition-colors">网申助手</Link></li>
               <li><Link to="/my-resume" className="hover:text-primary transition-colors">我的简历</Link></li>
               <li><Link to="/career-planning" className="hover:text-primary transition-colors">求职规划</Link></li>
-              <li><Link to="/agency-evaluation" className="hover:text-primary transition-colors">机构测评</Link></li>
-              <li><Link to="/campus-calendar" className="hover:text-primary transition-colors">校招日历</Link></li>
             </ul>
           </div>
           <div>
@@ -382,7 +401,7 @@ const Footer = () => {
         </div>
         <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm mb-4 md:mb-0">
-            © 2026 CareerAI. All rights reserved.
+            © 2026 职引. All rights reserved.
           </p>
           <div className="flex space-x-4">
             {/* Social icons placeholders */}
@@ -396,43 +415,77 @@ const Footer = () => {
   );
 };
 
+function AppLayout() {
+  const { isAuthModalOpen, closeAuthModal, authMode } = useAuth();
+
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+        await seedMockData();
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    }
+    testConnection();
+  }, []);
+
+  return (
+    <>
+      <ScrollToTop />
+      <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary overflow-x-hidden">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="/job-map" element={<JobMap />} />
+          <Route path="/companies/:id" element={<CompanyDetail />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/application-assistant" element={<ApplicationAssistant />} />
+          <Route path="/interview-prep" element={<InterviewPrep />} />
+          <Route path="/ai-interview" element={<AIInterview />} />
+          <Route path="/salary-insights" element={<SalaryInsights />} />
+          <Route path="/my-resume" element={<MyResume />} />
+          <Route path="/my-resume/:id" element={<ResumeEditor />} />
+          <Route path="/career-planning" element={<CareerPlanning />} />
+          <Route path="/agency-evaluation" element={<AgencyEvaluation />} />
+          <Route path="/campus-calendar" element={<CampusCalendar />} />
+          <Route path="/membership" element={<Membership />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/interview-experiences" element={<InterviewExperiences />} />
+          <Route path="/visa-policies" element={<VisaPolicies />} />
+          <Route path="/help-center" element={<HelpCenter />} />
+          <Route path="/team" element={<AboutTeam />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Footer />
+      </div>
+      
+      {/* Global Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={closeAuthModal} 
+        defaultMode={authMode} 
+      />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary overflow-x-hidden">
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
-              <Route path="/job-map" element={<JobMap />} />
-              <Route path="/companies/:id" element={<CompanyDetail />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/application-assistant" element={<ApplicationAssistant />} />
-              <Route path="/interview-prep" element={<InterviewPrep />} />
-              <Route path="/ai-interview" element={<AIInterview />} />
-              <Route path="/salary-insights" element={<SalaryInsights />} />
-              <Route path="/my-resume" element={<MyResume />} />
-              <Route path="/my-resume/:id" element={<ResumeEditor />} />
-              <Route path="/career-planning" element={<CareerPlanning />} />
-              <Route path="/agency-evaluation" element={<AgencyEvaluation />} />
-              <Route path="/campus-calendar" element={<CampusCalendar />} />
-              <Route path="/membership" element={<Membership />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/interview-experiences" element={<InterviewExperiences />} />
-              <Route path="/visa-policies" element={<VisaPolicies />} />
-              <Route path="/help-center" element={<HelpCenter />} />
-              <Route path="/team" element={<AboutTeam />} />
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-            </Routes>
-            <Footer />
-          </div>
+          <AppLayout />
         </Router>
       </ToastProvider>
     </AuthProvider>
   );
 }
+

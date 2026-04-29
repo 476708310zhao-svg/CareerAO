@@ -30,7 +30,7 @@ const FAQS = [
     id: 2,
     category: '职位申请',
     q: '平台上的岗位都是真实有效的吗？',
-    a: '是的，职引前程平台上的所有岗位均需经过企业资质认证和HR实名认证，确保数据的真实有效。我们每日会定时清理已失效或已下线的岗位。',
+    a: '是的，职引平台上的所有岗位均需经过企业资质认证和HR实名认证，确保数据的真实有效。我们每日会定时清理已失效或已下线的岗位。',
     isVideoAvailable: false
   },
   {
@@ -63,6 +63,8 @@ const FAQS = [
   }
 ];
 
+import { Link } from 'react-router-dom';
+
 export default function HelpCenter() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('热门问题');
@@ -72,7 +74,7 @@ export default function HelpCenter() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
-    { role: 'agent', text: '您好！我是职引前程的智能客服助理。请问有什么我可以帮您的？您可以简述您遇到的问题。' }
+    { role: 'agent', text: '您好！我是职引的智能客服助理。请问有什么我可以帮您的？您可以简述您遇到的问题。' }
   ]);
   
   const { showToast } = useToast();
@@ -228,20 +230,20 @@ export default function HelpCenter() {
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group">
               <h3 className="text-lg font-bold text-gray-900 mb-4">快捷入口</h3>
               <div className="space-y-3">
-                <a href="#" className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all select-none">
+                <Link to="/terms" className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all select-none">
                    <div className="flex items-center">
                      <FileText className="w-5 h-5 mr-3 text-blue-500" />
                      <span className="text-sm font-medium text-gray-700">平台用户协议</span>
                    </div>
                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                </a>
-                <a href="#" className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all select-none">
+                </Link>
+                <Link to="/privacy" className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all select-none">
                    <div className="flex items-center">
                      <FileText className="w-5 h-5 mr-3 text-emerald-500" />
                      <span className="text-sm font-medium text-gray-700">隐私权政策</span>
                    </div>
                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -27,7 +27,7 @@ const MOCK_BLOG_POSTS = [
     title: '手把手教你写出大厂HR秒回的简历（附2024最新模板）',
     excerpt: '简历是你向企业展示自己的第一步，好的简历不是经历的堆砌，而是能力的提炼。这篇文章将从排版、STAR法则、关键词优化三个维度，带你打造一份不可拒绝的满分简历。',
     category: '简历优化',
-    author: '职引前程导师',
+    author: '职引导师',
     date: '2024-03-15',
     readTime: '8 min read',
     tags: ['简历修改', 'STAR法则', '秋招'],

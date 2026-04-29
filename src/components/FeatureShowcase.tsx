@@ -154,7 +154,7 @@ export default function FeatureShowcase() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-20">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">8 大核心模块，覆盖求职全生命周期</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">点击列表，探索 CareerAI 如何在每一个环节为你赋能。</p>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">点击列表，探索 职引 如何在每一个环节为你赋能。</p>
         </div>
 
         {/* Part 1: Features 1-4 */}
