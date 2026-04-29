@@ -1,0 +1,87 @@
+# ⚠️  CRITICAL: DO NOT DELETE OR MODIFY THIS FILE
+# This workflow automatically restores deploy.yml if it gets deleted.
+
+name: Guard Deploy Workflow
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check and restore deploy.yml
+        run: |
+          if [ ! -f .github/workflows/deploy.yml ]; then
+            echo "⚠️  deploy.yml is missing! Restoring..."
+            mkdir -p .github/workflows
+            cat > .github/workflows/deploy.yml << 'DEPLOY_EOF'
+          # ⚠️  CRITICAL: DO NOT DELETE OR MODIFY THIS FILE
+          # This workflow auto-deploys to the production VPS (49.233.163.175) on every push to main.
+          # Deleting this file will break the CI/CD pipeline and require manual re-setup.
+          # If you need to change deployment config, discuss with the repo owner first.
+
+          name: Build & Deploy to Server
+
+          on:
+            push:
+              branches: [main]
+
+          jobs:
+            deploy:
+              runs-on: ubuntu-latest
+
+              steps:
+                - name: Checkout code
+                  uses: actions/checkout@v4
+
+                - name: Setup Node.js
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: '20'
+                    cache: 'npm'
+
+                - name: Install dependencies
+                  run: npm ci --legacy-peer-deps
+
+                - name: Build
+                  run: npm run build
+                  env:
+                    VITE_API_BASE_URL: https://www.zhiyincareer.com
+                    GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+                - name: Setup SSH key
+                  run: |
+                    mkdir -p ~/.ssh
+                    echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+                    chmod 600 ~/.ssh/deploy_key
+                    ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+                - name: Deploy via tar pipe
+                  run: |
+                    tar czf - -C dist . | ssh \
+                      -i ~/.ssh/deploy_key \
+                      -o StrictHostKeyChecking=no \
+                      -o ServerAliveInterval=30 \
+                      ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+                      "rm -rf /www/wwwroot/zhiyincareer-web/* && tar xzf - -C /www/wwwroot/zhiyincareer-web/"
+          DEPLOY_EOF
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .github/workflows/deploy.yml
+            git commit -m "ci: auto-restore deleted deploy.yml [skip ci]"
+            git push
+            echo "✅ deploy.yml restored and pushed."
+          else
+            echo "✅ deploy.yml exists, nothing to do."
+          fi
