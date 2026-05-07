@@ -121,7 +121,7 @@ export default function JobMap() {
                       onClick={() => setSelectedCity(point)}
                       onMouseEnter={() => setHoveredCity(point)}
                       onMouseLeave={() => setHoveredCity(null)}
-                      style={{ cursor: "pointer" }}
+                      className="cursor-pointer"
                     >
                       <circle 
                         r={radius} 

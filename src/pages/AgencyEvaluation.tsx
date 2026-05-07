@@ -19,6 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import SEO from '../components/SEO';
 
 export default function AgencyEvaluation() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,6 +135,11 @@ export default function AgencyEvaluation() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col relative">
+      <SEO 
+        title="中介避雷 (Agency Evaluation)" 
+        description="最全留学中介真实评价库。查看留学生对各大留学中介的红黑榜，防坑避雷，支持提交自己的真实被坑或好评经历。" 
+        keywords="留学中介, 留学机构评价, 中介避雷, 怎么选留学中心, 靠谱留学中介" 
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         
         {/* Header Section */}
@@ -218,7 +224,7 @@ export default function AgencyEvaluation() {
                             <div className="flex items-center space-x-2">
                               <h2 className="text-xl font-bold text-deep">{agency.name}</h2>
                               {agency.verified && (
-                                <ShieldCheck className="w-5 h-5 text-emerald-500" title="已认证真实评价" />
+                                <span title="已认证真实评价" className="flex items-center justify-center"><ShieldCheck className="w-5 h-5 text-emerald-500" /></span>
                               )}
                             </div>
                             <div className="flex items-center space-x-3 mt-1">

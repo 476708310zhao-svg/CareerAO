@@ -10,10 +10,14 @@ import {
   Briefcase,
   Search,
   Link as LinkIcon,
-  Bookmark
+  Bookmark,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
+import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 export default function CampusCalendar() {
   const { showToast } = useToast();
@@ -105,6 +109,11 @@ export default function CampusCalendar() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col">
+      <SEO 
+        title="校招日历 (Campus Hiring)" 
+        description="全球名企校招动态实时追踪。网申开启、绝密提前批、截止日期一网打尽。一键跳转投递，不错过任何抢手职位。" 
+        keywords="校招日历, 实习日历, 提前批, 校招网申, 面试时间" 
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
         
         {/* Header Section */}
@@ -124,6 +133,14 @@ export default function CampusCalendar() {
               <p className="text-gray-300 text-lg mb-6">
                 网申开启、绝密提前批、截止日期一网打尽。筛选适合你的岗位，一键跳转投递或订阅日历提醒。
               </p>
+              
+              <Link 
+                to="/campus-calendar/table" 
+                className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm px-6 py-3 rounded-xl text-base font-bold text-white transition-all border border-white/20 group"
+              >
+                <List className="w-5 h-5 text-orange-400 group-hover:scale-110 transition-transform" />
+                <span>校招日历表</span>
+              </Link>
             </div>
             
             {/* Quick Stats */}
@@ -204,55 +221,57 @@ export default function CampusCalendar() {
 
               {/* Event List */}
               <div className="space-y-4 flex-1 z-10">
-                {isLoading ? (
-                   <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                     <div className="w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
-                     <p className="font-medium">加载校招职位中...</p>
+                 {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                      <div className="w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+                      <p className="font-medium">加载校招职位中...</p>
+                    </div>
+                 ) : (
+                  events.map((event) => (
+                    <div key={event.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-5">
+                      {/* Left Date Block */}
+                      <div className="w-full md:w-32 bg-blue-50/50 rounded-xl flex flex-col items-center justify-center p-4:md:p-0 py-4 shrink-0 border border-blue-100/50">
+                         <span className="text-xl font-bold text-blue-700 leading-none">{event.day}</span>
+                         <span className={`text-[11px] font-bold mt-2 text-center w-full px-2 ${event.status === 'closing-soon' ? 'text-red-600 bg-red-100 py-1 rounded shadow-sm' : 'text-blue-500'}`}>
+                           {event.date}
+                         </span>
+                      </div>
+                      
+                      {/* Center Info */}
+                      <div className="flex-1 flex flex-col justify-center">
+                         <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center flex-wrap gap-y-1">
+                            <Building2 className="w-4 h-4 mr-1.5 text-gray-400" />
+                            <span className="mr-2">{event.company}</span>
+                            <span className="hidden md:inline mx-2 text-gray-300">|</span>
+                            <span className="text-[17px] text-gray-800 break-words">{event.title}</span>
+                         </h3>
+                         <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
+                            <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.type}</span>
+                            <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.role}</span>
+                            <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded text-xs font-bold">{event.gradYear}</span>
+                            <span className="flex items-center text-gray-500 text-xs font-medium ml-1">
+                              <MapPin className="w-3.5 h-3.5 mr-1" /> {event.location}
+                            </span>
+                         </div>
+                      </div>
+               
+                      {/* Right Actions */}
+                      <div className="flex md:flex-col items-center justify-center gap-3 shrink-0 md:w-36 md:border-l border-gray-100 md:pl-5">
+                          <button onClick={() => handleApply(event.applyUrl)} className="w-full bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg shadow-black/10 hover:-translate-y-0.5">
+                            去网申 <ExternalLink className="w-4 h-4 ml-1.5" />
+                          </button>
+                          <div className="flex w-full gap-2">
+                            <button onClick={() => handleCopyLink(event.applyUrl)} className="flex-1 justify-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="复制投递链接">
+                              <LinkIcon className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleBookmark()} className="flex-1 justify-center bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-200 hover:text-amber-600 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="收藏职位">
+                              <Bookmark className="w-4 h-4" />
+                            </button>
+                          </div>
+                      </div>
                    </div>
-                ) : events.map((event) => (
-                  <div key={event.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-5">
-                    {/* Left Date Block */}
-                    <div className="w-full md:w-32 bg-blue-50/50 rounded-xl flex flex-col items-center justify-center p-4:md:p-0 py-4 shrink-0 border border-blue-100/50">
-                       <span className="text-xl font-bold text-blue-700 leading-none">{event.day}</span>
-                       <span className={`text-[11px] font-bold mt-2 text-center w-full px-2 ${event.status === 'closing-soon' ? 'text-red-600 bg-red-100 py-1 rounded shadow-sm' : 'text-blue-500'}`}>
-                         {event.date}
-                       </span>
-                    </div>
-                    
-                    {/* Center Info */}
-                    <div className="flex-1 flex flex-col justify-center">
-                       <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center flex-wrap gap-y-1">
-                          <Building2 className="w-4 h-4 mr-1.5 text-gray-400" />
-                          <span className="mr-2">{event.company}</span>
-                          <span className="hidden md:inline mx-2 text-gray-300">|</span>
-                          <span className="text-[17px] text-gray-800 break-words">{event.title}</span>
-                       </h3>
-                       <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
-                          <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.type}</span>
-                          <span className="bg-gray-100 border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded text-xs font-semibold">{event.role}</span>
-                          <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded text-xs font-bold">{event.gradYear}</span>
-                          <span className="flex items-center text-gray-500 text-xs font-medium ml-1">
-                            <MapPin className="w-3.5 h-3.5 mr-1" /> {event.location}
-                          </span>
-                       </div>
-                    </div>
-             
-                    {/* Right Actions */}
-                    <div className="flex md:flex-col items-center justify-center gap-3 shrink-0 md:w-36 md:border-l border-gray-100 md:pl-5">
-                        <button onClick={() => handleApply(event.applyUrl)} className="w-full bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg shadow-black/10 hover:-translate-y-0.5">
-                          去网申 <ExternalLink className="w-4 h-4 ml-1.5" />
-                        </button>
-                        <div className="flex w-full gap-2">
-                          <button onClick={() => handleCopyLink(event.applyUrl)} className="flex-1 justify-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="复制投递链接">
-                            <LinkIcon className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleBookmark()} className="flex-1 justify-center bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-200 hover:text-amber-600 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="收藏职位">
-                            <Bookmark className="w-4 h-4" />
-                          </button>
-                        </div>
-                    </div>
-                 </div>
-                ))}
+                  ))
+                 )}
               </div>
 
               {/* Pagination */}

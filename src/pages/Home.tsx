@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/Logo';
+import SEO from '../components/SEO';
 import { 
   Search, 
   FileEdit, 
@@ -20,7 +21,10 @@ import {
   GraduationCap,
   Filter,
   Building2,
-  Sparkles
+  Sparkles,
+  Globe2,
+  Crown,
+  Info
 } from 'lucide-react';
 import FeatureShowcase from '../components/FeatureShowcase';
 import AuthModal from '../components/AuthModal';
@@ -30,151 +34,165 @@ const HeroMockup = () => (
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.7, delay: 0.2 }}
-    className="relative w-full max-w-5xl mx-auto mt-16 rounded-xl border border-gray-200 bg-white shadow-2xl overflow-hidden"
+    className="relative w-full max-w-5xl mx-auto mt-16 rounded-2xl border border-white/40 bg-white/60 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.03)] overflow-hidden"
   >
     {/* Browser Header */}
-    <div className="h-10 bg-gray-50 border-b border-gray-200 flex items-center px-4 space-x-2">
-      <div className="w-3 h-3 rounded-full bg-red-400"></div>
-      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-      <div className="w-3 h-3 rounded-full bg-green-400"></div>
-      <div className="ml-4 flex-1 flex justify-center">
-        <div className="h-5 w-1/2 max-w-sm bg-white border border-gray-200 rounded text-[10px] text-gray-400 flex items-center justify-center">
-          <Search className="w-3 h-3 mr-1" /> app.zhiyin.com
+    <div className="h-12 bg-white/80 backdrop-blur border-b border-gray-100 flex items-center px-4 space-x-2">
+      <div className="flex space-x-2 w-16">
+        <div className="w-3 h-3 rounded-full bg-red-400"></div>
+        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+        <div className="w-3 h-3 rounded-full bg-green-400"></div>
+      </div>
+      <div className="flex-1 flex justify-center">
+        <div className="h-6 w-1/2 max-w-sm bg-gray-50/80 border border-gray-100 rounded-md text-[11px] text-gray-500 font-medium flex items-center justify-center">
+          <Globe2 className="w-3.5 h-3.5 mr-1.5 opacity-50" /> app.zhiyin.com
         </div>
       </div>
+      <div className="w-16"></div>
     </div>
     {/* App Content Mockup */}
     <div className="flex h-[450px]">
       {/* Sidebar */}
-      <div className="w-48 border-r border-gray-100 bg-gray-50 p-3 hidden md:flex flex-col">
-        <div className="flex items-center space-x-2 mb-4 px-2 shrink-0">
-          <Logo className="w-6 h-6" />
-          <span className="font-bold text-sm text-deep">职引</span>
+      <div className="w-56 border-r border-gray-100/50 bg-white/50 p-4 hidden md:flex flex-col">
+        <div className="flex items-center space-x-2 mb-6 px-2 shrink-0">
+          <Logo className="w-7 h-7" />
+          <span className="font-bold text-base text-gray-900">职引</span>
         </div>
-        <div className="space-y-0.5 flex-1 overflow-y-auto pr-1">
-          <div className="h-8 bg-primary/10 rounded-md text-primary flex items-center px-2.5 text-xs font-medium">
-            <Send className="w-3.5 h-3.5 mr-2" /> 网申助手
+        <div className="space-y-1 flex-1 overflow-y-auto pr-1">
+          <div className="h-9 bg-primary/10 rounded-lg text-primary flex items-center px-3 text-[13px] font-bold">
+            <Send className="w-4 h-4 mr-2.5" /> 网申助手
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <BookOpen className="w-3.5 h-3.5 mr-2" /> 笔经面经
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <BookOpen className="w-4 h-4 mr-2.5 opacity-70" /> 笔经面经
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <Bot className="w-3.5 h-3.5 mr-2" /> AI 面试
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <Bot className="w-4 h-4 mr-2.5 opacity-70" /> AI 面试
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <LineChart className="w-3.5 h-3.5 mr-2" /> 薪资查询
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <LineChart className="w-4 h-4 mr-2.5 opacity-70" /> 薪资查询
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <FileEdit className="w-3.5 h-3.5 mr-2" /> 我的简历
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <FileEdit className="w-4 h-4 mr-2.5 opacity-70" /> 我的简历
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <Target className="w-3.5 h-3.5 mr-2" /> 求职规划
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <Target className="w-4 h-4 mr-2.5 opacity-70" /> 求职规划
           </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <ShieldCheck className="w-3.5 h-3.5 mr-2" /> 机构测评
-          </div>
-          <div className="h-8 hover:bg-gray-100 rounded-md text-gray-600 flex items-center px-2.5 text-xs transition-colors">
-            <Calendar className="w-3.5 h-3.5 mr-2" /> 校招日历
+          <div className="h-9 hover:bg-white rounded-lg text-gray-600 flex items-center px-3 text-[13px] font-medium transition-colors cursor-pointer">
+            <ShieldCheck className="w-4 h-4 mr-2.5 opacity-70" /> 机构测评
           </div>
         </div>
-        <div className="mt-2 pt-3 border-t border-gray-200 shrink-0">
-          <div className="flex items-center px-2">
-            <div className="w-7 h-7 rounded-full bg-gray-200"></div>
-            <div className="ml-2">
-              <div className="text-xs font-medium text-deep">Alex Chen</div>
-              <div className="text-[9px] text-gray-500">Pro Plan</div>
+        <div className="mt-2 pt-4 border-t border-gray-100/50 shrink-0">
+          <div className="flex items-center px-2 bg-white rounded-xl p-2 border border-gray-100 shadow-sm cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-indigo-500 text-white flex items-center justify-center font-bold text-xs">AC</div>
+            <div className="ml-2.5">
+              <div className="text-[13px] font-bold text-gray-900 leading-none">Alex Chen</div>
+              <div className="text-[10px] text-gray-500 mt-1 font-medium flex items-center">
+                <Crown className="w-3 h-3 text-amber-500 mr-1" /> Pro Plan
+              </div>
             </div>
           </div>
         </div>
       </div>
       {/* Main Content - Job Board Dual Column */}
-      <div className="flex-1 flex bg-white overflow-hidden">
+      <div className="flex-1 flex bg-white/80 overflow-hidden">
         {/* Job List */}
-        <div className="w-full sm:w-[35%] border-r border-gray-100 p-4 flex flex-col h-full">
+        <div className="w-full sm:w-[40%] border-r border-gray-100/50 p-5 flex flex-col h-full bg-gray-50/30">
           <div className="relative mb-4 shrink-0">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-            <input type="text" disabled placeholder="Software Engineer..." className="w-full h-9 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-md text-sm" />
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" />
+            <input type="text" disabled placeholder="搜索职位、公司..." className="w-full h-10 pl-10 pr-3 bg-white border border-gray-200 shadow-sm rounded-lg text-[13px] focus:outline-none" />
           </div>
-          <div className="flex space-x-2 mb-4 overflow-hidden shrink-0">
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full whitespace-nowrap">New York</span>
-            <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full whitespace-nowrap">Sponsor H1B</span>
+          <div className="flex space-x-2 mb-5 overflow-hidden shrink-0">
+            <span className="px-3 py-1 bg-white border border-gray-200 text-gray-600 text-xs rounded-full whitespace-nowrap shadow-sm font-medium">New York</span>
+            <span className="px-3 py-1 bg-primary/10 border border-primary/20 text-primary text-xs rounded-full whitespace-nowrap font-bold">Sponsor H1B</span>
           </div>
-          <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar">
             {[1, 2, 3].map(i => (
-              <div key={i} className={`p-3 rounded-lg border cursor-pointer transition-colors ${i === 1 ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200'}`}>
-                <div className="flex items-start justify-between mb-1">
-                  <div className="font-medium text-[13px] text-deep leading-tight">{i === 1 ? 'Frontend Engineer' : i === 2 ? 'Full Stack Developer' : 'Data Scientist'}</div>
-                  <div className="text-[10px] text-gray-400 shrink-0 ml-2">1d ago</div>
+              <div key={i} className={`p-4 rounded-xl border relative overflow-hidden cursor-pointer transition-all ${i === 1 ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}`}>
+                {i === 1 && <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>}
+                <div className="flex items-start justify-between mb-1.5">
+                  <div className="font-bold text-[14px] text-gray-900 leading-tight">{i === 1 ? 'Frontend Engineer' : i === 2 ? 'Full Stack Developer' : 'Data Scientist'}</div>
+                  <div className="text-[10px] text-gray-400 shrink-0 ml-2 font-medium">1d ago</div>
                 </div>
-                <div className="text-[11px] text-gray-500 mb-2 truncate">{i === 1 ? 'TechFlow Inc.' : i === 2 ? 'Global Systems' : 'AI Dynamics'} · New York, NY</div>
+                <div className="text-[12px] text-gray-500 mb-3 truncate font-medium">{i === 1 ? 'TechFlow Inc.' : i === 2 ? 'Global Systems' : 'AI Dynamics'} · New York, NY</div>
                 <div className="flex space-x-2">
-                  <span className="px-1.5 py-0.5 bg-success/10 text-success text-[9px] rounded font-medium">OPT</span>
-                  <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] rounded font-medium">H1B</span>
+                  <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 text-[10px] rounded font-bold">OPT</span>
+                  <span className="px-2 py-0.5 bg-blue-50 text-primary border border-blue-100 text-[10px] rounded font-bold">H1B</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
         {/* Job Detail */}
-        <div className="flex-1 p-5 hidden sm:flex flex-col h-full overflow-hidden relative">
-          <div className="flex justify-between items-start mb-5 shrink-0 gap-3">
-            <div className="flex items-start space-x-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
+        <div className="flex-1 p-6 hidden sm:flex flex-col h-full overflow-hidden relative bg-white">
+          <div className="flex justify-between items-start mb-6 shrink-0 gap-3">
+            <div className="flex items-start space-x-4 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
                 T
               </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-deep truncate">Frontend Engineer, React</h2>
-                <div className="text-xs text-gray-500 flex items-center mt-1 flex-wrap gap-y-1">
-                  <span className="flex items-center whitespace-nowrap"><Briefcase className="w-3 h-3 mr-1" /> TechFlow Inc.</span>
-                  <span className="mx-1.5 hidden lg:inline">·</span>
-                  <span className="flex items-center whitespace-nowrap"><Globe className="w-3 h-3 mr-1" /> New York, NY (Hybrid)</span>
+              <div className="min-w-0 pt-0.5">
+                <h2 className="text-xl font-black text-gray-900 truncate">Frontend Engineer, React</h2>
+                <div className="text-[13px] font-medium text-gray-500 flex items-center mt-1.5 flex-wrap gap-y-1">
+                  <span className="flex items-center whitespace-nowrap"><Briefcase className="w-3.5 h-3.5 mr-1.5 text-gray-400" /> TechFlow Inc.</span>
+                  <span className="mx-2 hidden lg:inline text-gray-300">|</span>
+                  <span className="flex items-center whitespace-nowrap"><Globe className="w-3.5 h-3.5 mr-1.5 text-gray-400" /> New York, NY (Hybrid)</span>
                 </div>
               </div>
             </div>
-            <div className="flex space-x-2 shrink-0">
-              <button className="h-8 px-3 bg-white border border-gray-200 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-50 whitespace-nowrap">收藏</button>
-              <button className="h-8 px-3 bg-primary text-white rounded-md text-xs font-medium hover:bg-primary-hover shadow-sm whitespace-nowrap">一键投递</button>
+            <div className="flex space-x-2 shrink-0 pt-1">
+              <button className="h-9 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg text-[13px] font-bold hover:bg-gray-50 whitespace-nowrap shadow-sm">收藏</button>
+              <button className="h-9 px-4 bg-gray-900 text-white rounded-lg text-[13px] font-bold hover:bg-black shadow-sm whitespace-nowrap">一键投递</button>
             </div>
           </div>
           
-          <div className="flex space-x-5 border-b border-gray-100 mb-5 shrink-0">
-            <div className="pb-1.5 border-b-2 border-primary text-xs font-medium text-primary cursor-pointer">职位详情</div>
-            <div className="pb-1.5 text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">公司信息</div>
-            <div className="pb-1.5 text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">薪资洞察</div>
+          <div className="flex space-x-6 border-b border-gray-100 mb-6 shrink-0">
+            <div className="pb-2 flex flex-col justify-between relative cursor-pointer group">
+              <span className="text-[13px] font-bold text-gray-900">职位详情</span>
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900 rounded-t-sm"></div>
+            </div>
+            <div className="pb-2 flex flex-col justify-between relative cursor-pointer group">
+              <span className="text-[13px] font-medium text-gray-500 group-hover:text-gray-900 transition-colors">公司信息</span>
+            </div>
+            <div className="pb-2 flex flex-col justify-between relative cursor-pointer group">
+              <span className="text-[13px] font-medium text-gray-500 group-hover:text-gray-900 transition-colors">薪资洞察</span>
+            </div>
           </div>
 
-          <div className="space-y-4 flex-1 overflow-hidden">
+          <div className="space-y-6 flex-1 overflow-hidden pr-2">
             <div>
-              <h3 className="text-sm font-bold text-deep mb-2">About the role</h3>
-              <div className="space-y-2">
-                <div className="h-2.5 w-full bg-gray-100 rounded"></div>
-                <div className="h-2.5 w-full bg-gray-100 rounded"></div>
-                <div className="h-2.5 w-5/6 bg-gray-100 rounded"></div>
+              <h3 className="text-[14px] font-bold text-gray-900 mb-3 flex items-center">
+                <Info className="w-4 h-4 mr-2 text-primary" /> About the role
+              </h3>
+              <div className="space-y-2.5">
+                <div className="h-3 w-full bg-gray-100 rounded-full"></div>
+                <div className="h-3 w-[95%] bg-gray-100 rounded-full"></div>
+                <div className="h-3 w-[85%] bg-gray-100 rounded-full"></div>
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-bold text-deep mb-2">Requirements</h3>
-              <div className="space-y-2 pl-4">
-                <div className="flex items-center"><div className="w-1 h-1 rounded-full bg-gray-400 mr-2"></div><div className="h-2.5 w-3/4 bg-gray-100 rounded"></div></div>
-                <div className="flex items-center"><div className="w-1 h-1 rounded-full bg-gray-400 mr-2"></div><div className="h-2.5 w-4/5 bg-gray-100 rounded"></div></div>
-                <div className="flex items-center"><div className="w-1 h-1 rounded-full bg-gray-400 mr-2"></div><div className="h-2.5 w-2/3 bg-gray-100 rounded"></div></div>
+              <h3 className="text-[14px] font-bold text-gray-900 mb-3 flex items-center">
+                <Target className="w-4 h-4 mr-2 text-primary" /> Requirements
+              </h3>
+              <div className="space-y-3 pl-2">
+                <div className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-gray-300 mr-3"></div><div className="h-3 w-3/4 bg-gray-100 rounded-full"></div></div>
+                <div className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-gray-300 mr-3"></div><div className="h-3 w-4/5 bg-gray-100 rounded-full"></div></div>
+                <div className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-gray-300 mr-3"></div><div className="h-3 w-2/3 bg-gray-100 rounded-full"></div></div>
               </div>
             </div>
           </div>
 
           {/* AI Banner */}
-          <div className="absolute bottom-6 left-6 right-6 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-100 flex items-center justify-between shadow-sm">
+          <div className="absolute bottom-6 left-6 right-6 p-4 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 backdrop-blur-md rounded-xl border border-indigo-100 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3 shadow-sm">
                 <Bot className="w-5 h-5 text-indigo-600" />
               </div>
               <div>
-                <div className="text-sm font-bold text-indigo-900">AI 模拟面试准备</div>
-                <div className="text-xs text-indigo-700 mt-0.5">基于此职位描述，生成 5 道高频面试题</div>
+                <div className="text-[13px] font-bold text-indigo-900">AI 模拟面试准备</div>
+                <div className="text-[11px] text-indigo-600 mt-0.5 font-medium">基于此职位描述，生成 5 道高频面试题</div>
               </div>
             </div>
-            <button className="h-8 px-3 bg-indigo-600 text-white rounded-md text-xs font-medium hover:bg-indigo-700 flex items-center">
-              <Play className="w-3 h-3 mr-1" /> 开始模拟
+            <button className="h-8 px-3.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm flex items-center">
+              <Play className="w-3 h-3 mr-1.5 fill-current" /> 开始模拟
             </button>
           </div>
         </div>
@@ -185,34 +203,57 @@ const HeroMockup = () => (
 
 const Hero = () => {
   return (
-    <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+    <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center">
+        <div className="w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl translate-y-[-20%]"></div>
+        <div className="absolute w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-3xl translate-y-[20%] translate-x-[20%]"></div>
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10"
       >
-        <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-          <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="inline-flex items-center px-4 py-1.5 rounded-full bg-white border border-gray-200 text-gray-700 text-sm font-medium mb-8 shadow-sm hover:shadow-md transition-shadow cursor-default"
+        >
+          <span className="flex h-2.5 w-2.5 rounded-full bg-primary mr-2.5 animate-pulse"></span>
           Web 端全新上线，支持沉浸式宽屏体验
-        </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold text-deep tracking-tight mb-6 leading-tight">
-          留学生求职，<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-500">一站式通关</span>
+          <ArrowRight className="ml-2 w-4 h-4 text-gray-400" />
+        </motion.div>
+        
+        <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight mb-8 leading-[1.1]">
+          留学生求职，<br className="md:hidden" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-500 to-purple-600 relative inline-block">
+            一站式通关
+            <svg className="absolute -bottom-2 left-0 w-full h-3 text-indigo-200/50 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+              <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round" />
+            </svg>
+          </span>
         </h1>
-        <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed">
+        
+        <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
           专为留学生打造的全链路求职神器。从网申助手、笔经面经到 AI 模拟面试，再到专属求职规划与校招日历，8大核心功能助你高效斩获 Dream Offer。
         </p>
+        
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <Link to="/jobs" className="w-full sm:w-auto px-8 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-base font-medium transition-all shadow-lg shadow-primary/30 flex items-center justify-center">
-            开始搜索职位 <ArrowRight className="ml-2 w-5 h-5" />
+          <Link to="/jobs" className="group w-full sm:w-auto px-8 py-4 bg-gray-900 hover:bg-black text-white rounded-xl text-base font-bold transition-all shadow-[0_10px_30px_-10px_rgba(0,0,0,0.4)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex items-center justify-center hover:-translate-y-0.5">
+            开始搜索职位 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
-          <Link to="/ai-interview" className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-deep rounded-lg text-base font-medium transition-all flex items-center justify-center">
-            体验 AI 模拟面试 <Bot className="ml-2 w-4 h-4 text-gray-500" />
+          <Link to="/ai-interview" className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-900 rounded-xl text-base font-bold transition-all flex items-center justify-center shadow-sm">
+            体验 AI 模拟面试 <Bot className="ml-2 w-5 h-5 text-gray-400" />
           </Link>
         </div>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500">
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 实时职位数据</div>
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 专属面经题库</div>
-          <div className="flex items-center"><CheckCircle2 className="w-4 h-4 text-success mr-1.5" /> 全流程 AI 辅助</div>
+        
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 font-medium">
+          <div className="flex items-center"><CheckCircle2 className="w-5 h-5 text-gray-400 mr-2" /> 实时职位数据</div>
+          <div className="flex items-center"><CheckCircle2 className="w-5 h-5 text-gray-400 mr-2" /> 专属面经题库</div>
+          <div className="flex items-center"><CheckCircle2 className="w-5 h-5 text-gray-400 mr-2" /> 全流程 AI 辅助</div>
         </div>
       </motion.div>
 
@@ -420,28 +461,36 @@ const Features = () => {
 
 const CTA = ({ onOpenAuth }: { onOpenAuth: (mode: 'login' | 'register') => void }) => {
   return (
-    <section className="py-20 bg-primary relative overflow-hidden">
+    <section className="py-24 relative overflow-hidden bg-gray-900 border-t border-gray-800">
       {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-indigo-500/30 rounded-full blur-3xl"></div>
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 border-white/10"></div>
+        <div className="absolute -top-[300px] -right-[300px] w-[800px] h-[800px] bg-primary/30 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-[200px] -left-[200px] w-[600px] h-[600px] bg-indigo-600/30 rounded-full blur-[100px]"></div>
       </div>
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-          准备好斩获你的 Dream Offer 了吗？
-        </h2>
-        <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto">
-          加入数万名北美留学生的行列，用最专业的工具武装自己。现在注册，即刻体验 AI 带来的求职效率飞跃。
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <button onClick={() => onOpenAuth('register')} className="w-full sm:w-auto px-8 py-4 bg-white text-primary hover:bg-gray-50 rounded-lg text-lg font-bold transition-colors shadow-lg">
-            免费注册账号
-          </button>
-          <button onClick={() => onOpenAuth('login')} className="w-full sm:w-auto px-8 py-4 bg-primary-hover text-white border border-blue-400 hover:bg-blue-700 rounded-lg text-lg font-medium transition-colors">
-            微信扫码登录
-          </button>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight leading-tight">
+            准备好斩获你的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Dream Offer</span> 了吗？
+          </h2>
+          <p className="text-gray-300 text-lg md:text-xl mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
+            加入数万名北美留学生的行列，用最专业的工具武装自己。现在注册，即刻体验 AI 带来的求职效率飞跃。
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-5">
+            <button onClick={() => onOpenAuth('register')} className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 active:scale-95 rounded-xl text-lg font-bold transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center">
+              免费注册账号 <ArrowRight className="ml-2 w-5 h-5" />
+            </button>
+            <button onClick={() => onOpenAuth('login')} className="w-full sm:w-auto px-8 py-4 bg-gray-800 text-white border border-gray-700 hover:bg-gray-700 hover:border-gray-600 rounded-xl text-lg font-bold transition-colors flex items-center justify-center">
+              微信扫码登录
+            </button>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -487,59 +536,59 @@ const RecommendedJobs = () => {
   }, []);
 
   return (
-    <section className="py-20 bg-gray-50 border-t border-gray-100">
+    <section className="py-24 bg-gray-50 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-end mb-10">
+        <div className="flex justify-between items-end mb-12">
           <div>
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold mb-5 shadow-sm">
               <Sparkles className="w-4 h-4 mr-2" />
               为您推荐
             </div>
-            <h2 className="text-3xl font-bold text-deep">智能职位推荐</h2>
-            <p className="text-gray-500 mt-2">基于您的简历和求职意向，为您精准匹配的高薪机会</p>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">智能职位推荐</h2>
+            <p className="text-gray-500 mt-3 text-lg font-medium">基于您的简历和求职意向，为您精准匹配的高薪机会</p>
           </div>
-          <Link to="/jobs" className="hidden sm:flex items-center text-primary hover:text-primary-hover font-medium transition-colors">
-            查看更多 <ArrowRight className="w-4 h-4 ml-1" />
+          <Link to="/jobs" className="hidden sm:flex items-center text-primary hover:text-primary-hover font-bold transition-colors">
+            查看更多 <ArrowRight className="w-5 h-5 ml-1.5" />
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse h-48"></div>
+              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse h-[220px]"></div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {jobs.map(job => (
-              <Link key={job.id} to={`/jobs/${job.id}`} className="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-green-50 text-green-600 px-3 py-1 rounded-bl-xl text-xs font-bold border-b border-l border-green-100">
+              <Link key={job.id} to={`/jobs/${job.id}`} className="block bg-white rounded-2xl p-7 border border-gray-100 shadow-[0_5px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:border-primary/20 transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-gradient-to-bl from-green-50 to-emerald-50 text-emerald-600 px-4 py-1.5 rounded-bl-2xl text-xs font-black shadow-sm flex items-center">
                   匹配度 {job.matchScore}%
                 </div>
-                <div className="flex items-start space-x-4 mb-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl font-bold text-gray-400 shrink-0">
+                <div className="flex items-start space-x-5 mb-5">
+                  <div className="w-14 h-14 bg-gradient-to-tr from-gray-50 to-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center text-2xl font-black text-gray-400 shrink-0 group-hover:scale-105 transition-transform duration-300">
                     {job.company.charAt(0)}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors line-clamp-1">{job.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{job.company}</p>
+                  <div className="pt-1">
+                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary transition-colors line-clamp-1">{job.title}</h3>
+                    <p className="text-[15px] font-medium text-gray-500 mt-1">{job.company}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium border border-gray-100">{job.location}</span>
-                  <span className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium border border-gray-100">{job.type}</span>
+                <div className="flex flex-wrap gap-2.5 mb-6">
+                  <span className="px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold border border-gray-100">{job.location}</span>
+                  <span className="px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold border border-gray-100">{job.type}</span>
                 </div>
-                <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                  <span className="text-primary font-bold text-sm">{job.salary}</span>
-                  <span className="text-xs text-gray-400">刚刚推荐</span>
+                <div className="flex justify-between items-center pt-5 border-t border-gray-50">
+                  <span className="text-primary font-black text-base tracking-tight">{job.salary}</span>
+                  <span className="text-xs font-bold text-gray-400">刚刚推荐</span>
                 </div>
               </Link>
             ))}
           </div>
         )}
-        <div className="mt-8 text-center sm:hidden">
-          <Link to="/jobs" className="inline-flex items-center text-primary font-medium">
-            查看更多 <ArrowRight className="w-4 h-4 ml-1" />
+        <div className="mt-10 text-center sm:hidden">
+          <Link to="/jobs" className="inline-flex items-center text-primary font-bold">
+            查看更多 <ArrowRight className="w-5 h-5 ml-1.5" />
           </Link>
         </div>
       </div>
@@ -558,6 +607,10 @@ export default function Home() {
 
   return (
     <main>
+      <SEO 
+        title="首页"
+        description="CareerAI - 专为留学生打造的一站式求职助手。提供校招日历、薪资待遇、面经库、中介避雷等功能，助力全球留学生斩获高薪Offer。"
+      />
       <Hero />
       <JobSearchIntro />
       <RecommendedJobs />
