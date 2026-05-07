@@ -1,9 +1,4 @@
 User-agent: *
 Allow: /
 
-# 不允许爬取用户私人页面
-Disallow: /my-resume
-Disallow: /my-resume/
-Disallow: /search
-
-Sitemap: https://www.zhiyincareer.com/sitemap.xml
+Sitemap: https://yourdomain.com/sitemap.xml
