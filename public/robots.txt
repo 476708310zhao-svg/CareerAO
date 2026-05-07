@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://yourdomain.com/sitemap.xml
+Disallow: /my-resume
+Disallow: /my-resume/
+Disallow: /search
+Sitemap: https://www.zhiyincareer.com/sitemap.xml
