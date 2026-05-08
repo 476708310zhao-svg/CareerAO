@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/Logo';
-import SEO from '../components/SEO';
+import { Helmet } from 'react-helmet-async';
 import { 
   Search, 
   FileEdit, 
@@ -607,10 +607,19 @@ export default function Home() {
 
   return (
     <main>
-      <SEO 
-        title="首页"
-        description="CareerAI - 专为留学生打造的一站式求职助手。提供校招日历、薪资待遇、面经库、中介避雷等功能，助力全球留学生斩获高薪Offer。"
-      />
+      <Helmet>
+        <title>职引 - 留学生一站式求职平台 | 校招日历、AI面试、薪资查询</title>
+        <meta name="description" content="职引为留学生提供一站式求职服务，涵盖8000+校招日历、AI模拟面试、薪资查询、笔经面经、网申助手、机构测评、求职规划等核心功能，助力留学生高效应对求职全流程。" />
+        <meta name="keywords" content="留学生求职,校招日历,AI面试,薪资查询,笔经面经,网申助手,机构测评,求职规划,留学生找工作,秋招春招,暑期实习" />
+        <link rel="canonical" href="https://www.zhiyincareer.com/" />
+        <meta property="og:title" content="职引 - 留学生一站式求职平台" />
+        <meta property="og:description" content="校招日历、AI模拟面试、薪资查询、笔经面经、网申助手，留学生求职全流程一站搞定。" />
+        <meta property="og:url" content="https://www.zhiyincareer.com/" />
+        <meta property="og:image" content="https://www.zhiyincareer.com/og-image.png" />
+        <meta name="twitter:title" content="职引 - 留学生一站式求职平台" />
+        <meta name="twitter:description" content="校招日历、AI模拟面试、薪资查询、笔经面经，留学生求职全流程一站搞定。" />
+        <meta name="twitter:image" content="https://www.zhiyincareer.com/og-image.png" />
+      </Helmet>
       <Hero />
       <JobSearchIntro />
       <RecommendedJobs />
