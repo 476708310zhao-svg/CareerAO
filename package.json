@@ -14,7 +14,7 @@
   },
   "reactSnap": {
     "source": "dist",
-    "routes": [
+    "include": [
       "/",
       "/jobs",
       "/salary-insights",
@@ -32,10 +32,10 @@
       "/terms"
     ],
     "puppeteerArgs": ["--no-sandbox", "--disable-setuid-sandbox"],
-    "renderAfterTime": 4000,
-    "skipThirdPartyRequests": false,
+    "waitFor": 500,
+    "skipThirdPartyRequests": true,
     "removeScriptTags": false,
-    "inlineCSS": false,
+    "inlineCss": false,
     "minifyHtml": { "collapseWhitespace": false, "removeComments": false }
   },
   "dependencies": {
