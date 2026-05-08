@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'motion/react';
 import {
   Search, MapPin, DollarSign, Bookmark, BookmarkCheck,
@@ -82,6 +83,15 @@ export default function Jobs() {
   };
 
   return (
+    <>
+    <Helmet>
+      <title>职位搜索 | 留学生求职 - 智引职途</title>
+      <meta name="description" content="汇聚互联网、金融、咨询、新能源等行业海内外职位，专为留学生、海归整理校招与社招信息，支持签证担保岗位筛选。" />
+      <meta name="keywords" content="留学生求职, 海归招聘, 校招职位, 实习招聘, 签证担保, 互联网招聘, 金融招聘, 咨询招聘" />
+      <meta property="og:title" content="职位搜索 - 智引职途" />
+      <meta property="og:description" content="汇聚海内外校招社招职位，专为留学生打造的求职平台。" />
+      <link rel="canonical" href="https://www.zhiyincareer.com/jobs" />
+    </Helmet>
     <div className="min-h-screen bg-gray-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
@@ -231,5 +241,6 @@ export default function Jobs() {
         </div>
       </div>
     </div>
+    </>
   );
 }

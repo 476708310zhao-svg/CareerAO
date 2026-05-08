@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'motion/react';
-import { 
-  ArrowLeft, 
-  Building2, 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  Bookmark, 
+import {
+  ArrowLeft,
+  Building2,
+  MapPin,
+  DollarSign,
+  Clock,
+  Bookmark,
   BookmarkCheck,
-  Share2, 
-  CheckCircle2, 
+  Share2,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   Bot,
@@ -18,39 +19,13 @@ import {
   ChevronRight,
   ExternalLink
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
-// Mock data for the job
-const MOCK_JOB_DETAIL = {
-  id: 1,
-  title: 'Software Engineer, New Grad 2026',
-  company: 'Google',
-  logo: 'G',
-  location: 'Mountain View, CA',
-  salary: '$130k - $180k',
-  type: '全职',
-  visa: '支持 H1B/OPT',
-  tags: ['C++', 'Python', 'Distributed Systems', 'Go', 'Kubernetes'],
-  postedAt: '2天前',
-  description: `
-    <h3>Minimum qualifications:</h3>
-    <ul>
-      <li>Bachelor's degree or equivalent practical experience.</li>
-      <li>Experience working with one or more general purpose programming languages including but not limited to: Java, C/C++, C#, Objective C, Python, JavaScript, or Go.</li>
-      <li>Experience working with data structures or algorithms.</li>
-    </ul>
-    <br/>
-    <h3>Preferred qualifications:</h3>
-    <ul>
-      <li>Master's degree or PhD in Computer Science or related technical field.</li>
-      <li>Experience with distributed systems and microservices architecture.</li>
-      <li>Experience with cloud computing platforms (GCP, AWS, Azure).</li>
-      <li>Interest and ability to learn other coding languages as needed.</li>
-    </ul>
-    <br/>
-    <h3>About the job:</h3>
-    <p>Google's software engineers develop the next-generation technologies that change how billions of users connect, explore, and interact with information and one another. Our products need to handle information at massive scale, and extend well beyond web search. We're looking for engineers who bring fresh ideas from all areas, including information retrieval, distributed computing, large-scale system design, networking and data storage, security, artificial intelligence, natural language processing, UI design and mobile; the list goes on and is growing every day.</p>
-  `
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  '全职': 'FULL_TIME',
+  '实习': 'INTERN',
+  '兼职': 'PART_TIME',
 };
 
 // Mock data for JD Analysis
@@ -71,50 +46,37 @@ export default function JobDetail() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<typeof MOCK_JD_ANALYSIS | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const jobId = id ? parseInt(id, 10) : MOCK_JOB_DETAIL.id;
 
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const jobId = job?.id ?? (id ? parseInt(id, 10) : 0);
 
   useEffect(() => {
-    const fetchJob = async () => {
-      try {
-        if (!id) {
-          setJob(MOCK_JOB_DETAIL);
-          setLoading(false);
-          return;
-        }
-
-        const { db } = await import('../lib/firebase');
-        const { doc, getDoc } = await import('firebase/firestore');
-        const jobDoc = await getDoc(doc(db, 'jobs', id));
-        
-        if (jobDoc.exists()) {
-          const data = jobDoc.data();
+    if (!id) { setLoading(false); return; }
+    setLoading(true);
+    apiFetch(`/api/proxy/jobs/${id}`)
+      .then(res => {
+        if (res.code === 0 && res.data) {
+          const d = res.data;
           setJob({
-            id: jobDoc.id,
-            title: data.title || '',
-            company: data.companyName || '',
-            logo: data.companyName?.charAt(0) || 'C',
-            location: data.location || '',
-            salary: data.salary || '',
-            type: data.type || '全职',
-            visa: data.visa ? '支持 H1B/OPT' : '不限身份',
-            tags: [],
-            postedAt: '刚发布',
-            description: data.description || ''
+            id: d.id,
+            title: d.title || '',
+            company: d.company || '',
+            logo: d.companyLogo || d.company?.charAt(0) || '?',
+            location: d.location || '',
+            salary: d.salary || '',
+            type: d.jobType || '全职',
+            visa: d.visaSponsored ? '支持签证担保' : '不限身份',
+            tags: d.requirements || [],
+            postedAt: d.postedAt || '',
+            industry: d.industry || '',
+            description: d.description || '',
+            applyUrl: d.applyUrl || '',
           });
-        } else {
-          setJob(MOCK_JOB_DETAIL);
         }
-      } catch (error) {
-        console.error('Error fetching job', error);
-        setJob(MOCK_JOB_DETAIL);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJob();
+      })
+      .catch(err => console.error('Failed to fetch job:', err))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleAnalyzeJD = () => {
@@ -137,11 +99,54 @@ export default function JobDetail() {
     });
   };
 
-  if (loading || !job) {
+  if (loading) {
     return <div className="min-h-screen pt-24 pb-16 bg-gray-50 flex items-center justify-center">Loading...</div>;
   }
+  if (!job) {
+    return <div className="min-h-screen pt-24 pb-16 bg-gray-50 flex items-center justify-center text-gray-500">职位不存在或已下线</div>;
+  }
+
+  const metaTitle = `${job.title} - ${job.company}${job.location ? ' | ' + job.location : ''}`;
+  const metaDesc = `${job.company}招聘${job.title}${job.location ? '，工作地点：' + job.location : ''}${job.salary ? '，薪资：' + job.salary : ''}，${job.type}岗位。专为留学生整理，快速了解职位详情。`;
+  const plainDescription = job.description?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500) || metaDesc;
+
+  const jobPostingSchema = {
+    '@context': 'https://schema.org/',
+    '@type': 'JobPosting',
+    title: job.title,
+    description: plainDescription,
+    datePosted: job.postedAt ? new Date(job.postedAt).toISOString().split('T')[0] : undefined,
+    hiringOrganization: {
+      '@type': 'Organization',
+      name: job.company,
+      ...(job.logo?.startsWith('http') && { logo: job.logo }),
+    },
+    jobLocation: {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: job.location,
+      },
+    },
+    ...(job.salary && { baseSalary: { '@type': 'MonetaryAmount', value: { '@type': 'QuantitativeValue', description: job.salary } } }),
+    employmentType: EMPLOYMENT_TYPE_MAP[job.type] || 'FULL_TIME',
+    industry: job.industry,
+    url: `https://www.zhiyincareer.com/jobs/${job.id}`,
+  };
 
   return (
+    <>
+      <Helmet>
+        <title>{metaTitle} | 智引职途</title>
+        <meta name="description" content={metaDesc} />
+        <meta name="keywords" content={`${job.title}, ${job.company}, ${job.location}, ${job.industry}, 留学生求职, 海归招聘`} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://www.zhiyincareer.com/jobs/${job.id}`} />
+        <link rel="canonical" href={`https://www.zhiyincareer.com/jobs/${job.id}`} />
+        <script type="application/ld+json">{JSON.stringify(jobPostingSchema)}</script>
+      </Helmet>
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -400,5 +405,6 @@ export default function JobDetail() {
         </div>
       </div>
     </div>
+    </>
   );
 }
