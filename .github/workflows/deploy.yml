@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           rm -f package-lock.json
-          npm install --legacy-peer-deps
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --legacy-peer-deps
 
       - name: Build
         run: npm run build
@@ -35,7 +35,14 @@ jobs:
 
       - name: Pre-render pages for SEO
         run: |
-          npm run prerender || echo "Pre-render warning: some pages may have failed"
+          CHROME=$(which google-chrome-stable google-chrome chromium-browser chromium 2>/dev/null | head -1)
+          if [ -n "$CHROME" ]; then
+            echo "Pre-rendering with Chrome: $CHROME"
+            PUPPETEER_EXECUTABLE_PATH="$CHROME" npm run prerender \
+              || echo "Pre-render failed, deploying without pre-rendering"
+          else
+            echo "Chrome not found, skipping pre-render"
+          fi
 
       - name: Setup SSH key
         run: |
