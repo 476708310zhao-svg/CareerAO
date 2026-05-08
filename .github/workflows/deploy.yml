@@ -36,13 +36,17 @@ jobs:
       - name: Pre-render pages for SEO
         run: |
           CHROME=$(which google-chrome-stable google-chrome chromium-browser chromium 2>/dev/null | head -1)
+          echo "Chrome found: $CHROME"
+          echo "Node: $(node --version), npm: $(npm --version)"
           if [ -n "$CHROME" ]; then
-            echo "Pre-rendering with Chrome: $CHROME"
-            PUPPETEER_EXECUTABLE_PATH="$CHROME" npm run prerender \
-              || echo "Pre-render failed, deploying without pre-rendering"
+            PUPPETEER_EXECUTABLE_PATH="$CHROME" npm run prerender 2>&1 \
+              || echo "Pre-render failed (see above)"
           else
             echo "Chrome not found, skipping pre-render"
           fi
+          echo "=== dist/ after prerender ==="
+          ls dist/ | head -20
+          ls dist/jobs/ 2>/dev/null && echo "jobs/index.html OK" || echo "jobs/ not created"
 
       - name: Setup SSH key
         run: |
