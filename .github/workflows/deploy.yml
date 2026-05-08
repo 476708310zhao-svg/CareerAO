@@ -33,6 +33,13 @@ jobs:
           VITE_API_BASE_URL: https://www.zhiyincareer.com
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
+      - name: Pre-render pages for SEO
+        run: |
+          npm run prerender || echo "Pre-render warning: some pages may have failed"
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+          PUPPETEER_EXECUTABLE_PATH: google-chrome-stable
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
