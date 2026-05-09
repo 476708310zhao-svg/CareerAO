@@ -503,29 +503,23 @@ const RecommendedJobs = () => {
   useEffect(() => {
     const fetchRecommended = async () => {
       try {
-        const { fetchJobsList } = await import('../lib/firestore_api');
-        const dbJobs = await fetchJobsList();
-        
-        let allJobs: any[] = [];
-        if (dbJobs && dbJobs.length > 0) {
-          const formattedDbJobs = dbJobs.map((j: any) => ({
-            id: j.id,
-            title: j.title || '',
-            company: j.companyName || '',
-            location: j.location || '',
-            salary: j.salary || '',
-            type: j.type || '全职',
-            matchScore: Math.floor(Math.random() * 20) + 80
-          }));
-          allJobs = formattedDbJobs.slice(0, 3);
-        } else {
-          allJobs = [
-            { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
-            { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
-            { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
-          ];
-        }
-        setJobs(allJobs);
+        const { apiFetch } = await import('../lib/api');
+        const res = await apiFetch('/api/proxy/jobs/recommend/list');
+        const list: any[] = (res.code === 0 && res.data) ? res.data : [];
+        const allJobs = list.slice(0, 3).map((j: any) => ({
+          id: j.id,
+          title: j.title || '',
+          company: j.company || '',
+          location: j.location || '',
+          salary: j.salary || '',
+          type: j.jobType || '全职',
+          matchScore: Math.floor(Math.random() * 20) + 80,
+        }));
+        setJobs(allJobs.length > 0 ? allJobs : [
+          { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
+          { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
+          { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
+        ]);
       } catch (error) {
         console.error('Failed to fetch recommended jobs:', error);
       } finally {
