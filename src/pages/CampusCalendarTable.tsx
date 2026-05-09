@@ -85,9 +85,10 @@ export default function CampusCalendarTable() {
 
   return (
     <div className="pt-24 pb-8 min-h-screen bg-gray-50 flex flex-col">
-      <SEO 
-        title="校招日历表 (Campus Hiring Table)" 
-        description="校招职位表格视图。筛选适合你的岗位，一键跳转投递。" 
+      <SEO
+        title="校招日历表 (Campus Hiring Table)"
+        description="校招职位表格视图。筛选适合你的岗位，一键跳转投递。"
+        canonical="https://www.zhiyincareer.com/campus-calendar/table"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
         

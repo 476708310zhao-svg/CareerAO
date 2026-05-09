@@ -144,10 +144,11 @@ export default function SalaryInsights() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50">
-      <SEO 
-        title="薪资待遇洞察 (Salary Insights)" 
-        description="最真实的科技大厂、金融咨询薪水数据揭秘。支持搜索按公司、岗位、地区维度的Base, Bonus, L1/L2级别薪资待遇。" 
-        keywords="留学生薪资, 大厂薪资, levels薪资, 科技公司待遇, 薪水查询" 
+      <SEO
+        title="薪资待遇洞察 (Salary Insights)"
+        description="最真实的科技大厂、金融咨询薪水数据揭秘。支持搜索按公司、岗位、地区维度的Base, Bonus, L1/L2级别薪资待遇。"
+        keywords="留学生薪资, 大厂薪资, levels薪资, 科技公司待遇, 薪水查询"
+        canonical="https://www.zhiyincareer.com/salary-insights"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         

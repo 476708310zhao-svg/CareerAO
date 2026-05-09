@@ -109,10 +109,11 @@ export default function CampusCalendar() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col">
-      <SEO 
-        title="校招日历 (Campus Hiring)" 
-        description="全球名企校招动态实时追踪。网申开启、绝密提前批、截止日期一网打尽。一键跳转投递，不错过任何抢手职位。" 
-        keywords="校招日历, 实习日历, 提前批, 校招网申, 面试时间" 
+      <SEO
+        title="校招日历 (Campus Hiring)"
+        description="全球名企校招动态实时追踪。网申开启、绝密提前批、截止日期一网打尽。一键跳转投递，不错过任何抢手职位。"
+        keywords="校招日历, 实习日历, 提前批, 校招网申, 面试时间"
+        canonical="https://www.zhiyincareer.com/campus-calendar"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
         

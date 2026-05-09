@@ -101,10 +101,11 @@ export default function CareerPlanning() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col">
-      <SEO 
-        title="AI 职业规划 (AI Career Planning)" 
-        description="基于目标拆解的个性化AI职业规划生成器。输入你的目标岗位与背景，一键生成从投递到拿Offer的完整路线图及能力雷达图。" 
-        keywords="AI职业规划, 简历修改推荐, 找实习时间线, 找工作规划, GPT求职" 
+      <SEO
+        title="AI 职业规划 (AI Career Planning)"
+        description="基于目标拆解的个性化AI职业规划生成器。输入你的目标岗位与背景，一键生成从投递到拿Offer的完整路线图及能力雷达图。"
+        keywords="AI职业规划, 简历修改推荐, 找实习时间线, 找工作规划, GPT求职"
+        canonical="https://www.zhiyincareer.com/career-planning"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
         

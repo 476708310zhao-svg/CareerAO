@@ -615,10 +615,10 @@ export default function Home() {
         <meta property="og:title" content="职引 - 留学生一站式求职平台" />
         <meta property="og:description" content="校招日历、AI模拟面试、薪资查询、笔经面经、网申助手，留学生求职全流程一站搞定。" />
         <meta property="og:url" content="https://www.zhiyincareer.com/" />
-        <meta property="og:image" content="https://www.zhiyincareer.com/og-image.png" />
+        <meta property="og:image" content="https://www.zhiyincareer.com/og-image.svg" />
         <meta name="twitter:title" content="职引 - 留学生一站式求职平台" />
         <meta name="twitter:description" content="校招日历、AI模拟面试、薪资查询、笔经面经，留学生求职全流程一站搞定。" />
-        <meta name="twitter:image" content="https://www.zhiyincareer.com/og-image.png" />
+        <meta name="twitter:image" content="https://www.zhiyincareer.com/og-image.svg" />
       </Helmet>
       <Hero />
       <JobSearchIntro />

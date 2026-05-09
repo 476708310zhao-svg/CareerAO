@@ -164,10 +164,11 @@ export default function JobNews() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
-      <SEO 
-        title="求职资讯" 
-        description="最新求职干货与行业新闻、签证政策解读、留学生求职动态。及时追踪求职市场变化，斩获高薪Offer。" 
-        keywords="求职资讯, 求职新闻, H1B政策, 大厂动态, 校招资讯" 
+      <SEO
+        title="求职资讯"
+        description="最新求职干货与行业新闻、签证政策解读、留学生求职动态。及时追踪求职市场变化，斩获高薪Offer。"
+        keywords="求职资讯, 求职新闻, H1B政策, 大厂动态, 校招资讯"
+        canonical="https://www.zhiyincareer.com/news"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         

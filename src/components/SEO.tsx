@@ -7,40 +7,41 @@ interface SEOProps {
   keywords?: string;
   ogType?: 'website' | 'article';
   ogImage?: string;
+  canonical?: string;
 }
 
-const SEO: React.FC<SEOProps> = ({ 
-  title, 
-  description, 
+const SEO: React.FC<SEOProps> = ({
+  title,
+  description,
   keywords,
   ogType = 'website',
-  ogImage = '/favicon.svg'
+  ogImage = 'https://www.zhiyincareer.com/og-image.svg',
+  canonical,
 }) => {
-  const siteTitle = 'CareerAI - 留学生求职助手';
-  const fullTitle = title ? `${title} | ${siteTitle}` : siteTitle;
-  const defaultDescription = 'CareerAI - 专为留学生打造的一站式求职助手，提供校招日历、薪资洞察、面经库、中介避雷等功能，助力全球留学生斩获高薪Offer。';
+  const siteTitle = '职引';
+  const fullTitle = title ? `${title} | ${siteTitle}` : `${siteTitle} - 留学生一站式求职平台`;
+  const defaultDescription = '职引为留学生提供一站式求职服务，涵盖8000+校招日历、AI模拟面试、薪资查询、笔经面经、网申助手、机构测评、求职规划等核心功能，助力留学生高效应对求职全流程。';
   const finalDescription = description || defaultDescription;
-  
-  const defaultKeywords = '留学生求职, 校招, 实习, 秋招, 春招, 薪资洞察, 面经, 留学中介评价, 职业规划, 海归求职, 留学生内推';
-  const finalKeywords = keywords ? `${keywords}, ${defaultKeywords}` : defaultKeywords;
+
+  const defaultKeywords = '留学生求职,校招日历,AI面试,薪资查询,笔经面经,网申助手,机构测评,求职规划,留学生找工作,秋招春招,暑期实习';
+  const finalKeywords = keywords ? `${keywords},${defaultKeywords}` : defaultKeywords;
 
   return (
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={finalDescription} />
       <meta name="keywords" content={finalKeywords} />
-      
-      {/* Open Graph / Facebook */}
+      {canonical && <link rel="canonical" href={canonical} />}
+
       <meta property="og:type" content={ogType} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={finalDescription} />
       <meta property="og:image" content={ogImage} />
-      
-      {/* Twitter */}
-      <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:title" content={fullTitle} />
-      <meta property="twitter:description" content={finalDescription} />
-      <meta property="twitter:image" content={ogImage} />
+      {canonical && <meta property="og:url" content={canonical} />}
+
+      <meta name="twitter:title" content={fullTitle} />
+      <meta name="twitter:description" content={finalDescription} />
+      <meta name="twitter:image" content={ogImage} />
     </Helmet>
   );
 };

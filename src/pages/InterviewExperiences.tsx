@@ -178,10 +178,11 @@ export default function InterviewExperiences() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
-      <SEO 
-        title="笔经面经 (Interview Experiences)" 
-        description="互联网/金融大厂求职真实面经库，包含笔试题目、面试流程、面试问题及详细解析，助你从容应对各大公司面试。" 
-        keywords="面经, 笔经, 字节跳动面经, 腾讯面经, 算法工程师面试, 留学生面试" 
+      <SEO
+        title="笔经面经 (Interview Experiences)"
+        description="互联网/金融大厂求职真实面经库，包含笔试题目、面试流程、面试问题及详细解析，助你从容应对各大公司面试。"
+        keywords="面经, 笔经, 字节跳动面经, 腾讯面经, 算法工程师面试, 留学生面试"
+        canonical="https://www.zhiyincareer.com/interview-experiences"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         

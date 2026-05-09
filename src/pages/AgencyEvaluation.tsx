@@ -135,10 +135,11 @@ export default function AgencyEvaluation() {
 
   return (
     <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col relative">
-      <SEO 
-        title="中介避雷 (Agency Evaluation)" 
-        description="最全留学中介真实评价库。查看留学生对各大留学中介的红黑榜，防坑避雷，支持提交自己的真实被坑或好评经历。" 
-        keywords="留学中介, 留学机构评价, 中介避雷, 怎么选留学中心, 靠谱留学中介" 
+      <SEO
+        title="中介避雷 (Agency Evaluation)"
+        description="最全留学中介真实评价库。查看留学生对各大留学中介的红黑榜，防坑避雷，支持提交自己的真实被坑或好评经历。"
+        keywords="留学中介, 留学机构评价, 中介避雷, 怎么选留学中心, 靠谱留学中介"
+        canonical="https://www.zhiyincareer.com/agency-evaluation"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         
