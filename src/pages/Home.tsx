@@ -27,7 +27,7 @@ import {
   Info
 } from 'lucide-react';
 import FeatureShowcase from '../components/FeatureShowcase';
-import AuthModal from '../components/AuthModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const HeroMockup = () => (
   <motion.div 
@@ -510,15 +510,16 @@ const RecommendedJobs = () => {
           id: j.id,
           title: j.title || '',
           company: j.company || '',
+          logo: j.logo || j.companyLogo || '',
           location: j.location || '',
           salary: j.salary || '',
           type: j.jobType || '全职',
           matchScore: Math.floor(Math.random() * 20) + 80,
         }));
         setJobs(allJobs.length > 0 ? allJobs : [
-          { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
-          { id: 3, title: 'Product Manager', company: 'ByteDance', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
-          { id: 4, title: 'Frontend Developer', company: 'Amazon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
+          { id: 1, title: 'Software Engineer, New Grad 2026', company: 'Google', logo: 'https://cdn.brandfetch.io/google.com/w/128/h/128/theme/light/icon', location: 'Mountain View, CA', salary: '$130k - $180k', type: '全职', matchScore: 98 },
+          { id: 3, title: 'Product Manager', company: 'ByteDance', logo: 'https://cdn.brandfetch.io/bytedance.com/w/128/h/128/theme/light/icon', location: 'San Jose, CA', salary: '$150k - $200k', type: '全职', matchScore: 92 },
+          { id: 4, title: 'Frontend Developer', company: 'Amazon', logo: 'https://cdn.brandfetch.io/amazon.com/w/128/h/128/theme/light/icon', location: 'Seattle, WA', salary: '$120k - $160k', type: '全职', matchScore: 88 },
         ]);
       } catch (error) {
         console.error('Failed to fetch recommended jobs:', error);
@@ -560,8 +561,25 @@ const RecommendedJobs = () => {
                   匹配度 {job.matchScore}%
                 </div>
                 <div className="flex items-start space-x-5 mb-5">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-gray-50 to-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center text-2xl font-black text-gray-400 shrink-0 group-hover:scale-105 transition-transform duration-300">
-                    {job.company.charAt(0)}
+                  <div className="w-14 h-14 bg-gradient-to-tr from-gray-50 to-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center text-2xl font-black text-gray-400 shrink-0 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+                    {job.logo ? (
+                      <>
+                        <img
+                          src={job.logo}
+                          alt={job.company}
+                          className="w-full h-full object-contain p-2 bg-white rounded-2xl"
+                          referrerPolicy="no-referrer"
+                          onError={(event) => {
+                            const target = event.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <span className="hidden">{job.company.charAt(0)}</span>
+                      </>
+                    ) : (
+                      job.company.charAt(0)
+                    )}
                   </div>
                   <div className="pt-1">
                     <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary transition-colors line-clamp-1">{job.title}</h3>
@@ -591,13 +609,7 @@ const RecommendedJobs = () => {
 };
 
 export default function Home() {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-
-  const handleOpenAuth = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setIsAuthModalOpen(true);
-  };
+  const { openAuthModal } = useAuth();
 
   return (
     <main>
@@ -619,12 +631,7 @@ export default function Home() {
       <RecommendedJobs />
       <Features />
       <FeatureShowcase />
-      <CTA onOpenAuth={handleOpenAuth} />
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        defaultMode={authMode} 
-      />
+      <CTA onOpenAuth={openAuthModal} />
     </main>
   );
 }

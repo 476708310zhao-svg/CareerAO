@@ -10,7 +10,9 @@
     "prerender": "react-snap",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "guard": "node scripts/guard-sensitive-files.mjs",
+    "verify": "npm run guard && npm run lint && npm run build"
   },
   "reactSnap": {
     "source": "dist",

@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import SEO from '../components/SEO';
+import { db } from '../lib/firebase';
+import { fetchExperiencesList } from '../lib/firestore_api';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 // Mock Data
 const MOCK_COMPANIES = ['全部', '字节跳动', '腾讯', '阿里巴巴', '华为', 'Google', 'Meta', 'Amazon', 'Microsoft'];
@@ -91,7 +94,6 @@ export default function InterviewExperiences() {
   useEffect(() => {
     const loadExperiences = async () => {
       try {
-        const { fetchExperiencesList } = await import('../lib/firestore_api');
         const dbExps = await fetchExperiencesList();
         if (dbExps && dbExps.length > 0) {
           const formattedDbExps = dbExps.map((exp: any) => ({
@@ -124,9 +126,6 @@ export default function InterviewExperiences() {
     }
 
     try {
-      const { db } = await import('../lib/firebase');
-      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-      
       const newId = 'exp_' + Math.floor(Math.random() * 1000000);
       await setDoc(doc(db, 'interview_experiences', newId), {
          title: newPost.title,

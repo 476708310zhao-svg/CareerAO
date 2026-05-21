@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Building2, MapPin, Globe, Users, Star, Briefcase, ChevronRight, MessageSquare } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { db } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 
 const MOCK_COMPANY = {
   id: 1,
@@ -39,8 +41,6 @@ export default function CompanyDetail() {
           return;
         }
 
-        const { db } = await import('../lib/firebase');
-        const { doc, getDoc, collection, query, where, getDocs } = await import('firebase/firestore');
         const companyDoc = await getDoc(doc(db, 'companies', id));
 
         if (companyDoc.exists()) {
