@@ -14,7 +14,7 @@ const RouteLoading = () => (
   <div className="min-h-[50vh] flex items-center justify-center px-4 pt-24">
     <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
       <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
-      Loading...
+      页面加载中...
     </div>
   </div>
 );
@@ -37,7 +37,6 @@ function AppLayout() {
         <Footer />
       </div>
       
-      {/* Global Auth Modal */}
       {isAuthModalOpen && (
         <Suspense fallback={null}>
           <AuthModal

@@ -1,268 +1,163 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FileText, 
-  Plus, 
-  Upload, 
-  Sparkles, 
-  Download, 
-  Edit3, 
-  Trash2, 
-  CheckCircle2, 
-  AlertCircle,
-  Target,
-  FileSearch,
-  ChevronRight,
-  MoreVertical,
-  Crown,
-  Send
-} from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight, Crown, Edit3, FileSearch, FileText, Plus, Send, Sparkles, Target, Upload } from 'lucide-react';
+
+import SEO from '../components/SEO';
+
+const initialResumes = [
+  { id: 1, name: 'Software Engineer - 2026 NG', targetRole: 'Software Engineer', lastModified: '2 小时前', atsScore: 92, language: 'English', isDefault: true },
+  { id: 2, name: 'Frontend Developer - React', targetRole: 'Frontend Engineer', lastModified: '3 天前', atsScore: 85, language: 'English', isDefault: false },
+  { id: 3, name: '产品经理实习 - 中文版', targetRole: 'Product Manager', lastModified: '1 周前', atsScore: 78, language: 'Chinese', isDefault: false },
+];
 
 export default function MyResume() {
   const navigate = useNavigate();
-  const [resumes] = useState([
-    {
-      id: 1,
-      name: 'Software Engineer - 2026 NG',
-      targetRole: 'Software Engineer',
-      lastModified: '2小时前',
-      atsScore: 92,
-      completion: 100,
-      language: 'English',
-      isDefault: true
-    },
-    {
-      id: 2,
-      name: 'Frontend Developer - React',
-      targetRole: 'Frontend Engineer',
-      lastModified: '3天前',
-      atsScore: 85,
-      completion: 90,
-      language: 'English',
-      isDefault: false
-    },
-    {
-      id: 3,
-      name: '产品经理实习 - 中文版',
-      targetRole: 'Product Manager',
-      lastModified: '1周前',
-      atsScore: 78,
-      completion: 85,
-      language: 'Chinese',
-      isDefault: false
-    }
-  ]);
-
+  const [resumes] = useState(initialResumes);
+  const [jdText, setJdText] = useState('');
+  const [atsResult, setAtsResult] = useState<number | null>(null);
   const maxFreeResumes = 3;
-  const currentResumes = resumes.length;
+
+  const runAtsCheck = () => {
+    if (!jdText.trim()) return;
+    setAtsResult(Math.min(96, 76 + Math.floor(jdText.length / 120)));
+  };
 
   return (
-    <div className="pt-24 pb-16 min-h-screen bg-gray-50">
+    <main className="pt-24 pb-16 min-h-screen bg-gray-50">
+      <SEO
+        title="我的简历"
+        description="管理多版本简历，进行 ATS 匹配度检查，并使用 AI 优化简历经历表达。"
+        keywords="简历优化,ATS简历,留学生简历,AI简历润色"
+        canonical="https://www.zhiyincareer.com/my-resume"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <section className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center tracking-tight">
+            <h1 className="text-3xl font-black text-gray-900 flex items-center tracking-tight">
               <FileText className="w-8 h-8 text-primary mr-3" />
-              我的简历 (My Resumes)
+              我的简历
             </h1>
-            <p className="text-gray-500 mt-2">
-              管理您的多版本简历。使用 AI 一键润色经历，并进行 ATS 简历解析打分。
-            </p>
+            <p className="text-gray-500 mt-2">管理多版本简历，按目标岗位优化表达，并检查 ATS 匹配度。</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-xl font-medium transition-colors flex items-center shadow-sm">
               <Upload className="w-4 h-4 mr-2" />
               导入 PDF
             </button>
-            <button className="bg-primary hover:bg-primary-hover text-white px-4 py-2.5 rounded-xl font-medium transition-colors flex items-center shadow-sm shadow-primary/20">
+            <button onClick={() => navigate('/my-resume/new')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2.5 rounded-xl font-medium transition-colors flex items-center shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               新建简历
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: Resume List */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid lg:grid-cols-3 gap-8">
+          <section className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                  简历库 
-                  <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
-                    {currentResumes} / {maxFreeResumes} 个版本
-                  </span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <h2 className="text-lg font-bold text-gray-900">
+                  简历库
+                  <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">{resumes.length} / {maxFreeResumes} 个版本</span>
                 </h2>
-                {currentResumes >= maxFreeResumes && (
-                  <button className="text-sm text-amber-600 font-medium hover:text-amber-700 flex items-center bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 transition-colors">
+                {resumes.length >= maxFreeResumes && (
+                  <button className="text-sm text-amber-600 font-medium hover:text-amber-700 flex items-center bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
                     <Crown className="w-4 h-4 mr-1.5" />
-                    升级 PRO 解锁无限版本
+                    升级解锁更多版本
                   </button>
                 )}
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div className="grid md:grid-cols-2 gap-4">
                 {resumes.map((resume) => (
-                  <div key={resume.id} className="border border-gray-200 rounded-xl p-5 hover:border-primary/40 hover:shadow-md transition-all flex flex-col bg-white group relative">
-                    {resume.isDefault && (
-                      <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl">
-                        默认投递
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="pr-6">
-                        <h3 className="font-bold text-gray-900 text-base truncate group-hover:text-primary transition-colors">
-                          {resume.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-1">目标岗位: {resume.targetRole}</p>
-                      </div>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                  <article key={resume.id} className="border border-gray-200 rounded-xl p-5 hover:border-primary/40 hover:shadow-md transition-all flex flex-col bg-white group relative">
+                    {resume.isDefault && <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl">默认投递</div>}
+                    <div className="mb-4 pr-8">
+                      <h3 className="font-bold text-gray-900 text-base truncate group-hover:text-primary transition-colors">{resume.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">目标岗位：{resume.targetRole}</p>
                     </div>
-
-                    <div className="flex items-center space-x-4 mb-4">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">ATS Score</span>
-                        <div className="flex items-center">
-                          <span className={`font-bold text-lg ${resume.atsScore >= 90 ? 'text-green-500' : resume.atsScore >= 80 ? 'text-primary' : 'text-amber-500'}`}>
-                            {resume.atsScore}
-                          </span>
-                          <span className="text-xs text-gray-400 ml-1">/100</span>
-                        </div>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">ATS Score</span>
+                        <div className={`font-bold text-lg ${resume.atsScore >= 90 ? 'text-green-500' : resume.atsScore >= 80 ? 'text-primary' : 'text-amber-500'}`}>{resume.atsScore}<span className="text-xs text-gray-400 ml-1">/100</span></div>
                       </div>
-                      <div className="w-px h-8 bg-gray-100"></div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Language</span>
-                        <span className="text-sm font-medium text-gray-700">{resume.language}</span>
+                      <div className="w-px h-9 bg-gray-100" />
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Updated</span>
+                        <div className="text-sm font-medium text-gray-700">{resume.lastModified}</div>
                       </div>
                     </div>
-
                     <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                       <button className="px-3 py-1.5 flex items-center justify-center text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-black transition-colors w-full mr-3 shadow-sm">
-                        <Send className="w-3.5 h-3.5 mr-1.5" /> 一键网申投递
+                        <Send className="w-3.5 h-3.5 mr-1.5" />
+                        用于网申
                       </button>
-                      <div className="flex items-center space-x-1">
-                        <button 
-                          onClick={() => navigate(`/my-resume/${resume.id}`)}
-                          className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20" 
-                          title="编辑 & AI润色"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <button onClick={() => navigate(`/my-resume/${resume.id}`)} className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="编辑简历">
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                     </div>
-                  </div>
+                  </article>
                 ))}
 
-                {/* Create New Card */}
-                <div 
-                  onClick={() => navigate('/my-resume/new')}
-                  className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center text-center hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer min-h-[200px]"
-                >
-                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-white">
-                    <Plus className="w-6 h-6 text-gray-400 group-hover:text-primary" />
-                  </div>
+                <button onClick={() => navigate('/my-resume/new')} className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center text-center hover:border-primary/40 hover:bg-primary/5 transition-all min-h-[200px]">
+                  <Plus className="w-8 h-8 text-gray-400 mb-3" />
                   <h3 className="font-medium text-gray-900">创建新版本</h3>
-                  <p className="text-xs text-gray-500 mt-1 max-w-[200px]">针对不同岗位定制专属简历，提高网申通过率</p>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Polish Banner */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
-              <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between">
-                <div className="mb-4 md:mb-0">
-                  <h3 className="text-xl font-bold flex items-center mb-2">
-                    <Sparkles className="w-5 h-5 mr-2 text-yellow-300" />
-                    AI 深度润色服务
-                  </h3>
-                  <p className="text-indigo-100 text-sm max-w-md">
-                    运用哈佛商学院推荐的 XYZ 简历法则，将平淡的经历转化为强有力的数据驱动型描述。
-                  </p>
-                </div>
-                <button className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-50 transition-colors shrink-0 shadow-sm">
-                  一键优化简历
+                  <p className="text-xs text-gray-500 mt-1 max-w-[220px]">针对不同岗位定制简历，提高网申通过率。</p>
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Right Column: Tools & ATS */}
-          <div className="space-y-6">
-            
-            {/* ATS Checker */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-md">
+              <h3 className="text-xl font-bold flex items-center mb-2"><Sparkles className="w-5 h-5 mr-2 text-yellow-300" />AI 深度润色</h3>
+              <p className="text-indigo-100 text-sm max-w-2xl mb-4">把平铺直叙的经历改写成更有结果感、动作感和岗位匹配度的表达。</p>
+              <button onClick={() => navigate('/my-resume/1')} className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-50 transition-colors">打开编辑器</button>
+            </div>
+          </section>
+
+          <aside className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center mb-4">
                 <Target className="w-5 h-5 text-primary mr-2" />
                 <h3 className="font-bold text-gray-900">ATS 匹配度检测</h3>
               </div>
-              <p className="text-sm text-gray-500 mb-4">
-                上传目标岗位的 Job Description，检测您的简历在企业 ATS 系统中的匹配得分。
-              </p>
-              
-              <div className="space-y-3">
-                <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">选择简历</label>
-                  <select className="w-full bg-transparent border-none outline-none text-sm text-gray-900">
-                    <option>Software Engineer - 2026 NG</option>
-                    <option>Frontend Developer - React</option>
-                  </select>
+              <p className="text-sm text-gray-500 mb-4">粘贴目标岗位 JD，快速判断简历是否覆盖核心关键词。</p>
+              <textarea value={jdText} onChange={(event) => setJdText(event.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-900 resize-none h-28 outline-none focus:ring-2 focus:ring-primary/20" placeholder="粘贴 Job Description..." />
+              <button onClick={runAtsCheck} className="w-full mt-3 bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center">
+                <FileSearch className="w-4 h-4 mr-2" />
+                开始检测
+              </button>
+              {atsResult && (
+                <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
+                  <div className="text-sm text-gray-500 mb-1">预测匹配度</div>
+                  <div className="text-3xl font-black text-primary">{atsResult}%</div>
                 </div>
-                
-                <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">粘贴 Job Description</label>
-                  <textarea 
-                    className="w-full bg-transparent border-none outline-none text-sm text-gray-900 resize-none h-20"
-                    placeholder="Paste the job requirements here..."
-                  ></textarea>
-                </div>
-
-                <button className="w-full bg-gray-900 hover:bg-black text-white py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center">
-                  <FileSearch className="w-4 h-4 mr-2" />
-                  开始检测
-                </button>
-              </div>
+              )}
             </div>
 
-            {/* Resume Tips */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-900 mb-4">高分简历指南</h3>
               <ul className="space-y-4">
-                <li className="flex items-start">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 mr-2 shrink-0" />
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">使用强动词开头</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">避免使用 "Responsible for"，改用 "Architected", "Spearheaded", "Optimized"。</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 mr-2 shrink-0" />
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">量化你的成果</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">加入具体数据，例如 "提升了 40% 的加载速度" 或 "管理 $500K 的预算"。</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 mr-2 shrink-0" />
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">控制在一页纸内</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">对于应届生和少于 5 年经验的求职者，一页纸 (1-page) 是北美求职的黄金标准。</p>
-                  </div>
-                </li>
+                {[
+                  ['使用强动作动词开头', '避免 Responsible for，优先使用 Built、Led、Optimized。', CheckCircle2],
+                  ['量化你的结果', '加入具体数据，例如提升 40% 加载速度或服务 10k 用户。', CheckCircle2],
+                  ['控制在一页内', '应届生和少于 5 年经验的候选人优先保持一页。', AlertCircle],
+                ].map(([title, desc, Icon]) => (
+                  <li key={title as string} className="flex items-start">
+                    <Icon className="w-4 h-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900">{title as string}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">{desc as string}</p>
+                    </div>
+                  </li>
+                ))}
               </ul>
               <button className="w-full mt-4 py-2 text-sm font-medium text-primary hover:text-primary-hover flex items-center justify-center transition-colors">
-                查看完整指南 <ChevronRight className="w-4 h-4 ml-1" />
+                查看完整指南
+                <ChevronRight className="w-4 h-4 ml-1" />
               </button>
             </div>
-
-          </div>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
