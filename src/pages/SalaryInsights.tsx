@@ -62,9 +62,27 @@ export default function SalaryInsights() {
       setIsLoading(true);
       setErrorMessage('');
       try {
+        let market: any = null;
+        try {
+          const marketParams = new URLSearchParams({ job_title: role, company, location, region: 'NA' });
+          const marketResponse = await apiFetch(`/api/proxy/salaries/market?${marketParams}`);
+          market = marketResponse.data?.[0] || null;
+        } catch (marketError) {
+          console.warn('Salary market fallback:', marketError);
+        }
+        if (!cancelled && market) {
+          setStats({
+            avgTotal: market.median_salary,
+            avgBase: Math.round((market.median_salary || 0) * ((market.breakdown?.base_pct || 65) / 100)),
+            avgStock: Math.round((market.median_salary || 0) * ((market.breakdown?.equity_pct || 20) / 100)),
+            avgBonus: Math.round((market.median_salary || 0) * ((market.breakdown?.bonus_pct || 15) / 100)),
+            count: market.sample_size || undefined,
+          });
+        }
+
         const params = new URLSearchParams({ position: role, company, region: location });
         const statsResponse = await apiFetch(`/api/proxy/salaries/statistics?${params}`);
-        if (!cancelled && statsResponse.data && !statsResponse.useMock) {
+        if (!cancelled && !market && statsResponse.data && !statsResponse.useMock) {
           setStats(statsResponse.data);
         }
 

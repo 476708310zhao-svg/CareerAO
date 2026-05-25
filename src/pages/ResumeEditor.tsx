@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Download, Save, Sparkles, Wand2 } from 'lucide-react';
@@ -53,6 +53,17 @@ export default function ResumeEditor() {
   const [diagnosisOpen, setDiagnosisOpen] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!id || id === 'new') return;
+    apiFetch(`/api/proxy/resumes/${id}`)
+      .then((response) => {
+        if (response.data?.data) {
+          setResume((current) => ({ ...current, ...response.data.data }));
+        }
+      })
+      .catch((error) => console.warn('Resume detail fallback:', error));
+  }, [id]);
+
   const handlePrint = useReactToPrint({
     contentRef,
     documentTitle: `${resume.personalInfo.fullName.replace(' ', '_')}_Resume`,
@@ -60,9 +71,23 @@ export default function ResumeEditor() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
-    setIsSaving(false);
-    showToast('简历已保存', 'success');
+    try {
+      const endpoint = id && id !== 'new' ? `/api/proxy/resumes/${id}` : '/api/proxy/resumes';
+      await apiFetch(endpoint, {
+        method: id && id !== 'new' ? 'PUT' : 'POST',
+        body: JSON.stringify({
+          name: resume.name,
+          language: 'en',
+          data: resume,
+        }),
+      });
+      showToast('简历已同步到后端', 'success');
+    } catch (error) {
+      console.warn('Resume save fallback:', error);
+      showToast('当前未登录，已保留本地编辑内容', 'info');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updatePersonalInfo = (field: keyof typeof resume.personalInfo, value: string) => {
@@ -82,14 +107,23 @@ export default function ResumeEditor() {
   const polishExperience = async () => {
     setIsPolishing(true);
     try {
-      const response = await apiFetch('/api/ai/polish-resume', {
+      const response = await apiFetch('/api/proxy/ai/chat', {
         method: 'POST',
         body: JSON.stringify({
-          text: resume.experience.bullets.join('\n'),
-          role: resume.targetRole,
+          temperature: 0.35,
+          messages: [
+            {
+              role: 'system',
+              content: 'Rewrite resume bullets in English. Make them concise, action-oriented, quantified when possible. Return only bullet lines.',
+            },
+            {
+              role: 'user',
+              content: `Target role: ${resume.targetRole}\nBullets:\n${resume.experience.bullets.join('\n')}`,
+            },
+          ],
         }),
       });
-      const raw = response.result || '';
+      const raw = response.choices?.[0]?.message?.content || '';
       const bullets = raw
         .split('\n')
         .map((line: string) => line.replace(/^[-•]\s*/, '').trim())

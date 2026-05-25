@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { AlertCircle, CheckCircle2, Clipboard, Copy, FileText, Sparkles, Zap } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { apiFetch } from '../lib/api';
 
 const sampleAnswers = [
   {
@@ -27,17 +28,39 @@ export default function ApplicationAssistant() {
   const [resumeText, setResumeText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
 
   const matchedKeywords = useMemo(() => extractKeywords(`${jdText} ${resumeText}`), [jdText, resumeText]);
   const missingHints = ['补充量化结果', '突出和 JD 对应的关键词', '准备 2 个 STAR 案例'];
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!jdText.trim()) return;
     setIsAnalyzing(true);
-    window.setTimeout(() => {
+    try {
+      const response = await apiFetch('/api/proxy/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          temperature: 0.4,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a career application assistant. Analyze the JD and resume excerpt. Return concise Chinese advice with match score, keywords, open-question angles, and pre-submit checklist.',
+            },
+            {
+              role: 'user',
+              content: `JD:\n${jdText}\n\nResume excerpt:\n${resumeText || '未提供'}`,
+            },
+          ],
+        }),
+      });
+      setAiSummary(response.choices?.[0]?.message?.content || '');
+    } catch (error) {
+      console.warn('Application analysis fallback:', error);
+      setAiSummary('');
+    } finally {
       setIsAnalyzing(false);
       setShowResults(true);
-    }, 900);
+    }
   };
 
   return (
@@ -108,6 +131,12 @@ export default function ApplicationAssistant() {
 
             {showResults && (
               <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {aiSummary && (
+                  <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                    <h2 className="text-lg font-bold text-indigo-950 mb-3">AI 后端分析</h2>
+                    <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-line">{aiSummary}</p>
+                  </div>
+                )}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-gray-900 mb-1">岗位匹配度</h2>

@@ -98,19 +98,30 @@ export default function AIInterview() {
     setTranscript('');
     setIsAiThinking(true);
     try {
-      const response = await apiFetch('/api/ai/interview-chat', {
+      const response = await apiFetch('/api/proxy/ai/chat', {
         method: 'POST',
         body: JSON.stringify({
-          messages: nextMessages,
-          role: selectedRole,
-          company: selectedCompany,
-          jd: jdContext,
-          type: selectedType,
-          difficulty: selectedDifficulty,
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'system',
+              content: [
+                `You are an AI interviewer for ${selectedCompany}.`,
+                `Target role: ${selectedRole}. Interview type: ${selectedType}. Difficulty: ${selectedDifficulty}.`,
+                `Ask one focused question or follow-up at a time. Give concise feedback when useful.`,
+                `Limit the mock session to about ${questionCount} core questions.`,
+                jdContext ? `Job description context: ${jdContext}` : '',
+              ].filter(Boolean).join('\n'),
+            },
+            ...nextMessages.map((message) => ({
+              role: message.role === 'ai' ? 'assistant' : 'user',
+              content: message.text,
+            })),
+          ],
         }),
       });
       const reply =
-        response.reply ||
+        response.choices?.[0]?.message?.content ||
         'Thanks. Let me ask a follow-up: can you quantify the impact and explain what trade-off you made?';
       setMessages((current) => [...current, { role: 'ai', text: reply }]);
       speak(reply);

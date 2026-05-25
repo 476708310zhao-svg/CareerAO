@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Calendar, CheckCircle2, Circle, Compass, Rocket, 
 import { Legend, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 import SEO from '../components/SEO';
+import { apiFetch } from '../lib/api';
 
 const skillData = [
   { subject: '算法', current: 55, target: 85 },
@@ -35,6 +36,18 @@ const buildRoadmap = (role: string, timeline: string) => [
   },
 ];
 
+type BackendCareerPlan = {
+  phases?: Array<{
+    duration?: string;
+    goal?: string;
+    skills?: string[];
+    projects?: string[];
+    resume?: string;
+    interview?: string;
+    job_search?: string;
+  }>;
+};
+
 export default function CareerPlanning() {
   const [activePhase, setActivePhase] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -44,16 +57,40 @@ export default function CareerPlanning() {
     timeline: '6 个月',
     background: 'CS 硕士，1 段实习经历',
   });
+  const [backendPlan, setBackendPlan] = useState<BackendCareerPlan | null>(null);
 
-  const roadmap = useMemo(() => buildRoadmap(formState.role, formState.timeline), [formState.role, formState.timeline]);
+  const roadmap = useMemo(() => {
+    if (backendPlan?.phases?.length) {
+      return backendPlan.phases.map((phase, index) => ({
+        title: `${phase.duration || `第 ${index + 1} 阶段`}：${phase.goal || '阶段目标'}`,
+        focus: [phase.resume, phase.interview, phase.job_search].filter(Boolean).join(' / ') || '围绕目标岗位推进核心任务',
+        tasks: [...(phase.skills || []), ...(phase.projects || [])].slice(0, 5),
+        progress: index === 0 ? 30 : 0,
+      }));
+    }
+    return buildRoadmap(formState.role, formState.timeline);
+  }, [backendPlan, formState.role, formState.timeline]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    window.setTimeout(() => {
+    try {
+      const response = await apiFetch('/api/proxy/ai/career-plan', {
+        method: 'POST',
+        body: JSON.stringify({
+          location: '不限',
+          position: formState.role,
+          background: `${formState.background}\n准备周期：${formState.timeline}`,
+        }),
+      });
+      setBackendPlan(response.plan || null);
+    } catch (error) {
+      console.warn('Career plan fallback:', error);
+      setBackendPlan(null);
+    } finally {
       setIsGenerating(false);
       setHasGenerated(true);
       setActivePhase(0);
-    }, 800);
+    }
   };
 
   return (

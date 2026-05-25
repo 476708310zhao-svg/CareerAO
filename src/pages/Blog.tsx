@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bookmark, BookOpen, Calendar, Clock, Eye, Search, ThumbsUp, TrendingUp, User } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
+import { apiFetch } from '../lib/api';
 
 const categories = ['全部', '简历优化', '面试技巧', '行业分析', '薪资谈判', '职场发展', '笔试真题'];
 
-const posts = [
+const fallbackPosts = [
   {
     id: 1,
     title: '如何写出更容易通过 ATS 的留学生简历',
@@ -54,9 +55,33 @@ const posts = [
 export default function Blog() {
   const [activeCategory, setActiveCategory] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState(fallbackPosts);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(new Set());
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const { showToast } = useToast();
+
+  useEffect(() => {
+    apiFetch('/api/proxy/news?tab=tip')
+      .then((response) => {
+        const articles = Array.isArray(response.articles) ? response.articles : [];
+        if (!articles.length) return;
+        setPosts(articles.slice(0, 9).map((article: any, index: number) => ({
+          id: article.id || `news_${index}`,
+          title: article.title || '求职资讯',
+          excerpt: article.desc || article.title || '',
+          category: article.type === 'data' ? '行业分析' : article.type === 'policy' ? '职场发展' : '面试技巧',
+          author: article.source || '职引资讯',
+          date: article.pubDate || article.time || '',
+          readTime: '5 min read',
+          tags: [article.lang === 'en' ? 'English' : '中文'],
+          views: 0,
+          likes: 0,
+          imageUrl: fallbackPosts[index % fallbackPosts.length].imageUrl,
+          recommended: index < 3,
+        })));
+      })
+      .catch((error) => console.warn('Blog news fallback:', error));
+  }, []);
 
   const filteredPosts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

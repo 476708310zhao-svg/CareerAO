@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, ChevronRight, Crown, Edit3, FileSearch, FileText, Plus, Send, Sparkles, Target, Upload } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { apiFetch } from '../lib/api';
 
 const initialResumes = [
   { id: 1, name: 'Software Engineer - 2026 NG', targetRole: 'Software Engineer', lastModified: '2 小时前', atsScore: 92, language: 'English', isDefault: true },
@@ -12,10 +13,35 @@ const initialResumes = [
 
 export default function MyResume() {
   const navigate = useNavigate();
-  const [resumes] = useState(initialResumes);
+  const [resumes, setResumes] = useState(initialResumes);
+  const [isLoading, setIsLoading] = useState(true);
   const [jdText, setJdText] = useState('');
   const [atsResult, setAtsResult] = useState<number | null>(null);
   const maxFreeResumes = 3;
+
+  useEffect(() => {
+    let mounted = true;
+    apiFetch('/api/proxy/resumes')
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        if (mounted && list.length) {
+          setResumes(list.map((item: any, index: number) => ({
+            id: item.id,
+            name: item.name || `简历 ${index + 1}`,
+            targetRole: item.language === 'en' ? 'English Resume' : '中文简历',
+            lastModified: item.updated_at || item.created_at || '刚刚',
+            atsScore: 82,
+            language: item.language === 'en' ? 'English' : 'Chinese',
+            isDefault: index === 0,
+          })));
+        }
+      })
+      .catch((error) => {
+        console.warn('Resume list fallback:', error);
+      })
+      .finally(() => mounted && setIsLoading(false));
+    return () => { mounted = false; };
+  }, []);
 
   const runAtsCheck = () => {
     if (!jdText.trim()) return;
@@ -57,7 +83,7 @@ export default function MyResume() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                 <h2 className="text-lg font-bold text-gray-900">
                   简历库
-                  <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">{resumes.length} / {maxFreeResumes} 个版本</span>
+                  <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">{isLoading ? '同步中' : `${resumes.length} / ${maxFreeResumes} 个版本`}</span>
                 </h2>
                 {resumes.length >= maxFreeResumes && (
                   <button className="text-sm text-amber-600 font-medium hover:text-amber-700 flex items-center bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
