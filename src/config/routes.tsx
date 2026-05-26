@@ -29,6 +29,7 @@ const Search = lazy(() => import('../pages/Search'));
 const JobMap = lazy(() => import('../pages/JobMap'));
 const Favorites = lazy(() => import('../pages/Favorites'));
 const Messages = lazy(() => import('../pages/Messages'));
+const Applications = lazy(() => import('../pages/Applications'));
 
 export const appRoutes = [
   { path: '/', element: <Home /> },
@@ -50,6 +51,7 @@ export const appRoutes = [
   { path: '/membership', element: <Membership /> },
   { path: '/favorites', element: <Favorites /> },
   { path: '/messages', element: <Messages /> },
+  { path: '/applications', element: <Applications /> },
   { path: '/blog', element: <Blog /> },
   { path: '/news', element: <JobNews /> },
   { path: '/interview-experiences', element: <InterviewExperiences /> },

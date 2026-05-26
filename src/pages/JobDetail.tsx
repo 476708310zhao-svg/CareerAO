@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
@@ -68,10 +70,13 @@ export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { showToast } = useToast();
   const [job, setJob] = useState<JobDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +143,39 @@ export default function JobDetail() {
         jd: job.description,
       },
     });
+  };
+
+  const trackApplicationAndOpen = async () => {
+    if (!job?.applyUrl) return;
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      showToast('请先登录，再记录投递进度。', 'info');
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      await apiFetch('/api/proxy/applications', {
+        method: 'POST',
+        body: JSON.stringify({
+          jobId: job.id,
+          jobSnapshot: {
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            salary: job.salary,
+            applyUrl: job.applyUrl,
+          },
+        }),
+      });
+      showToast('已记录投递，正在打开官网。', 'success');
+    } catch (error) {
+      console.warn('Failed to create application record:', error);
+      showToast(error instanceof Error ? error.message : '投递记录保存失败，仍会打开官网。', 'error');
+    } finally {
+      setIsApplying(false);
+      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   if (isLoading) {
@@ -230,17 +268,16 @@ export default function JobDetail() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href={job.applyUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={trackApplicationAndOpen}
+                    disabled={!job.applyUrl || isApplying}
                     className={`flex-1 py-3 rounded-xl font-bold transition-colors shadow-sm flex items-center justify-center ${
-                      job.applyUrl ? 'bg-primary hover:bg-primary-hover text-white' : 'bg-gray-100 text-gray-400 pointer-events-none'
+                      job.applyUrl ? 'bg-primary hover:bg-primary-hover text-white disabled:bg-primary/60' : 'bg-gray-100 text-gray-400'
                     }`}
                   >
-                    前往官网投递
+                    {isApplying ? '正在记录投递...' : '记录投递并打开官网'}
                     <ExternalLink className="w-4 h-4 ml-2 opacity-80" />
-                  </a>
+                  </button>
                   <button onClick={startInterview} className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
                     <Bot className="w-5 h-5 mr-2" />
                     用此 JD 模拟面试

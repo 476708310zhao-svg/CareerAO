@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Bookmark, ChevronDown, LogOut, Menu, Search, User, X } from 'lucide-react';
+import { Bell, Bookmark, ChevronDown, FileText, LogOut, Menu, Search, User, X } from 'lucide-react';
 
 import { navCategories } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -223,6 +223,14 @@ const Navbar = () => {
                           </span>
                         )}
                       </Link>
+                      <Link
+                        to="/applications"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        投递追踪
+                      </Link>
                     </div>
                     <div className="py-1 border-t border-gray-50">
                       <button
@@ -325,6 +333,10 @@ const Navbar = () => {
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
+                </Link>
+                <Link to="/applications" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
+                  <FileText className="w-5 h-5 mr-3 text-gray-400" />
+                  投递追踪
                 </Link>
                 <button
                   onClick={handleLogout}
