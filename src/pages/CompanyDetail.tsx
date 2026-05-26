@@ -1,222 +1,224 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Building2, MapPin, Globe, Users, Star, Briefcase, ChevronRight, MessageSquare } from 'lucide-react';
-import { apiFetch } from '../lib/api';
-import { db } from '../lib/firebase';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Briefcase, Building2, ChevronRight, Globe, MapPin, MessageSquare, Star, TrendingUp, Users } from 'lucide-react';
 
-const MOCK_COMPANY = {
-  id: 1,
-  name: 'Google',
-  logo: 'G',
+import SEO from '../components/SEO';
+import { apiFetch } from '../lib/api';
+
+type CompanyDetailData = {
+  id: string | number;
+  name: string;
+  logo?: string;
+  logoUrl?: string;
+  industry?: string;
+  headquarters?: string;
+  websiteUrl?: string;
+  size?: string;
+  description?: string;
+  jobCount?: number;
+  experienceCount?: number;
+  salaryCount?: number;
+  jobs?: any[];
+  experiences?: any[];
+  salaries?: any[];
+};
+
+const fallbackCompany: CompanyDetailData = {
+  id: 'fallback',
+  name: 'Company',
   industry: '科技/互联网',
-  location: 'Mountain View, CA',
-  website: 'careers.google.com',
-  size: '10000+ 人',
-  rating: 4.8,
-  description: 'Google is a multinational technology company that specializes in Internet-related services and products, which include online advertising technologies, a search engine, cloud computing, software, and hardware.',
-  jobs: [
-    { id: 1, title: 'Software Engineer, New Grad 2026', location: 'Mountain View, CA', type: '全职', postedAt: '2天前' },
-    { id: 2, title: 'Product Manager', location: 'San Francisco, CA', type: '全职', postedAt: '1周前' }
-  ],
-  experiences: [
-    { id: 1, title: '2025 NG SWE 面经 (Offer)', author: 'Alice', date: '2024-10-01', tags: ['算法', 'System Design'] },
-    { id: 2, title: 'PM Intern 连环面记录', author: 'Bob', date: '2024-09-15', tags: ['Behavioral', 'Product Sense'] }
-  ]
+  headquarters: 'Global',
+  websiteUrl: 'https://www.zhiyincareer.com/jobs',
+  size: '信息待补充',
+  description: '公司信息正在同步中。你可以先查看相关职位、面经和薪资样例。',
+  jobs: [],
+  experiences: [],
+  salaries: [],
+};
+
+const normalizeUrl = (url?: string) => {
+  if (!url) return '';
+  return url.startsWith('http') ? url : `https://${url}`;
 };
 
 export default function CompanyDetail() {
   const { id } = useParams();
-  const [company, setCompany] = useState<any>(null);
+  const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'about' | 'jobs' | 'experiences'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'jobs' | 'experiences' | 'salaries'>('about');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchCompany = async () => {
       setIsLoading(true);
       try {
-        if (!id) {
-          setCompany(MOCK_COMPANY);
-          setIsLoading(false);
-          return;
-        }
-
-        const companyDoc = await getDoc(doc(db, 'companies', id));
-
-        if (companyDoc.exists()) {
-          const compData = companyDoc.data();
-          
-          // Try fetching jobs for this company
-          const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', id));
-          const jobsSnap = await getDocs(jobsQuery);
-          let relatedJobs = jobsSnap.docs.map(jd => ({
-             id: jd.id,
-             title: jd.data().title || '',
-             location: jd.data().location || '',
-             type: jd.data().type || '全职',
-             postedAt: '刚发布'
-          }));
-
-          // Try fetching experiences for this company
-          const expQuery = query(collection(db, 'interview_experiences'), where('company', '==', compData.name));
-          const expSnap = await getDocs(expQuery);
-          let relatedExps = expSnap.docs.map(ed => ({
-             id: ed.id,
-             title: `${ed.data().round} - ${ed.data().role}`,
-             author: ed.data().userId || 'Anonymous',
-             date: '刚刚',
-             tags: [ed.data().role, ed.data().round]
-          }));
-
-          setCompany({
-            id: companyDoc.id,
-            name: compData.name || '',
-            logo: compData.name?.charAt(0) || 'C',
-            industry: '科技/互联网', // Default if not provided
-            location: compData.location || 'Unknown',
-            website: compData.website || '#',
-            size: '10000+ 人', // Default mock info
-            rating: 4.8,
-            description: compData.description || '',
-            jobs: relatedJobs.length > 0 ? relatedJobs : MOCK_COMPANY.jobs,
-            experiences: relatedExps.length > 0 ? relatedExps : MOCK_COMPANY.experiences
-          });
-        } else {
-          setCompany(MOCK_COMPANY);
-        }
+        if (!id) throw new Error('Missing company id');
+        const response = await apiFetch(`/api/proxy/companies/${id}`);
+        if (!cancelled) setCompany(response.data || fallbackCompany);
       } catch (error) {
-        console.error('Failed to fetch company details:', error);
-        setCompany(MOCK_COMPANY); // Fallback to mock
+        console.warn('Company detail fallback:', error);
+        if (!cancelled) setCompany(fallbackCompany);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
     fetchCompany();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pt-24 pb-12 bg-gray-50 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <main className="min-h-screen pt-24 pb-12 bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </main>
     );
   }
 
   if (!company) {
-    return <div className="min-h-screen pt-24 text-center">Company not found</div>;
+    return <main className="min-h-screen pt-24 text-center">未找到公司信息</main>;
   }
 
+  const website = normalizeUrl(company.websiteUrl);
+  const jobs = company.jobs || [];
+  const experiences = company.experiences || [];
+  const salaries = company.salaries || [];
+
   return (
-    <div className="min-h-screen pt-24 pb-12 bg-gray-50">
+    <main className="min-h-screen pt-24 pb-12 bg-gray-50">
+      <SEO
+        title={`${company.name} 公司详情`}
+        description={`查看 ${company.name} 的公司介绍、在招职位、面经和薪资参考。`}
+        canonical={`https://www.zhiyincareer.com/companies/${id || ''}`}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header Section */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-8">
-          <div className="flex items-start space-x-6">
-            <div className="w-24 h-24 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0">
-              <span className="text-4xl font-bold text-primary">{company.logo || company.name.charAt(0)}</span>
+        <section className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-8">
+          <div className="flex flex-col md:flex-row md:items-start gap-6">
+            <div className="w-24 h-24 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border border-primary/10">
+              {company.logoUrl || company.logo ? (
+                <img src={company.logoUrl || company.logo} alt={company.name} className="w-full h-full object-contain p-3" />
+              ) : (
+                <span className="text-4xl font-bold text-primary">{company.name.charAt(0)}</span>
+              )}
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{company.name}</h1>
+              <h1 className="text-3xl font-black text-gray-900 mb-2">{company.name}</h1>
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-                <span className="flex items-center"><Building2 className="w-4 h-4 mr-1" /> {company.industry}</span>
-                <span className="flex items-center"><MapPin className="w-4 h-4 mr-1" /> {company.location}</span>
-                <span className="flex items-center"><Users className="w-4 h-4 mr-1" /> {company.size}</span>
-                <span className="flex items-center"><Star className="w-4 h-4 mr-1 text-yellow-400" /> {company.rating}</span>
+                <span className="flex items-center"><Building2 className="w-4 h-4 mr-1" /> {company.industry || '行业待补充'}</span>
+                <span className="flex items-center"><MapPin className="w-4 h-4 mr-1" /> {company.headquarters || '地点待补充'}</span>
+                <span className="flex items-center"><Users className="w-4 h-4 mr-1" /> {company.size || '规模待补充'}</span>
+                <span className="flex items-center"><Star className="w-4 h-4 mr-1 text-yellow-400" /> 数据已接入</span>
               </div>
-              <a href={`https://${company.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:text-primary-hover text-sm font-medium">
-                <Globe className="w-4 h-4 mr-1" /> 访问官网
-              </a>
+              {website && (
+                <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:text-primary-hover text-sm font-medium">
+                  <Globe className="w-4 h-4 mr-1" /> 访问官网
+                </a>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
+              {[
+                ['职位', company.jobCount ?? jobs.length, Briefcase],
+                ['面经', company.experienceCount ?? experiences.length, MessageSquare],
+                ['薪资', company.salaryCount ?? salaries.length, TrendingUp],
+              ].map(([label, value, Icon]) => (
+                <div key={label as string} className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center min-w-20">
+                  {React.createElement(Icon as typeof Briefcase, { className: 'w-4 h-4 mx-auto mb-1 text-primary' })}
+                  <div className="text-lg font-black text-gray-900">{value as number}</div>
+                  <div className="text-xs text-gray-500">{label as string}</div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex border-b border-gray-100">
-            <button 
-              onClick={() => setActiveTab('about')}
-              className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'about' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              公司介绍
-            </button>
-            <button 
-              onClick={() => setActiveTab('jobs')}
-              className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'jobs' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              在招职位 ({company.jobs?.length || 0})
-            </button>
-            <button 
-              onClick={() => setActiveTab('experiences')}
-              className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'experiences' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              笔经面经 ({company.experiences?.length || 0})
-            </button>
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="flex border-b border-gray-100 overflow-x-auto">
+            {[
+              ['about', '公司介绍'],
+              ['jobs', `在招职位 (${jobs.length})`],
+              ['experiences', `笔经面经 (${experiences.length})`],
+              ['salaries', `薪资参考 (${salaries.length})`],
+            ].map(([tab, label]) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as typeof activeTab)}
+                className={`flex-1 min-w-32 py-4 text-sm font-medium text-center transition-colors ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <div className="p-8">
             {activeTab === 'about' && (
-              <div className="prose max-w-none text-gray-600">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">关于我们</h3>
-                <p className="leading-relaxed">{company.description}</p>
+              <div className="max-w-3xl text-gray-600">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">关于 {company.name}</h2>
+                <p className="leading-relaxed">{company.description || '暂无公司介绍。'}</p>
               </div>
             )}
 
             {activeTab === 'jobs' && (
               <div className="space-y-4">
-                {company.jobs?.map((job: any) => (
-                  <Link key={job.id} to={`/jobs/${job.id}`} className="block bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                    <div className="flex justify-between items-start">
+                {jobs.map((job: any) => (
+                  <Link key={job.id || job.jobId} to={`/jobs/${job.id || job.jobId}`} className="block bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                    <div className="flex justify-between items-start gap-4">
                       <div>
-                        <h4 className="font-bold text-gray-900 mb-1">{job.title}</h4>
-                        <div className="flex items-center space-x-3 text-sm text-gray-500">
-                          <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" /> {job.location}</span>
-                          <span className="flex items-center"><Briefcase className="w-3.5 h-3.5 mr-1" /> {job.type}</span>
+                        <h3 className="font-bold text-gray-900 mb-1">{job.title || job.jobTitle || '职位'}</h3>
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                          <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" /> {job.location || job.jobCity || '地点待定'}</span>
+                          <span className="flex items-center"><Briefcase className="w-3.5 h-3.5 mr-1" /> {job.type || job.jobType || '职位类型待定'}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs text-gray-400">{job.postedAt}</span>
-                        <div className="mt-2 text-primary flex items-center text-sm font-medium">
-                          查看详情 <ChevronRight className="w-4 h-4 ml-1" />
-                        </div>
-                      </div>
+                      <span className="text-primary flex items-center text-sm font-medium whitespace-nowrap">
+                        查看详情 <ChevronRight className="w-4 h-4 ml-1" />
+                      </span>
                     </div>
                   </Link>
                 ))}
-                {(!company.jobs || company.jobs.length === 0) && (
-                  <div className="text-center text-gray-500 py-8">暂无在招职位</div>
-                )}
+                {!jobs.length && <div className="text-center text-gray-500 py-8">暂无在招职位</div>}
               </div>
             )}
 
             {activeTab === 'experiences' && (
               <div className="space-y-4">
-                {company.experiences?.map((exp: any) => (
-                  <Link key={exp.id} to={`/interview-prep/${exp.id}`} className="block bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors border border-gray-100">
-                    <h4 className="font-bold text-gray-900 mb-2">{exp.title}</h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {exp.tags?.map((tag: string, i: number) => (
-                          <span key={i} className="px-2 py-1 bg-white rounded-md text-xs font-medium text-gray-600 border border-gray-200">
-                            {tag}
-                          </span>
+                {experiences.map((experience: any) => (
+                  <Link key={experience.id} to="/interview-experiences" className="block bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors border border-gray-100">
+                    <h3 className="font-bold text-gray-900 mb-2">{experience.title || `${experience.position || ''} 面经`}</h3>
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        {[experience.position, experience.round, experience.type].filter(Boolean).map((tag: string) => (
+                          <span key={tag} className="px-2 py-1 bg-white rounded-md text-xs font-medium text-gray-600 border border-gray-200">{tag}</span>
                         ))}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500 space-x-4">
-                        <span>作者: {exp.author}</span>
-                        <span>{exp.date}</span>
-                      </div>
+                      <span>{experience.createdAt ? new Date(experience.createdAt).toLocaleDateString() : '近期'}</span>
                     </div>
                   </Link>
                 ))}
-                {(!company.experiences || company.experiences.length === 0) && (
-                  <div className="text-center text-gray-500 py-8">暂无面经分享</div>
-                )}
+                {!experiences.length && <div className="text-center text-gray-500 py-8">暂无面经分享</div>}
+              </div>
+            )}
+
+            {activeTab === 'salaries' && (
+              <div className="space-y-4">
+                {salaries.map((salary: any, index: number) => (
+                  <div key={`${salary.position}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-gray-900">{salary.position || '岗位'}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{salary.samples || 0} 条样本 · {salary.currency || ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-black text-primary">{salary.avgSalary ? Number(salary.avgSalary).toLocaleString() : 'N/A'}</div>
+                      <div className="text-xs text-gray-500">{salary.range || '区间待补充'}</div>
+                    </div>
+                  </div>
+                ))}
+                {!salaries.length && <div className="text-center text-gray-500 py-8">暂无薪资样本</div>}
               </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
