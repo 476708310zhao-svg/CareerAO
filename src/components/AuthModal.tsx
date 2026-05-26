@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { X, Check } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Check, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+import { useAuth } from '../contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -10,88 +11,97 @@ interface AuthModalProps {
   defaultMode?: 'login' | 'register';
 }
 
-const GoogleIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-  </svg>
-);
-
-
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { loginWithGoogle } = useAuth();
-  
+export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
+  const { loginWithPassword, registerWithPassword } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
   const [agreed, setAgreed] = useState(false);
-  const [showError, setShowError] = useState(false);
+  const [showAgreementError, setShowAgreementError] = useState(false);
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formState, setFormState] = useState({
+    nickname: '',
+    account: '',
+    email: '',
+    password: '',
+  });
 
-  // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
+      setMode(defaultMode);
       setApiError('');
+      setShowAgreementError(false);
+      setShowPassword(false);
     }
-  }, [isOpen]);
+  }, [defaultMode, isOpen]);
 
-  const handleGoogleSignIn = async () => {
-    if (!agreed) {
-      setShowError(true);
-      return;
-    }
-    
+  const ensureAgreement = () => {
+    if (agreed) return true;
+    setShowAgreementError(true);
+    return false;
+  };
+
+  const handlePasswordAuth = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ensureAgreement()) return;
     setIsLoading(true);
     setApiError('');
-    
+
     try {
-      await loginWithGoogle();
+      if (mode === 'login') {
+        await loginWithPassword(formState.account.trim(), formState.password);
+      } else {
+        await registerWithPassword({
+          nickname: formState.nickname.trim() || '新用户',
+          email: formState.email.trim(),
+          password: formState.password,
+        });
+      }
       onClose();
     } catch (err: any) {
-      setApiError(err.message || '登录失败，请重试');
+      setApiError(err.message || (mode === 'login' ? '登录失败，请重试' : '注册失败，请重试'));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const switchMode = (nextMode: 'login' | 'register') => {
+    setMode(nextMode);
+    setApiError('');
+    setShowAgreementError(false);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100]"
-          />
-          
-          {/* Modal */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100]" />
+
           <div className="fixed inset-0 flex items-center justify-center z-[101] p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden pointer-events-auto relative"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden pointer-events-auto relative"
             >
-              {/* Close button */}
-              <button 
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
-              >
+              <button onClick={onClose} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10" aria-label="关闭登录窗口">
                 <X className="w-5 h-5" />
               </button>
 
               <div className="p-6 sm:p-8">
-                <div className="text-center mb-8">
+                <div className="text-center mb-7">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    欢迎来到 职引
+                    {mode === 'login' ? '登录职引' : '创建职引账号'}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    一站式全流程求职辅助平台
+                    登录后可保存简历、提交评价、同步反馈和使用更多求职工具
                   </p>
+                </div>
+
+                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-xl mb-5">
+                  <button onClick={() => switchMode('login')} className={`py-2 text-sm font-bold rounded-lg transition-colors ${mode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>登录</button>
+                  <button onClick={() => switchMode('register')} className={`py-2 text-sm font-bold rounded-lg transition-colors ${mode === 'register' ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>注册</button>
                 </div>
 
                 {apiError && (
@@ -100,32 +110,76 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                 )}
 
-                <div className="space-y-4">
-                  <button
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                    className="w-full h-12 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center justify-center"
-                  >
-                    <GoogleIcon className="w-5 h-5 mr-3" />
-                    {isLoading ? '处理中...' : '使用 Google 账号继续'}
-                  </button>
-                </div>
+                <form onSubmit={handlePasswordAuth} className="space-y-4">
+                  {mode === 'register' && (
+                    <label className="block">
+                      <span className="block text-sm font-medium text-gray-700 mb-1.5">昵称</span>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          value={formState.nickname}
+                          onChange={(event) => setFormState({ ...formState, nickname: event.target.value })}
+                          className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          placeholder="你的昵称"
+                        />
+                      </div>
+                    </label>
+                  )}
 
-                {/* Agreement Checkbox */}
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700 mb-1.5">{mode === 'login' ? '邮箱或手机号' : '邮箱'}</span>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type={mode === 'login' ? 'text' : 'email'}
+                        value={mode === 'login' ? formState.account : formState.email}
+                        onChange={(event) => setFormState(mode === 'login' ? { ...formState, account: event.target.value } : { ...formState, email: event.target.value })}
+                        className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        placeholder={mode === 'login' ? 'name@example.com / 手机号' : 'name@example.com'}
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block">
+                    <span className="block text-sm font-medium text-gray-700 mb-1.5">密码</span>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formState.password}
+                        onChange={(event) => setFormState({ ...formState, password: event.target.value })}
+                        className="w-full h-11 pl-10 pr-10 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        placeholder={mode === 'register' ? '至少 6 位密码' : '请输入密码'}
+                        minLength={6}
+                        required
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label={showPassword ? '隐藏密码' : '显示密码'}>
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-11 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  >
+                    {isLoading ? '处理中...' : mode === 'login' ? '登录' : '注册并登录'}
+                  </button>
+                </form>
+
                 <div className="mt-6 flex items-start">
                   <button
                     type="button"
                     onClick={() => {
                       setAgreed(!agreed);
-                      setShowError(false);
+                      setShowAgreementError(false);
                     }}
                     className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                      agreed 
-                        ? 'bg-primary border-primary text-white' 
-                        : showError 
-                          ? 'border-red-500 bg-red-50' 
-                          : 'border-gray-300 bg-white'
+                      agreed ? 'bg-primary border-primary text-white' : showAgreementError ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'
                     }`}
+                    aria-label="同意用户协议"
                   >
                     {agreed && <Check className="w-3 h-3" />}
                   </button>
@@ -136,7 +190,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <Link to="/privacy" onClick={onClose} className="text-primary hover:underline mx-1">《隐私政策》</Link>
                   </div>
                 </div>
-                {showError && !agreed && (
+                {showAgreementError && !agreed && (
                   <p className="text-xs text-red-500 mt-1 ml-6">请先阅读并同意相关协议</p>
                 )}
               </div>
@@ -147,4 +201,3 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     </AnimatePresence>
   );
 }
-
