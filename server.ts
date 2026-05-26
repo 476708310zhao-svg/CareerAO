@@ -106,7 +106,7 @@ async function startServer() {
           'Authorization': req.headers.authorization || '',
           'Content-Type': req.headers['content-type'] || 'application/json'
         },
-        body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined
+        body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) ? JSON.stringify(req.body) : undefined
       });
 
       if (!response.ok) {

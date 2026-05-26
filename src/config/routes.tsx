@@ -27,6 +27,7 @@ const Jobs = lazy(() => import('../pages/Jobs'));
 const CompanyDetail = lazy(() => import('../pages/CompanyDetail'));
 const Search = lazy(() => import('../pages/Search'));
 const JobMap = lazy(() => import('../pages/JobMap'));
+const Favorites = lazy(() => import('../pages/Favorites'));
 
 export const appRoutes = [
   { path: '/', element: <Home /> },
@@ -46,6 +47,7 @@ export const appRoutes = [
   { path: '/campus-calendar', element: <CampusCalendar /> },
   { path: '/campus-calendar/table', element: <CampusCalendarTable /> },
   { path: '/membership', element: <Membership /> },
+  { path: '/favorites', element: <Favorites /> },
   { path: '/blog', element: <Blog /> },
   { path: '/news', element: <JobNews /> },
   { path: '/interview-experiences', element: <InterviewExperiences /> },

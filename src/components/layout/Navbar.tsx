@@ -184,10 +184,14 @@ const Navbar = () => {
                         <User className="w-4 h-4 mr-2" />
                         个人中心
                       </Link>
-                      <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+                      <Link
+                        to="/favorites"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
                         <Bookmark className="w-4 h-4 mr-2" />
                         我的收藏
-                      </button>
+                      </Link>
                     </div>
                     <div className="py-1 border-t border-gray-50">
                       <button
@@ -276,10 +280,10 @@ const Navbar = () => {
                   <User className="w-5 h-5 mr-3 text-gray-400" />
                   个人中心
                 </Link>
-                <button className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
+                <Link to="/favorites" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
                   <Bookmark className="w-5 h-5 mr-3 text-gray-400" />
                   我的收藏
-                </button>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium"

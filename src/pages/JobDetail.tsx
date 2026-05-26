@@ -209,7 +209,7 @@ export default function JobDetail() {
                       <Share2 className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => toggleFavorite(jobId)}
+                      onClick={() => toggleFavorite(jobId, { title: job.title, subtitle: job.company })}
                       className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
                         isFavorite(jobId) ? 'bg-primary/10 text-primary' : 'bg-gray-50 text-gray-500 hover:text-primary hover:bg-primary/10'
                       }`}

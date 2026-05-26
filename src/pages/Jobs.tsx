@@ -332,7 +332,7 @@ const Jobs = () => {
                           <button
                             onClick={(event) => {
                               event.stopPropagation();
-                              toggleFavorite(job.id);
+                              toggleFavorite(job.id, { title: job.title, subtitle: job.company });
                             }}
                             className={`p-2 rounded-full transition-colors ${
                               isFavorite(job.id)
