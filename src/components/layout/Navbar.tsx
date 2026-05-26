@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bookmark, ChevronDown, LogOut, Menu, Search, User, X } from 'lucide-react';
+import { Bell, Bookmark, ChevronDown, LogOut, Menu, Search, User, X } from 'lucide-react';
 
 import { navCategories } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { apiFetch } from '../../lib/api';
 import Logo from '../Logo';
 
 const Navbar = () => {
@@ -12,6 +13,7 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeNavDropdown, setActiveNavDropdown] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -23,6 +25,20 @@ const Navbar = () => {
     setIsOpen(false);
     setActiveNavDropdown(null);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+
+    apiFetch('/api/proxy/messages/unread-count')
+      .then((response) => setUnreadCount(Number(response.data?.count) || 0))
+      .catch((error) => {
+        console.warn('Failed to load unread message count:', error);
+        setUnreadCount(0);
+      });
+  }, [isAuthenticated, location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -192,6 +208,21 @@ const Navbar = () => {
                         <Bookmark className="w-4 h-4 mr-2" />
                         我的收藏
                       </Link>
+                      <Link
+                        to="/messages"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
+                        <span className="flex items-center">
+                          <Bell className="w-4 h-4 mr-2" />
+                          消息中心
+                        </span>
+                        {unreadCount > 0 && (
+                          <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </Link>
                     </div>
                     <div className="py-1 border-t border-gray-50">
                       <button
@@ -283,6 +314,17 @@ const Navbar = () => {
                 <Link to="/favorites" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
                   <Bookmark className="w-5 h-5 mr-3 text-gray-400" />
                   我的收藏
+                </Link>
+                <Link to="/messages" className="w-full flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
+                  <span className="flex items-center">
+                    <Bell className="w-5 h-5 mr-3 text-gray-400" />
+                    消息中心
+                  </span>
+                  {unreadCount > 0 && (
+                    <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
                 <button
                   onClick={handleLogout}
