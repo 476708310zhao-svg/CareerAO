@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Briefcase, CalendarClock, ExternalLink, FileText, Inbox, RotateCcw, Trash2 } from 'lucide-react';
+import { Briefcase, CalendarClock, ExternalLink, FileText, Inbox, LogIn, RotateCcw, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../lib/api';
 
 type ApplicationItem = {
@@ -62,6 +63,7 @@ const formatDate = (value?: string) => {
 };
 
 export default function Applications() {
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [statistics, setStatistics] = useState<ApplicationStats>({});
   const [activeStatus, setActiveStatus] = useState('');
@@ -76,6 +78,13 @@ export default function Applications() {
   ], [statistics]);
 
   const loadApplications = async (status = activeStatus) => {
+    if (!isAuthenticated) {
+      setApplications([]);
+      setStatistics({});
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
     try {
@@ -95,7 +104,7 @@ export default function Applications() {
 
   useEffect(() => {
     loadApplications(activeStatus);
-  }, [activeStatus]);
+  }, [activeStatus, isAuthenticated]);
 
   const withdrawApplication = async (item: ApplicationItem) => {
     try {
@@ -126,53 +135,66 @@ export default function Applications() {
             <p className="text-gray-500 mt-3">记录官网投递动作，集中查看申请状态和后续跟进节点。</p>
           </div>
 
-          <button
-            onClick={() => loadApplications(activeStatus)}
-            className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            刷新记录
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => loadApplications(activeStatus)}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              刷新记录
+            </button>
+          )}
         </section>
 
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {statCards.map((card) => (
-            <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">{card.label}</p>
-              <p className="mt-2 text-2xl font-black text-gray-900">{card.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.key || 'all'}
-              onClick={() => setActiveStatus(tab.key)}
-              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
-                activeStatus === tab.key ? 'bg-primary text-white' : 'bg-white text-gray-600 border border-gray-200 hover:text-primary'
-              }`}
-            >
-              {tab.label}
+        {!isAuthenticated ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
+            <LogIn className="mx-auto mb-4 h-12 w-12 text-primary/40" />
+            <h2 className="text-lg font-bold text-gray-900">登录后查看投递记录</h2>
+            <p className="mt-2 mb-6 text-sm text-gray-500">记录官网投递动作后，你可以在这里持续追踪申请进度。</p>
+            <button onClick={() => openAuthModal('login')} className="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover">
+              立即登录
             </button>
-          ))}
-        </div>
-
-        {errorMessage && (
-          <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
-            {errorMessage}
           </div>
-        )}
+        ) : (
+          <>
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {statCards.map((card) => (
+                <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <p className="text-sm text-gray-500">{card.label}</p>
+                  <p className="mt-2 text-2xl font-black text-gray-900">{card.value}</p>
+                </div>
+              ))}
+            </div>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="h-32 rounded-2xl border border-gray-100 bg-white animate-pulse" />
-            ))}
-          </div>
-        ) : applications.length ? (
-          <div className="space-y-4">
-            {applications.map((item) => {
+            <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+              {statusTabs.map((tab) => (
+                <button
+                  key={tab.key || 'all'}
+                  onClick={() => setActiveStatus(tab.key)}
+                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+                    activeStatus === tab.key ? 'bg-primary text-white' : 'bg-white text-gray-600 border border-gray-200 hover:text-primary'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {errorMessage && (
+              <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+                {errorMessage}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-32 rounded-2xl border border-gray-100 bg-white animate-pulse" />
+                ))}
+              </div>
+            ) : applications.length ? (
+              <div className="space-y-4">
+                {applications.map((item) => {
               const job = item.jobSnapshot?.title ? item.jobSnapshot : item.job || {};
               const statusLabel = item.statusText || statusTabs.find((tab) => tab.key === item.status)?.label || item.status || '已投递';
               return (
@@ -220,17 +242,19 @@ export default function Applications() {
                   </div>
                 </article>
               );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-            <Inbox className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-            <h2 className="text-lg font-bold text-gray-900">暂无投递记录</h2>
-            <p className="mt-2 text-sm text-gray-500">在职位详情页点击“记录投递并打开官网”后，记录会同步到这里。</p>
-            <Link to="/jobs" className="mt-6 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover">
-              去找职位
-            </Link>
-          </div>
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
+                <Inbox className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                <h2 className="text-lg font-bold text-gray-900">暂无投递记录</h2>
+                <p className="mt-2 text-sm text-gray-500">在职位详情页点击“记录投递并打开官网”后，记录会同步到这里。</p>
+                <Link to="/jobs" className="mt-6 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover">
+                  去找职位
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, Clock, MailOpen, RefreshCw } from 'lucide-react';
+import { Bell, CheckCheck, Clock, LogIn, MailOpen, RefreshCw } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../lib/api';
 
 type MessageItem = {
@@ -34,6 +35,7 @@ const formatTime = (value?: string) => {
 };
 
 export default function Messages() {
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +52,13 @@ export default function Messages() {
   }, [messages]);
 
   const loadMessages = async () => {
+    if (!isAuthenticated) {
+      setMessages([]);
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
     try {
@@ -61,7 +70,7 @@ export default function Messages() {
       console.warn('Failed to load messages:', error);
       setMessages([]);
       setUnreadCount(0);
-      setErrorMessage('消息中心加载失败，请确认已登录后重试。');
+      setErrorMessage('消息中心加载失败，请稍后重试。');
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +78,7 @@ export default function Messages() {
 
   useEffect(() => {
     loadMessages();
-  }, []);
+  }, [isAuthenticated]);
 
   const markMessageRead = async (message: MessageItem) => {
     if (message.isRead) return;
@@ -125,93 +134,108 @@ export default function Messages() {
             <p className="text-gray-500 mt-3">统一接收职位提醒、系统通知、校招订阅和订单状态更新。</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={loadMessages}
-              className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              刷新
-            </button>
-            <button
-              onClick={markAllRead}
-              disabled={!unreadCount || isMarkingAll}
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-gray-300 transition-colors"
-            >
-              <CheckCheck className="w-4 h-4 mr-2" />
-              全部已读
-            </button>
-          </div>
+          {isAuthenticated && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={loadMessages}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                刷新
+              </button>
+              <button
+                onClick={markAllRead}
+                disabled={!unreadCount || isMarkingAll}
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-gray-300 transition-colors"
+              >
+                <CheckCheck className="w-4 h-4 mr-2" />
+                全部已读
+              </button>
+            </div>
+          )}
         </section>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">全部消息</p>
-            <p className="mt-2 text-2xl font-black text-gray-900">{messages.length}</p>
-          </div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">未读消息</p>
-            <p className="mt-2 text-2xl font-black text-primary">{unreadCount}</p>
-          </div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">消息类型</p>
-            <p className="mt-2 text-2xl font-black text-gray-900">{Object.keys(groupedMessages).length}</p>
-          </div>
-        </div>
-
-        {errorMessage && (
-          <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
-            {errorMessage}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="h-28 rounded-2xl border border-gray-100 bg-white animate-pulse" />
-            ))}
-          </div>
-        ) : messages.length ? (
-          <div className="space-y-6">
-            {Object.entries(groupedMessages).map(([type, items]) => (
-              <section key={type}>
-                <h2 className="mb-3 text-sm font-black text-gray-500">{typeLabels[type] || '其他消息'}</h2>
-                <div className="space-y-3">
-                  {items.map((message) => (
-                    <button
-                      key={message.id}
-                      onClick={() => markMessageRead(message)}
-                      className={`w-full rounded-2xl border p-5 text-left shadow-sm transition-colors ${
-                        message.isRead
-                          ? 'border-gray-100 bg-white hover:border-gray-200'
-                          : 'border-primary/20 bg-primary/[0.04] hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            {!message.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
-                            <h3 className="font-bold text-gray-900 line-clamp-1">{message.title || '未命名消息'}</h3>
-                          </div>
-                          <p className="mt-2 text-sm leading-6 text-gray-600">{message.content || '暂无消息内容。'}</p>
-                        </div>
-                        <span className="inline-flex shrink-0 items-center text-xs font-medium text-gray-400">
-                          <Clock className="mr-1 h-3.5 w-3.5" />
-                          {formatTime(message.createdAt)}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+        {!isAuthenticated ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
+            <LogIn className="mx-auto mb-4 h-12 w-12 text-primary/40" />
+            <h2 className="text-lg font-bold text-gray-900">登录后查看消息</h2>
+            <p className="mt-2 mb-6 text-sm text-gray-500">职位提醒、投递进展和会员订单状态会同步到你的账号。</p>
+            <button onClick={() => openAuthModal('login')} className="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover">
+              立即登录
+            </button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-            <MailOpen className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-            <h2 className="text-lg font-bold text-gray-900">暂无消息</h2>
-            <p className="mt-2 text-sm text-gray-500">订阅校招、收藏职位或完成会员订单后，相关更新会出现在这里。</p>
-          </div>
+          <>
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <p className="text-sm text-gray-500">全部消息</p>
+                <p className="mt-2 text-2xl font-black text-gray-900">{messages.length}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <p className="text-sm text-gray-500">未读消息</p>
+                <p className="mt-2 text-2xl font-black text-primary">{unreadCount}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <p className="text-sm text-gray-500">消息类型</p>
+                <p className="mt-2 text-2xl font-black text-gray-900">{Object.keys(groupedMessages).length}</p>
+              </div>
+            </div>
+
+            {errorMessage && (
+              <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+                {errorMessage}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-28 rounded-2xl border border-gray-100 bg-white animate-pulse" />
+                ))}
+              </div>
+            ) : messages.length ? (
+              <div className="space-y-6">
+                {Object.entries(groupedMessages).map(([type, items]) => (
+                  <section key={type}>
+                    <h2 className="mb-3 text-sm font-black text-gray-500">{typeLabels[type] || '其他消息'}</h2>
+                    <div className="space-y-3">
+                      {items.map((message) => (
+                        <button
+                          key={message.id}
+                          onClick={() => markMessageRead(message)}
+                          className={`w-full rounded-2xl border p-5 text-left shadow-sm transition-colors ${
+                            message.isRead
+                              ? 'border-gray-100 bg-white hover:border-gray-200'
+                              : 'border-primary/20 bg-primary/[0.04] hover:border-primary/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                {!message.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                                <h3 className="font-bold text-gray-900 line-clamp-1">{message.title || '未命名消息'}</h3>
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-gray-600">{message.content || '暂无消息内容。'}</p>
+                            </div>
+                            <span className="inline-flex shrink-0 items-center text-xs font-medium text-gray-400">
+                              <Clock className="mr-1 h-3.5 w-3.5" />
+                              {formatTime(message.createdAt)}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
+                <MailOpen className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                <h2 className="text-lg font-bold text-gray-900">暂无消息</h2>
+                <p className="mt-2 text-sm text-gray-500">订阅校招、收藏职位或完成会员订单后，相关更新会出现在这里。</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
