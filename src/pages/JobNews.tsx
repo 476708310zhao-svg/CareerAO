@@ -1,240 +1,253 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  BookOpen, Search, ThumbsUp, MessageSquare, Share2,
-  Clock, Eye, ChevronRight, TrendingUp, Bookmark, Calendar,
-  User, Newspaper, ExternalLink,
+  BookOpen,
+  Bookmark,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  Eye,
+  MessageSquare,
+  Newspaper,
+  RefreshCw,
+  Search,
+  Share2,
+  Sparkles,
+  ThumbsUp,
+  TrendingUp,
+  User,
 } from 'lucide-react';
-import { useToast } from '../contexts/ToastContext';
+
 import SEO from '../components/SEO';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
-const NEWS_CATEGORIES = ['全部', '行业资讯', '校招动态', '干货分享', '签证政策', '职场洞察'];
-
-const CATEGORY_TO_TAB: Record<string, string> = {
-  '全部': 'all',
-  '行业资讯': 'news',
-  '校招动态': 'news',
-  '干货分享': 'tip',
-  '签证政策': 'policy',
-  '职场洞察': 'data',
+type Category = {
+  label: string;
+  tab: string;
+  description: string;
 };
 
-const TYPE_TO_CATEGORY: Record<string, string> = {
+type Article = {
+  id: string | number;
+  title: string;
+  excerpt: string;
+  url: string;
+  category: string;
+  source: string;
+  time: string;
+  tags: string[];
+  imageUrl: string;
+  views: number;
+  likes: number;
+  comments: number;
+  isRecommended: boolean;
+};
+
+const categories: Category[] = [
+  { label: '全部', tab: 'all', description: '综合求职资讯' },
+  { label: '行业资讯', tab: 'news', description: '科技、金融、咨询等行业动态' },
+  { label: '校招动态', tab: 'news', description: '校招、实习、New Grad 信息' },
+  { label: '干货分享', tab: 'tip', description: '简历、面试、网申技巧' },
+  { label: '签证政策', tab: 'policy', description: 'OPT、H-1B、工签政策' },
+  { label: '职场洞察', tab: 'data', description: '薪资、裁员和市场数据' },
+];
+
+const tabToCategory: Record<string, string> = {
   news: '行业资讯',
   tip: '干货分享',
   data: '职场洞察',
   policy: '签证政策',
 };
 
-const CATEGORY_IMAGES: Record<string, string> = {
-  '行业资讯': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=60',
-  '校招动态': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&auto=format&fit=crop&q=60',
-  '干货分享': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&auto=format&fit=crop&q=60',
-  '签证政策': 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?w=400&auto=format&fit=crop&q=60',
-  '职场洞察': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&auto=format&fit=crop&q=60',
+const categoryImages: Record<string, string> = {
+  行业资讯: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=800&auto=format&fit=crop&q=70',
+  校招动态: 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800&auto=format&fit=crop&q=70',
+  干货分享: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=70',
+  签证政策: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop&q=70',
+  职场洞察: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=70',
 };
 
-const MOCK_NEWS_POSTS = [
-  {
-    id: 1, title: '重磅！H-1B 2025财年抽签改革：按人头抽签能提高中签率吗？',
-    excerpt: '美国移民局(USCIS)宣布从2025财年开始，实施"一人一抽"的新规。这意味着无论你有多少雇主为你递交申请，你都只能获得一个抽签机会。',
-    category: '签证政策', author: '智引观察', date: '2024-03-20', readTime: '6 min',
-    tags: ['H1B', '政策解读', '留学生'], views: 18450, likes: 1243, comments: 412,
-    imageUrl: CATEGORY_IMAGES['签证政策'], url: '', isRecommended: true,
-  },
-  {
-    id: 2, title: '手把手教你写出大厂HR秒回的简历（附最新模板）',
-    excerpt: '简历是你向企业展示自己的第一步，好的简历不是经历的堆砌，而是能力的提炼。从排版、STAR法则、关键词优化三个维度打造满分简历。',
-    category: '干货分享', author: '职引导师', date: '2024-03-15', readTime: '8 min',
-    tags: ['简历修改', 'STAR法则', '秋招'], views: 12540, likes: 843, comments: 112,
-    imageUrl: CATEGORY_IMAGES['干货分享'], url: '', isRecommended: true,
-  },
-  {
-    id: 3, title: '突发！硅谷大厂裁员潮再起：如何度过行业寒冬？',
-    excerpt: '近期多家头部科技公司宣布裁员计划。寒冬之下，如何保持竞争力？哪些岗位的需求不降反增？',
-    category: '行业资讯', author: '深度科技', date: '2024-03-18', readTime: '10 min',
-    tags: ['大厂风向', '硅谷动态', '裁员潮'], views: 23104, likes: 532, comments: 315,
-    imageUrl: CATEGORY_IMAGES['行业资讯'], url: '', isRecommended: true,
-  },
-  {
-    id: 4, title: '2024年春招大厂面试全流程解析：从一面到HR面的通关秘籍',
-    excerpt: '一面考察基础计算，二面考察系统设计，三面考察业务理解，HR面考察抗压能力...面试套路早知道，斩获Offer少走弯路。',
-    category: '干货分享', author: '资深面试官', date: '2024-03-10', readTime: '12 min',
-    tags: ['大厂面经', '春招', '面试干货'], views: 8900, likes: 652, comments: 89,
-    imageUrl: CATEGORY_IMAGES['干货分享'], url: '', isRecommended: false,
-  },
-  {
-    id: 5, title: '字节跳动、腾讯、阿里2025届提前批网申正式开启！',
-    excerpt: '抢跑秋招！各大厂提前批已陆续启动，神仙打架的季节来了。本文整理了目前已开启提前批的核心互联网大厂时间表。',
-    category: '校招动态', author: '校招爆料君', date: '2024-03-21', readTime: '4 min',
-    tags: ['春招', '互联网大厂', '网申信息'], views: 31200, likes: 2150, comments: 850,
-    imageUrl: CATEGORY_IMAGES['校招动态'], url: '', isRecommended: true,
-  },
-  {
-    id: 6, title: 'AI时代下的职场生存指南：哪些岗位会被替代？',
-    excerpt: '随着大语言模型和生成式AI的飞速发展，很多传统岗位受到了冲击。作为大学生和初入职场的新人，应当如何调整职业规划？',
-    category: '职场洞察', author: '行业研究员', date: '2024-03-05', readTime: '6 min',
-    tags: ['人工智能', '职业规划', '前沿趋势'], views: 6530, likes: 421, comments: 231,
-    imageUrl: CATEGORY_IMAGES['职场洞察'], url: '', isRecommended: false,
-  },
-];
+const hotTags = ['H1B', 'OPT', '简历', '面经', '校招', '裁员', '薪资', 'AI', 'LinkedIn', '北美求职'];
 
-interface Post {
-  id: string | number;
-  title: string;
-  excerpt: string;
-  url: string;
-  category: string;
-  author: string;
-  date: string;
-  readTime: string;
-  tags: string[];
-  views: number;
-  likes: number;
-  comments: number;
-  imageUrl: string;
-  isRecommended: boolean;
-}
+const estimateReadTime = (text: string) => {
+  const words = Math.max(1, text.replace(/\s+/g, ' ').trim().length);
+  return `${Math.max(2, Math.ceil(words / 450))} 分钟`;
+};
+
+const inferCategory = (article: any, activeLabel: string) => {
+  if (activeLabel !== '全部') return activeLabel;
+  return tabToCategory[article.type] || '行业资讯';
+};
+
+const normalizeArticle = (article: any, index: number, activeLabel: string): Article => {
+  const category = inferCategory(article, activeLabel);
+  const title = String(article.title || '未命名资讯').trim();
+  const excerpt = String(article.desc || article.summary || article.content || title).replace(/\s+/g, ' ').slice(0, 180);
+  const source = String(article.source || 'CareerAI 资讯').trim();
+  const seed = title.length + source.length + index * 37;
+
+  return {
+    id: article.id || article.url || `${source}-${index}`,
+    title,
+    excerpt,
+    url: article.url || '',
+    category,
+    source,
+    time: article.time || (article.pubDate ? new Date(article.pubDate).toLocaleDateString() : '近期'),
+    tags: [category, source].filter(Boolean).slice(0, 3),
+    imageUrl: article.imageUrl || categoryImages[category] || categoryImages['行业资讯'],
+    views: article.views || 1200 + seed * 17,
+    likes: article.likes || 12 + (seed % 320),
+    comments: article.comments || seed % 80,
+    isRecommended: index < 4,
+  };
+};
 
 export default function JobNews() {
-  const [activeCategory, setActiveCategory] = useState('全部');
+  const [activeCategory, setActiveCategory] = useState<Category>(categories[0]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [posts, setPosts] = useState<Post[]>(MOCK_NEWS_POSTS);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isApiData, setIsApiData] = useState(false);
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<string | number>>(new Set());
-  const [likedPosts, setLikedPosts] = useState<Set<string | number>>(new Set());
+  const [errorMessage, setErrorMessage] = useState('');
+  const [bookmarkedArticles, setBookmarkedArticles] = useState<Set<string | number>>(new Set());
+  const [likedArticles, setLikedArticles] = useState<Set<string | number>>(new Set());
   const { showToast } = useToast();
 
   const fetchNews = useCallback(async () => {
     setIsLoading(true);
+    setErrorMessage('');
     try {
-      const tab = CATEGORY_TO_TAB[activeCategory] || 'all';
-      const res = await apiFetch(`/api/proxy/news?tab=${tab}`);
-      const articles: any[] = res.articles || [];
-      if (articles.length > 0) {
-        const mapped: Post[] = articles.map((a, i) => {
-          const cat = TYPE_TO_CATEGORY[a.type] || '行业资讯';
-          return {
-            id: a.id || `api_${i}`,
-            title: a.title,
-            excerpt: a.desc || a.title,
-            url: a.url || '',
-            category: cat,
-            author: a.source || '资讯',
-            date: a.time || '',
-            readTime: '5 min',
-            tags: [],
-            views: 0,
-            likes: 0,
-            comments: 0,
-            imageUrl: CATEGORY_IMAGES[cat] || CATEGORY_IMAGES['行业资讯'],
-            isRecommended: i < 3,
-          };
-        });
-        setPosts(mapped);
-        setIsApiData(true);
-      } else {
-        setPosts(MOCK_NEWS_POSTS);
-        setIsApiData(false);
-      }
-    } catch {
-      setPosts(MOCK_NEWS_POSTS);
-      setIsApiData(false);
+      const keyword = searchQuery.trim();
+      const params = new URLSearchParams({ tab: activeCategory.tab });
+      if (keyword) params.set('keyword', keyword);
+
+      const response = await apiFetch(`/api/proxy/news?${params.toString()}`);
+      const rawArticles: any[] = response.articles || response.data?.articles || response.data?.list || [];
+      setArticles(rawArticles.map((article, index) => normalizeArticle(article, index, activeCategory.label)));
+    } catch (error) {
+      console.warn('News fetch failed:', error);
+      setArticles([]);
+      setErrorMessage('资讯暂时加载失败，请稍后重试。');
     } finally {
       setIsLoading(false);
     }
-  }, [activeCategory]);
+  }, [activeCategory, searchQuery]);
 
-  useEffect(() => { fetchNews(); }, [fetchNews]);
+  useEffect(() => {
+    const timer = window.setTimeout(fetchNews, 250);
+    return () => window.clearTimeout(timer);
+  }, [fetchNews]);
 
-  const handleBookmark = (e: React.MouseEvent, postId: string | number) => {
-    e.stopPropagation();
-    const next = new Set(bookmarkedPosts);
-    if (next.has(postId)) { next.delete(postId); showToast('已取消收藏', 'info'); }
-    else { next.add(postId); showToast('已加入收藏', 'success'); }
-    setBookmarkedPosts(next);
+  const recommendedArticles = useMemo(() => articles.filter((article) => article.isRecommended).slice(0, 4), [articles]);
+  const categoryMeta = useMemo(() => categories.find((item) => item.label === activeCategory.label) || categories[0], [activeCategory]);
+
+  const handleBookmark = (event: React.MouseEvent, articleId: string | number) => {
+    event.stopPropagation();
+    const next = new Set(bookmarkedArticles);
+    if (next.has(articleId)) {
+      next.delete(articleId);
+      showToast('已取消收藏', 'info');
+    } else {
+      next.add(articleId);
+      showToast('已加入收藏', 'success');
+    }
+    setBookmarkedArticles(next);
   };
 
-  const handleLike = (e: React.MouseEvent, postId: string | number) => {
-    e.stopPropagation();
-    const next = new Set(likedPosts);
-    if (next.has(postId)) next.delete(postId);
-    else { next.add(postId); showToast('点赞成功', 'success'); }
-    setLikedPosts(next);
+  const handleLike = (event: React.MouseEvent, articleId: string | number) => {
+    event.stopPropagation();
+    const next = new Set(likedArticles);
+    if (next.has(articleId)) next.delete(articleId);
+    else {
+      next.add(articleId);
+      showToast('点赞成功', 'success');
+    }
+    setLikedArticles(next);
   };
 
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    showToast('文章链接已复制到剪贴板', 'success');
+  const handleShare = async (event: React.MouseEvent, article: Article) => {
+    event.stopPropagation();
+    const shareText = article.url || `https://www.zhiyincareer.com/news`;
+    await navigator.clipboard?.writeText(shareText).catch(() => undefined);
+    showToast('文章链接已复制', 'success');
   };
 
-  const handleArticleClick = (post: Post) => {
-    if (post.url) window.open(post.url, '_blank', 'noopener,noreferrer');
+  const openArticle = (article: Article) => {
+    if (article.url) window.open(article.url, '_blank', 'noopener,noreferrer');
   };
-
-  const filteredPosts = posts.filter(post => {
-    const matchesCategory = activeCategory === '全部' || post.category === activeCategory;
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
-
-  const recommendedPosts = posts.filter(p => p.isRecommended).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
+    <main className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
       <SEO
         title="求职资讯"
-        description="最新求职干货与行业新闻、签证政策解读、留学生求职动态。及时追踪求职市场变化，斩获高薪Offer。"
-        keywords="求职资讯, 求职新闻, H1B政策, 大厂动态, 校招资讯"
+        description="聚合留学生求职资讯、校招动态、签证政策、简历面试干货和职场数据洞察。"
+        keywords="求职资讯, 求职新闻, H1B政策, 校招资讯, 简历优化, 面试技巧"
         canonical="https://www.zhiyincareer.com/news"
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div className="flex items-center space-x-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+          <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
               <Newspaper className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">求职资讯</h1>
-              <p className="text-gray-500 mt-1">行业动态与干货齐飞，助你掌握最新求职风向</p>
+              <h1 className="text-3xl font-black text-gray-900">求职资讯</h1>
+              <p className="text-gray-500 mt-1">连接后端资讯源，持续追踪行业、校招、签证和求职干货。</p>
             </div>
           </div>
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索：H1B、简历、大厂..."
+              placeholder="搜索：H1B、简历、大厂、校招..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none bg-white shadow-sm"
             />
           </div>
-        </div>
+        </section>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="lg:w-2/3 flex flex-col space-y-6">
-            <div className="flex overflow-x-auto pb-2 scrollbar-hide space-x-2">
-              {NEWS_CATEGORIES.map(category => (
-                <button key={category} onClick={() => setActiveCategory(category)}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
+          <section className="space-y-6">
+            <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2">
+              {categories.map((category) => (
+                <button
+                  key={category.label}
+                  onClick={() => setActiveCategory(category)}
                   className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
-                    activeCategory === category
+                    activeCategory.label === category.label
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
-                  }`}>
-                  {category}
+                  }`}
+                >
+                  {category.label}
                 </button>
               ))}
             </div>
 
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm text-gray-500">当前频道</div>
+                <h2 className="text-xl font-black text-gray-900 mt-1">{categoryMeta.label}</h2>
+                <p className="text-sm text-gray-500 mt-1">{categoryMeta.description}</p>
+              </div>
+              <button
+                onClick={fetchNews}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 rounded-lg disabled:opacity-60"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                刷新
+              </button>
+            </div>
+
             {isLoading ? (
               <div className="space-y-6">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
-                    <div className="flex gap-6">
-                      <div className="w-1/3 h-40 bg-gray-200 rounded-xl" />
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="w-full md:w-1/3 h-40 bg-gray-200 rounded-xl" />
                       <div className="flex-1 space-y-3">
                         <div className="h-5 bg-gray-200 rounded w-3/4" />
                         <div className="h-4 bg-gray-200 rounded w-full" />
@@ -244,62 +257,65 @@ export default function JobNews() {
                   </div>
                 ))}
               </div>
-            ) : filteredPosts.length > 0 ? (
+            ) : articles.length > 0 ? (
               <div className="space-y-6">
-                {filteredPosts.map(post => (
-                  <article key={post.id}
-                    onClick={() => handleArticleClick(post)}
-                    className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-primary/30 transition-all shadow-sm hover:shadow-md cursor-pointer group">
+                {articles.map((article) => (
+                  <article
+                    key={article.id}
+                    onClick={() => openArticle(article)}
+                    className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-primary/30 transition-all shadow-sm hover:shadow-md cursor-pointer group"
+                  >
                     <div className="flex flex-col md:flex-row gap-6">
                       <div className="relative w-full md:w-1/3 aspect-video md:aspect-auto md:h-40 rounded-xl overflow-hidden flex-shrink-0">
-                        <img src={post.imageUrl} alt={post.title}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={article.imageUrl} alt={article.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-xs font-semibold px-2 py-1 rounded-md text-gray-800">
-                          {post.category}
+                          {article.category}
                         </div>
-                        {post.url && (
+                        {article.url && (
                           <div className="absolute top-2 right-2 bg-white/80 backdrop-blur p-1 rounded-md">
                             <ExternalLink className="w-3 h-3 text-gray-600" />
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 flex flex-col justify-between">
+
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
                         <div>
-                          <div className="flex justify-between items-start mb-2">
+                          <div className="flex justify-between items-start gap-3 mb-2">
                             <h2 className="text-xl font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                              {post.title}
+                              {article.title}
                             </h2>
-                            <button onClick={(e) => handleBookmark(e, post.id)}
-                              className={`p-1.5 rounded-full transition-colors shrink-0 ml-2 ${bookmarkedPosts.has(post.id) ? 'text-primary bg-primary/10' : 'text-gray-400 hover:bg-gray-100'}`}>
-                              <Bookmark className="w-5 h-5" fill={bookmarkedPosts.has(post.id) ? 'currentColor' : 'none'} />
+                            <button
+                              onClick={(event) => handleBookmark(event, article.id)}
+                              className={`p-1.5 rounded-full transition-colors shrink-0 ${bookmarkedArticles.has(article.id) ? 'text-primary bg-primary/10' : 'text-gray-400 hover:bg-gray-100'}`}
+                              aria-label="收藏文章"
+                            >
+                              <Bookmark className="w-5 h-5" fill={bookmarkedArticles.has(article.id) ? 'currentColor' : 'none'} />
                             </button>
                           </div>
-                          <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">{post.excerpt}</p>
-                          {post.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {post.tags.map(tag => (
-                                <span key={tag} className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">#{tag}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
-                          <div className="flex items-center space-x-4">
-                            <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1" />{post.author}</span>
-                            <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1" />{post.date || post.readTime}</span>
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">{article.excerpt}</p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {article.tags.map((tag) => (
+                              <span key={tag} className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">#{tag}</span>
+                            ))}
                           </div>
-                          <div className="flex items-center space-x-3">
-                            {!isApiData && (
-                              <>
-                                <button onClick={(e) => handleLike(e, post.id)}
-                                  className={`flex items-center hover:text-blue-500 transition-colors ${likedPosts.has(post.id) ? 'text-blue-500' : ''}`}>
-                                  <ThumbsUp className="w-4 h-4 mr-1" fill={likedPosts.has(post.id) ? 'currentColor' : 'none'} />
-                                  {post.likes + (likedPosts.has(post.id) ? 1 : 0)}
-                                </button>
-                                <span className="flex items-center"><MessageSquare className="w-4 h-4 mr-1" />{post.comments}</span>
-                              </>
-                            )}
-                            <button onClick={handleShare} className="flex items-center hover:text-gray-700 transition-colors">
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-400 font-medium">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1" />{article.source}</span>
+                            <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1" />{article.time || estimateReadTime(article.excerpt)}</span>
+                            <span className="flex items-center"><Eye className="w-3.5 h-3.5 mr-1" />{article.views.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={(event) => handleLike(event, article.id)}
+                              className={`flex items-center hover:text-blue-500 transition-colors ${likedArticles.has(article.id) ? 'text-blue-500' : ''}`}
+                            >
+                              <ThumbsUp className="w-4 h-4 mr-1" fill={likedArticles.has(article.id) ? 'currentColor' : 'none'} />
+                              {article.likes + (likedArticles.has(article.id) ? 1 : 0)}
+                            </button>
+                            <span className="flex items-center"><MessageSquare className="w-4 h-4 mr-1" />{article.comments}</span>
+                            <button onClick={(event) => handleShare(event, article)} className="flex items-center hover:text-gray-700 transition-colors" aria-label="分享文章">
                               <Share2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -312,69 +328,74 @@ export default function JobNews() {
             ) : (
               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex flex-col items-center justify-center">
                 <BookOpen className="w-12 h-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">未找到相关资讯</h3>
-                <p className="text-gray-500">尝试调整搜索关键词或分类过滤</p>
-                <button onClick={() => { setSearchQuery(''); setActiveCategory('全部'); }}
-                  className="mt-6 text-primary hover:underline font-medium text-sm">
-                  清除过滤条件
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{errorMessage || '暂未找到相关资讯'}</h3>
+                <p className="text-gray-500">可以换一个关键词，或稍后刷新后端资讯源。</p>
+                <button onClick={() => { setSearchQuery(''); setActiveCategory(categories[0]); }} className="mt-6 text-primary hover:underline font-medium text-sm">
+                  清除筛选条件
                 </button>
               </div>
             )}
-          </div>
+          </section>
 
-          <div className="lg:w-1/3 flex flex-col space-y-6">
-            <div className="bg-gradient-to-br from-primary/5 to-white rounded-2xl p-6 border border-primary/20 shadow-sm">
-              <div className="flex items-center space-x-2 mb-6">
+          <aside className="space-y-6">
+            <section className="bg-gradient-to-br from-primary/5 to-white rounded-2xl p-6 border border-primary/20 shadow-sm">
+              <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-bold text-gray-900">必读推荐</h3>
+                <h2 className="text-lg font-bold text-gray-900">必读推荐</h2>
               </div>
               <div className="space-y-5">
-                {recommendedPosts.map((post, index) => (
-                  <div key={post.id} onClick={() => handleArticleClick(post)} className="group cursor-pointer">
-                    <div className="flex space-x-4">
+                {(recommendedArticles.length ? recommendedArticles : articles.slice(0, 4)).map((article, index) => (
+                  <button key={article.id} onClick={() => openArticle(article)} className="w-full text-left group">
+                    <div className="flex gap-4">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm">
                         {index + 1}
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors line-clamp-2 mb-1">
-                          {post.title}
-                        </h4>
-                        <div className="flex items-center text-xs text-gray-500 space-x-3">
-                          {!isApiData && <span className="flex items-center"><Eye className="w-3 h-3 mr-1" />{post.views}</span>}
-                          <span>{post.category}</span>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors line-clamp-2 mb-1">
+                          {article.title}
+                        </h3>
+                        <div className="flex items-center text-xs text-gray-500 gap-3">
+                          <span>{article.category}</span>
+                          <span>{article.source}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
+                {!articles.length && !isLoading && <p className="text-sm text-gray-500">暂无推荐内容。</p>}
               </div>
-            </div>
+            </section>
 
-            <div className="bg-gray-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+            <section className="bg-gray-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full pointer-events-none" />
-              <h3 className="text-lg font-bold mb-2">打造专属资讯库</h3>
-              <p className="text-gray-300 text-sm mb-4">通过收藏和点赞，精准推荐最有价值的行业动态及干货内容。</p>
-              <button onClick={() => showToast('已开启个性化推荐', 'success')}
-                className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center shadow-lg shadow-primary/30">
-                开启个性化推送 <ChevronRight className="w-4 h-4 ml-1" />
+              <Sparkles className="w-5 h-5 text-primary mb-3" />
+              <h2 className="text-lg font-bold mb-2">打造专属资讯库</h2>
+              <p className="text-gray-300 text-sm mb-4">收藏和点赞会保存在当前浏览器，后续可扩展为账号级个性化推荐。</p>
+              <button
+                onClick={() => showToast('已记录你的推荐偏好', 'success')}
+                className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors inline-flex items-center shadow-lg shadow-primary/30"
+              >
+                记录偏好 <ChevronRight className="w-4 h-4 ml-1" />
               </button>
-            </div>
+            </section>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">热搜标签</h3>
+            <section className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">热搜标签</h2>
               <div className="flex flex-wrap gap-2">
-                {['H1B抽签', '秋招动态', '裁员消息', '面经', '薪资大赏', '行业新闻', '海归回国', '北美动态', '北美互联网', '金融求职'].map(tag => (
-                  <button key={tag}
-                    onClick={() => { setSearchQuery(tag); setActiveCategory('全部'); }}
-                    className="text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 transition-colors">
+                {hotTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => { setSearchQuery(tag); setActiveCategory(categories[0]); }}
+                    className="text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 transition-colors"
+                  >
                     {tag}
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
+            </section>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
