@@ -1,59 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Search as SearchIcon, Building2, Briefcase, FileText, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Building2, Briefcase, ChevronRight, FileText, Search as SearchIcon } from 'lucide-react';
+
+import SEO from '../components/SEO';
 import { apiFetch } from '../lib/api';
+
+type SearchResults = {
+  jobs: Array<{ id: string | number; title: string; company: string; location: string }>;
+  companies: Array<{ id: string | number; name: string; industry: string; location: string }>;
+  experiences: Array<{ id: string | number; title: string; author: string; date: string }>;
+};
+
+const emptyResults: SearchResults = { jobs: [], companies: [], experiences: [] };
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [activeTab, setActiveTab] = useState<'all' | 'jobs' | 'companies' | 'experiences'>('all');
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<any>({ jobs: [], companies: [], experiences: [] });
+  const [results, setResults] = useState<SearchResults>(emptyResults);
 
   useEffect(() => {
-    if (!query) return;
+    if (!query.trim()) {
+      setResults(emptyResults);
+      return;
+    }
 
+    let cancelled = false;
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        // In a real app, this would hit a global search endpoint
-        // For now, we mock the global search results based on the query
-        await new Promise(resolve => setTimeout(resolve, 600));
-        
+        const keyword = encodeURIComponent(query.trim());
+        const [jobsResponse, companiesResponse, experiencesResponse] = await Promise.allSettled([
+          apiFetch(`/api/proxy/jobs?keyword=${keyword}&page=1&pageSize=5`),
+          apiFetch(`/api/proxy/companies?keyword=${keyword}&page=1&pageSize=5`),
+          apiFetch(`/api/proxy/experiences?keyword=${keyword}&page=1&pageSize=5`),
+        ]);
+
+        if (cancelled) return;
+
+        const jobsData = jobsResponse.status === 'fulfilled' ? jobsResponse.value.data?.list || [] : [];
+        const companiesData = companiesResponse.status === 'fulfilled' ? companiesResponse.value.data?.list || [] : [];
+        const experiencesData = experiencesResponse.status === 'fulfilled' ? experiencesResponse.value.data?.list || [] : [];
+
         setResults({
-          jobs: [
-            { id: 1, title: `${query} Engineer`, company: 'Google', location: 'Mountain View, CA' },
-            { id: 2, title: `Senior ${query} Developer`, company: 'Meta', location: 'Menlo Park, CA' }
-          ],
-          companies: [
-            { id: 1, name: `${query} Tech`, industry: 'Technology', location: 'San Francisco, CA' }
-          ],
-          experiences: [
-            { id: 1, title: `${query} 面试经验分享`, author: 'User123', date: '2024-10-15' }
-          ]
+          jobs: jobsData.map((job: any) => ({
+            id: job.id || job.job_id,
+            title: job.title || job.job_title || '职位',
+            company: job.company || job.employer_name || '公司',
+            location: job.location || job.job_city || job.region || '远程/待定',
+          })),
+          companies: companiesData.map((company: any) => ({
+            id: company.id,
+            name: company.displayName || company.name || company.nameEn || '公司',
+            industry: company.industry || company.industryL1 || '行业待补充',
+            location: company.headquarters || company.hqCity || company.hqCountry || '地点待补充',
+          })),
+          experiences: experiencesData.map((exp: any) => ({
+            id: exp.id,
+            title: exp.title || `${exp.company || ''} 面经分享`,
+            author: exp.userName || exp.author || '匿名用户',
+            date: exp.createdAt ? new Date(exp.createdAt).toLocaleDateString() : '近期',
+          })),
         });
       } catch (error) {
         console.error('Search failed:', error);
+        if (!cancelled) setResults(emptyResults);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     fetchResults();
+    return () => {
+      cancelled = true;
+    };
   }, [query]);
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const newQuery = formData.get('q') as string;
-    if (newQuery.trim()) {
-      setSearchParams({ q: newQuery.trim() });
-    }
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const newQuery = String(formData.get('q') || '').trim();
+    if (newQuery) setSearchParams({ q: newQuery });
   };
 
   const renderJobs = () => (
     <div className="space-y-4">
-      {results.jobs.map((job: any) => (
+      {results.jobs.map((job) => (
         <Link key={job.id} to={`/jobs/${job.id}`} className="block bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-start">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mr-4 shrink-0">
@@ -61,7 +94,7 @@ export default function Search() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-gray-900">{job.title}</h3>
-              <p className="text-sm text-gray-500 mt-1">{job.company} • {job.location}</p>
+              <p className="text-sm text-gray-500 mt-1">{job.company} · {job.location}</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </div>
@@ -72,7 +105,7 @@ export default function Search() {
 
   const renderCompanies = () => (
     <div className="space-y-4">
-      {results.companies.map((company: any) => (
+      {results.companies.map((company) => (
         <Link key={company.id} to={`/companies/${company.id}`} className="block bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-start">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 shrink-0">
@@ -80,7 +113,7 @@ export default function Search() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-gray-900">{company.name}</h3>
-              <p className="text-sm text-gray-500 mt-1">{company.industry} • {company.location}</p>
+              <p className="text-sm text-gray-500 mt-1">{company.industry} · {company.location}</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </div>
@@ -91,15 +124,15 @@ export default function Search() {
 
   const renderExperiences = () => (
     <div className="space-y-4">
-      {results.experiences.map((exp: any) => (
-        <Link key={exp.id} to={`/interview-prep/${exp.id}`} className="block bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      {results.experiences.map((exp) => (
+        <Link key={exp.id} to="/interview-experiences" className="block bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-start">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4 shrink-0">
               <FileText className="w-5 h-5 text-green-600" />
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-gray-900">{exp.title}</h3>
-              <p className="text-sm text-gray-500 mt-1">作者: {exp.author} • {exp.date}</p>
+              <p className="text-sm text-gray-500 mt-1">作者 {exp.author} · {exp.date}</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </div>
@@ -108,11 +141,16 @@ export default function Search() {
     </div>
   );
 
+  const hasResults = results.jobs.length > 0 || results.companies.length > 0 || results.experiences.length > 0;
+
   return (
     <div className="min-h-screen pt-24 pb-12 bg-gray-50">
+      <SEO
+        title={query ? `${query} 搜索结果` : '站内搜索'}
+        description="搜索职引官网职位、公司和面经内容。"
+        canonical="https://www.zhiyincareer.com/search"
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Search Header */}
         <div className="mb-8">
           <form onSubmit={handleSearch} className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
@@ -131,38 +169,26 @@ export default function Search() {
 
         {query && (
           <>
-            {/* Tabs */}
             <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-              <button 
-                onClick={() => setActiveTab('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === 'all' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
-              >
-                全部结果
-              </button>
-              <button 
-                onClick={() => setActiveTab('jobs')}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === 'jobs' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
-              >
-                职位 ({results.jobs.length})
-              </button>
-              <button 
-                onClick={() => setActiveTab('companies')}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === 'companies' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
-              >
-                公司 ({results.companies.length})
-              </button>
-              <button 
-                onClick={() => setActiveTab('experiences')}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === 'experiences' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
-              >
-                面经 ({results.experiences.length})
-              </button>
+              {[
+                ['all', '全部结果', hasResults ? results.jobs.length + results.companies.length + results.experiences.length : 0],
+                ['jobs', '职位', results.jobs.length],
+                ['companies', '公司', results.companies.length],
+                ['experiences', '面经', results.experiences.length],
+              ].map(([id, label, count]) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id as typeof activeTab)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === id ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
+                >
+                  {label} ({count})
+                </button>
+              ))}
             </div>
 
-            {/* Results */}
             {isLoading ? (
               <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
             ) : (
               <div className="space-y-8">
@@ -174,7 +200,7 @@ export default function Search() {
                     {renderJobs()}
                   </div>
                 )}
-                
+
                 {(activeTab === 'all' || activeTab === 'companies') && results.companies.length > 0 && (
                   <div>
                     <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -193,7 +219,7 @@ export default function Search() {
                   </div>
                 )}
 
-                {results.jobs.length === 0 && results.companies.length === 0 && results.experiences.length === 0 && (
+                {!hasResults && (
                   <div className="text-center py-12 text-gray-500">
                     未找到与 "{query}" 相关的结果
                   </div>

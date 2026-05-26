@@ -55,8 +55,7 @@ export default function CampusCalendar() {
         queryParams.append('page', (currentPage - 1).toString());
         queryParams.append('pageSize', '10');
 
-        // Fetch data from real backend directly using apiFetch
-        const result = await apiFetch(`/api/campus?${queryParams.toString()}`);
+        const result = await apiFetch(`/api/proxy/campus?${queryParams.toString()}`);
         
         let fetchedEvents = [];
         if (result.data?.list) {

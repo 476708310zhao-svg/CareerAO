@@ -43,7 +43,7 @@ export default function CampusCalendarTable() {
         queryParams.append('page', (currentPage - 1).toString());
         queryParams.append('pageSize', '20');
 
-        const result = await apiFetch(`/api/campus?${queryParams.toString()}`);
+        const result = await apiFetch(`/api/proxy/campus?${queryParams.toString()}`);
         
         let fetchedEvents = [];
         if (result.data?.list) {
