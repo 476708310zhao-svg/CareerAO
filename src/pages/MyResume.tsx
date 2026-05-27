@@ -191,6 +191,15 @@ export default function MyResume() {
                   <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
                     <div className="text-sm text-gray-500 mb-1">预测匹配度</div>
                     <div className="text-3xl font-black text-primary">{atsResult}%</div>
+                    <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+                      {atsResult >= 88 ? '匹配度不错，可以继续微调关键词和量化结果。' : '建议按该 JD 重新润色经历，补齐关键词和结果指标。'}
+                    </p>
+                    <button
+                      onClick={() => navigate('/my-resume/new', { state: { jd: jdText } })}
+                      className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary-hover"
+                    >
+                      用该 JD 优化简历
+                    </button>
                   </div>
                 )}
               </div>

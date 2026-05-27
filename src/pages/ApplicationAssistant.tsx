@@ -200,7 +200,7 @@ export default function ApplicationAssistant() {
                     AI 面试
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </button>
-                  <button onClick={() => navigate('/resume-editor', { state: { jd: jdText, resume: resumeText } })} className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors">
+                  <button onClick={() => navigate('/my-resume/new', { state: { jd: jdText, resume: resumeText } })} className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors">
                     优化简历
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </button>

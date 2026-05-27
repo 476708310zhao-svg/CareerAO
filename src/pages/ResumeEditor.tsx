@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Download, Save, Sparkles, Wand2 } from 'lucide-react';
 
@@ -53,13 +53,26 @@ const personalInfoLabels: Record<string, string> = {
 
 export default function ResumeEditor() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [resume, setResume] = useState(initialResume);
+  const [targetJd, setTargetJd] = useState('');
+  const [sourceResumeText, setSourceResumeText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
   const [diagnosisOpen, setDiagnosisOpen] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const state = location.state as { jd?: string; resume?: string; role?: string } | null;
+    if (!state) return;
+    if (state.jd) setTargetJd(state.jd);
+    if (state.resume) setSourceResumeText(state.resume);
+    if (state.role) {
+      setResume((current) => ({ ...current, targetRole: state.role, name: `${state.role} - Targeted Resume` }));
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (!id || id === 'new') return;
@@ -126,7 +139,12 @@ export default function ResumeEditor() {
             },
             {
               role: 'user',
-              content: `Target role: ${resume.targetRole}\nBullets:\n${resume.experience.bullets.join('\n')}`,
+              content: [
+                `Target role: ${resume.targetRole}`,
+                targetJd ? `Target JD:\n${targetJd}` : '',
+                sourceResumeText ? `Resume context:\n${sourceResumeText}` : '',
+                `Bullets:\n${resume.experience.bullets.join('\n')}`,
+              ].filter(Boolean).join('\n\n'),
             },
           ],
         }),
@@ -182,6 +200,17 @@ export default function ResumeEditor() {
         <section className="overflow-y-auto bg-white p-6 border-r border-gray-200">
           <div className="max-w-2xl mx-auto space-y-8 pb-20">
             <section>
+              {(targetJd || sourceResumeText) && (
+                <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                  <h2 className="text-sm font-bold text-indigo-950 mb-2">已带入网申上下文</h2>
+                  {targetJd && <p className="text-xs text-indigo-800 leading-5 line-clamp-3">目标 JD：{targetJd}</p>}
+                  {sourceResumeText && <p className="text-xs text-indigo-800 leading-5 line-clamp-3 mt-2">简历片段：{sourceResumeText}</p>}
+                  <button onClick={polishExperience} disabled={isPolishing} className="mt-3 inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50">
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    按该 JD 润色经历
+                  </button>
+                </div>
+              )}
               <h2 className="text-lg font-bold text-gray-900 mb-4">基本信息</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {Object.entries(resume.personalInfo).map(([key, value]) => (
