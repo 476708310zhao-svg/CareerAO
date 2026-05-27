@@ -43,6 +43,14 @@ const initialResume = {
   skills: 'JavaScript, TypeScript, React, Node.js, Python, SQL, AWS, Docker, Git',
 };
 
+const personalInfoLabels: Record<string, string> = {
+  fullName: '姓名',
+  email: '邮箱',
+  phone: '电话',
+  location: '所在地',
+  linkedin: 'LinkedIn',
+};
+
 export default function ResumeEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -84,7 +92,7 @@ export default function ResumeEditor() {
       showToast('简历已同步到后端', 'success');
     } catch (error) {
       console.warn('Resume save fallback:', error);
-      showToast('当前未登录，已保留本地编辑内容', 'info');
+      showToast('当前未登录或同步失败，已保留本地编辑内容', 'info');
     } finally {
       setIsSaving(false);
     }
@@ -123,10 +131,10 @@ export default function ResumeEditor() {
           ],
         }),
       });
-      const raw = response.choices?.[0]?.message?.content || '';
+      const raw = response.choices?.[0]?.message?.content || response.data?.content || '';
       const bullets = raw
         .split('\n')
-        .map((line: string) => line.replace(/^[-•]\s*/, '').trim())
+        .map((line: string) => line.replace(/^[-*\u2022\s]*/, '').trim())
         .filter(Boolean);
       if (bullets.length) {
         setResume((current) => ({ ...current, experience: { ...current.experience, bullets: bullets.slice(0, 4) } }));
@@ -146,12 +154,12 @@ export default function ResumeEditor() {
       <SEO title={id === 'new' ? '新建简历' : '编辑简历'} canonical="https://www.zhiyincareer.com/my-resume" />
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sticky top-16 z-40 shadow-sm">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/my-resume')} className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={() => navigate('/my-resume')} className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" aria-label="返回简历库">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <h1 className="font-bold text-gray-900">{resume.name}</h1>
-            <p className="text-xs text-gray-500">编辑后可导出 PDF，也可用于网申助手。</p>
+            <p className="text-xs text-gray-500">编辑后可导出 PDF，也可用于网申助手和投递流程。</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -178,7 +186,7 @@ export default function ResumeEditor() {
               <div className="grid sm:grid-cols-2 gap-4">
                 {Object.entries(resume.personalInfo).map(([key, value]) => (
                   <label key={key} className="block">
-                    <span className="block text-xs font-medium text-gray-700 mb-1">{key}</span>
+                    <span className="block text-xs font-medium text-gray-700 mb-1">{personalInfoLabels[key] || key}</span>
                     <input value={value} onChange={(event) => updatePersonalInfo(key as keyof typeof resume.personalInfo, event.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
                   </label>
                 ))}
@@ -250,7 +258,7 @@ export default function ResumeEditor() {
             <div className="text-4xl font-black text-primary mb-2">88</div>
             <p className="text-sm text-gray-600 mb-4">整体结构清晰，建议继续补充项目结果指标和系统设计关键词。</p>
             <ul className="space-y-2 text-xs text-gray-600 list-disc pl-4">
-              <li>把 Improved 改写为具体动作和结果。</li>
+              <li>把 Improved 改写为更具体的动作和结果。</li>
               <li>补充并发、缓存、数据库设计等关键词。</li>
               <li>每条经历尽量包含 Action + Result。</li>
             </ul>
