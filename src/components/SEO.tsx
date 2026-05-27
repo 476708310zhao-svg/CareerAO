@@ -8,6 +8,7 @@ interface SEOProps {
   ogType?: 'website' | 'article';
   ogImage?: string;
   canonical?: string;
+  noindex?: boolean;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
@@ -24,6 +25,7 @@ const SEO: React.FC<SEOProps> = ({
   ogType = 'website',
   ogImage = 'https://www.zhiyincareer.com/og-image.svg',
   canonical,
+  noindex = false,
   jsonLd,
 }) => {
   const siteTitle = '职引';
@@ -37,6 +39,7 @@ const SEO: React.FC<SEOProps> = ({
       <title>{fullTitle}</title>
       <meta name="description" content={finalDescription} />
       <meta name="keywords" content={finalKeywords} />
+      <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />
       {canonical && <link rel="canonical" href={canonical} />}
 
       <meta property="og:type" content={ogType} />

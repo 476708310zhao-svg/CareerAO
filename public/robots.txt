@@ -2,5 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /my-resume
 Disallow: /my-resume/
+Disallow: /favorites
+Disallow: /messages
+Disallow: /applications
 Disallow: /search
 Sitemap: https://www.zhiyincareer.com/sitemap.xml

@@ -151,7 +151,7 @@ export default function ResumeEditor() {
 
   return (
     <main className="pt-16 min-h-screen bg-gray-50 flex flex-col">
-      <SEO title={id === 'new' ? '新建简历' : '编辑简历'} canonical="https://www.zhiyincareer.com/my-resume" />
+      <SEO title={id === 'new' ? '新建简历' : '编辑简历'} canonical="https://www.zhiyincareer.com/my-resume" noindex />
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sticky top-16 z-40 shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/my-resume')} className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" aria-label="返回简历库">

@@ -121,6 +121,7 @@ export default function Messages() {
         title="消息中心"
         description="查看职位提醒、系统通知、投递进展与会员订单消息，及时跟进求职关键节点。"
         canonical="https://www.zhiyincareer.com/messages"
+        noindex
       />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">

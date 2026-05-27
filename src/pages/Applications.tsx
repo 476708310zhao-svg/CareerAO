@@ -122,6 +122,7 @@ export default function Applications() {
         title="投递追踪"
         description="集中管理已投递职位，查看申请状态、投递时间和后续跟进节点。"
         canonical="https://www.zhiyincareer.com/applications"
+        noindex
       />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

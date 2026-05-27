@@ -68,6 +68,7 @@ export default function Favorites() {
         title="我的收藏"
         description="查看你收藏的职位机会，快速回到职位详情继续准备投递。"
         canonical="https://www.zhiyincareer.com/favorites"
+        noindex
       />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <section className="mb-8">

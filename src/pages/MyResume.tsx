@@ -80,6 +80,7 @@ export default function MyResume() {
         description="管理多版本简历，进行 ATS 匹配度检查，并使用 AI 优化简历经历表达。"
         keywords="简历优化,ATS简历,留学生简历,AI简历润色"
         canonical="https://www.zhiyincareer.com/my-resume"
+        noindex
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <section className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
