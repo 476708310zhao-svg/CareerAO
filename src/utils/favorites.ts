@@ -32,6 +32,116 @@ type FavoriteMeta = {
   subtitle?: string;
 };
 
+type FavoriteTargetId = number | string;
+
+type TypedFavoritesOptions = {
+  type: string;
+  storageKey: string;
+  eventName: string;
+};
+
+export function useTypedFavorites({ type, storageKey, eventName }: TypedFavoritesOptions) {
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFavorites(Array.isArray(parsed) ? parsed.map(String) : []);
+      } catch (e) {
+        console.error('Failed to parse typed favorites');
+      }
+    }
+
+    const handleUpdate = (newFavorites: string[]) => {
+      setFavorites(newFavorites.map(String));
+    };
+
+    favoritesEmitter.on(eventName, handleUpdate);
+    return () => favoritesEmitter.off(eventName, handleUpdate);
+  }, [eventName, storageKey]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let cancelled = false;
+    apiFetch(`/api/proxy/favorites?type=${encodeURIComponent(type)}`)
+      .then((response) => {
+        if (cancelled) return;
+        const list = response.data || [];
+        const remoteFavorites = Array.isArray(list)
+          ? list.map((item: any) => String(item.targetId)).filter(Boolean)
+          : [];
+        setFavorites(remoteFavorites);
+        localStorage.setItem(storageKey, JSON.stringify(remoteFavorites));
+        favoritesEmitter.emit(eventName, remoteFavorites);
+      })
+      .catch((error) => {
+        console.warn(`Failed to load remote ${type} favorites:`, error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventName, isAuthenticated, storageKey, type]);
+
+  const persistLocalFavorites = (nextFavorites: string[]) => {
+    setFavorites(nextFavorites);
+    localStorage.setItem(storageKey, JSON.stringify(nextFavorites));
+    favoritesEmitter.emit(eventName, nextFavorites);
+  };
+
+  const syncFavorite = async (targetId: FavoriteTargetId, shouldFavorite: boolean, meta?: FavoriteMeta) => {
+    if (!isAuthenticated) return;
+
+    if (shouldFavorite) {
+      await apiFetch('/api/proxy/favorites', {
+        method: 'POST',
+        body: JSON.stringify({
+          type,
+          targetId,
+          title: meta?.title || '',
+          subtitle: meta?.subtitle || '',
+        }),
+      });
+      return;
+    }
+
+    await apiFetch('/api/proxy/favorites', {
+      method: 'DELETE',
+      body: JSON.stringify({ type, targetId }),
+    });
+  };
+
+  const toggleFavorite = (targetId: FavoriteTargetId, meta?: FavoriteMeta) => {
+    const normalizedId = String(targetId);
+    const shouldFavorite = !favorites.includes(normalizedId);
+    const nextFavorites = shouldFavorite
+      ? [...favorites, normalizedId]
+      : favorites.filter((id) => id !== normalizedId);
+
+    persistLocalFavorites(nextFavorites);
+    syncFavorite(targetId, shouldFavorite, meta).catch((error) => {
+      console.warn(`Failed to sync ${type} favorite:`, error);
+      persistLocalFavorites(favorites);
+    });
+  };
+
+  const isFavorite = (targetId: FavoriteTargetId) => favorites.includes(String(targetId));
+
+  return { favorites, toggleFavorite, isFavorite };
+}
+
+export function useCampusFavorites() {
+  return useTypedFavorites({
+    type: 'campus',
+    storageKey: 'careerai_campus_favorites',
+    eventName: 'update:campus',
+  });
+}
+
 export function useFavorites() {
   const [favorites, setFavorites] = useState<number[]>([]);
   const { isAuthenticated } = useAuth();

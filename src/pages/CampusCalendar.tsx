@@ -16,8 +16,10 @@ import {
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
+import { useCampusFavorites } from '../utils/favorites';
 
 type CampusEvent = {
   id: number | string;
@@ -31,6 +33,7 @@ type CampusEvent = {
   gradYear: string;
   applyUrl?: string;
   status?: string;
+  deadlineDate?: string;
 };
 
 const regions = ['全部', 'North America', 'Mainland China', 'APAC', 'EMEA'];
@@ -61,11 +64,14 @@ const normalizeEvent = (event: any): CampusEvent => {
     gradYear: event.gradYear ? `${event.gradYear}届` : '届别不限',
     applyUrl: event.applyUrl || event.url || '',
     status: event.status || '',
+    deadlineDate: deadline || '',
   };
 };
 
 export default function CampusCalendar() {
   const { showToast } = useToast();
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { favorites: campusFavorites, isFavorite, toggleFavorite } = useCampusFavorites();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRegion, setFilterRegion] = useState('全部');
   const [filterType, setFilterType] = useState('全部');
@@ -132,8 +138,37 @@ export default function CampusCalendar() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleBookmark = () => {
-    showToast('校招收藏功能即将同步到账号', 'info');
+  const handleBookmark = (event: CampusEvent) => {
+    const nextIsFavorite = !isFavorite(event.id);
+    toggleFavorite(event.id, {
+      title: `${event.company} · ${event.title}`,
+      subtitle: `${event.type} / ${event.location} / 截止 ${event.date}`,
+    });
+    showToast(nextIsFavorite ? '已收藏到校招机会' : '已取消收藏', 'success');
+  };
+
+  const handleSubscribe = async (event: CampusEvent) => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      showToast('登录后可以同步截止提醒到消息中心', 'info');
+      return;
+    }
+
+    try {
+      await apiFetch('/api/proxy/notify/campus-subscribe', {
+        method: 'POST',
+        body: JSON.stringify({
+          campusId: event.id,
+          company: event.company,
+          deadlineDate: event.deadlineDate || event.date,
+          positionName: event.title,
+        }),
+      });
+      showToast('已创建截止提醒，可在消息中心查看', 'success');
+    } catch (error: any) {
+      console.warn('Failed to subscribe campus reminder:', error);
+      showToast(error?.message || '提醒创建失败，请稍后重试', 'error');
+    }
   };
 
   return (
@@ -256,8 +291,11 @@ export default function CampusCalendar() {
                         <button onClick={() => handleCopyLink(event.applyUrl)} className="flex-1 justify-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="复制投递链接">
                           <LinkIcon className="w-4 h-4" />
                         </button>
-                        <button onClick={handleBookmark} className="flex-1 justify-center bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-200 hover:text-amber-600 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="收藏职位">
-                          <Bookmark className="w-4 h-4" />
+                        <button onClick={() => handleBookmark(event)} className={`flex-1 justify-center border py-2 rounded-xl text-sm font-medium transition-colors flex items-center ${isFavorite(event.id) ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white hover:bg-amber-50 border-gray-200 hover:border-amber-200 hover:text-amber-600 text-gray-600'}`} title={isFavorite(event.id) ? '取消收藏' : '收藏校招机会'}>
+                          <Bookmark className={`w-4 h-4 ${isFavorite(event.id) ? 'fill-current' : ''}`} />
+                        </button>
+                        <button onClick={() => handleSubscribe(event)} className="flex-1 justify-center bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 hover:text-blue-600 text-gray-600 py-2 rounded-xl text-sm font-medium transition-colors flex items-center" title="创建截止提醒">
+                          <Bell className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -289,13 +327,21 @@ export default function CampusCalendar() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
                 <span>我的提醒与收藏</span>
-                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">规划中</span>
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">已接入</span>
               </h3>
-              <p className="text-sm text-gray-500 leading-6">后续会把校招订阅、微信截止提醒和账号收藏统一同步到这里。</p>
-              <button className="w-full mt-5 bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center group">
-                <Bell className="w-4 h-4 mr-2 text-gray-400 group-hover:text-amber-500 transition-colors" />
-                配置截止提醒
-              </button>
+              <p className="text-sm text-gray-500 leading-6">点亮收藏会同步到账号；创建截止提醒后，会在消息中心生成一条校招提醒记录。</p>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
+                  <Bookmark className="w-4 h-4 text-amber-600 mb-2" />
+                  <p className="text-2xl font-black text-gray-900">{campusFavorites.length}</p>
+                  <p className="text-xs font-bold text-gray-500 mt-1">已收藏机会</p>
+                </div>
+                <Link to="/messages" className="rounded-xl bg-blue-50 border border-blue-100 p-4 hover:bg-blue-100 transition-colors">
+                  <Clock className="w-4 h-4 text-blue-600 mb-2" />
+                  <p className="text-sm font-black text-gray-900">消息中心</p>
+                  <p className="text-xs font-bold text-gray-500 mt-2">查看提醒</p>
+                </Link>
+              </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-100">
