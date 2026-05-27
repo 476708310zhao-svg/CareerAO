@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Briefcase, CalendarClock, ExternalLink, FileText, Inbox, LogIn, RotateCcw, Trash2 } from 'lucide-react';
+import { Briefcase, CalendarClock, ExternalLink, FileText, Inbox, LogIn, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
@@ -67,6 +67,7 @@ export default function Applications() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [statistics, setStatistics] = useState<ApplicationStats>({});
   const [activeStatus, setActiveStatus] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -76,6 +77,26 @@ export default function Applications() {
     { label: '面试中', value: statistics.interview || 0 },
     { label: 'Offer', value: statistics.offer || 0 },
   ], [statistics]);
+
+  const visibleApplications = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    if (!keyword) return applications;
+    return applications.filter((item) => {
+      const job = item.jobSnapshot?.title ? item.jobSnapshot : item.job || {};
+      return [job.title, job.company, job.location, item.statusText, item.status]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword));
+    });
+  }, [applications, searchQuery]);
+
+  const nextActionLabel = (status: string) => {
+    if (status === 'applied') return '建议 5-7 天后检查邮箱或官网状态';
+    if (status === 'viewed') return '准备面试题和项目讲述，等待进一步通知';
+    if (status === 'interview') return '记录面试时间，提前准备 STAR 案例';
+    if (status === 'offer') return '对比薪资、签证和团队成长空间';
+    if (status === 'rejected') return '复盘关键词和简历匹配度，调整下一批投递';
+    return '持续跟进申请状态';
+  };
 
   const loadApplications = async (status = activeStatus) => {
     if (!isAuthenticated) {
@@ -181,6 +202,18 @@ export default function Applications() {
               ))}
             </div>
 
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+              <div className="flex items-center rounded-xl bg-gray-50 px-4 py-3">
+                <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="搜索公司、职位、地点或状态..."
+                  className="w-full bg-transparent text-sm text-gray-900 outline-none"
+                />
+              </div>
+            </div>
+
             {errorMessage && (
               <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
                 {errorMessage}
@@ -193,9 +226,9 @@ export default function Applications() {
                   <div key={item} className="h-32 rounded-2xl border border-gray-100 bg-white animate-pulse" />
                 ))}
               </div>
-            ) : applications.length ? (
+            ) : visibleApplications.length ? (
               <div className="space-y-4">
-                {applications.map((item) => {
+                {visibleApplications.map((item) => {
               const job = item.jobSnapshot?.title ? item.jobSnapshot : item.job || {};
               const statusLabel = item.statusText || statusTabs.find((tab) => tab.key === item.status)?.label || item.status || '已投递';
               return (
@@ -214,6 +247,7 @@ export default function Applications() {
                           <CalendarClock className="mr-1 h-3.5 w-3.5" />
                           投递于 {formatDate(item.appliedAt)}
                         </p>
+                        <p className="mt-2 text-xs font-medium text-primary">{nextActionLabel(item.status)}</p>
                       </div>
                     </div>
 

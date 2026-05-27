@@ -37,19 +37,36 @@ const formatTime = (value?: string) => {
 export default function Messages() {
   const { isAuthenticated, openAuthModal } = useAuth();
   const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const messageFilters = useMemo(() => [
+    { key: 'all', label: '全部', count: messages.length },
+    { key: 'unread', label: '未读', count: unreadCount },
+    ...Object.entries(typeLabels).map(([key, label]) => ({
+      key,
+      label,
+      count: messages.filter((message) => (message.type || 'system') === key).length,
+    })).filter((item) => item.count > 0),
+  ], [messages, unreadCount]);
+
+  const filteredMessages = useMemo(() => {
+    if (activeFilter === 'all') return messages;
+    if (activeFilter === 'unread') return messages.filter((message) => !message.isRead);
+    return messages.filter((message) => (message.type || 'system') === activeFilter);
+  }, [activeFilter, messages]);
+
   const groupedMessages = useMemo(() => {
-    return messages.reduce<Record<string, MessageItem[]>>((groups, message) => {
+    return filteredMessages.reduce<Record<string, MessageItem[]>>((groups, message) => {
       const key = message.type || 'system';
       if (!groups[key]) groups[key] = [];
       groups[key].push(message);
       return groups;
     }, {});
-  }, [messages]);
+  }, [filteredMessages]);
 
   const loadMessages = async () => {
     if (!isAuthenticated) {
@@ -188,13 +205,28 @@ export default function Messages() {
               </div>
             )}
 
+            <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+              {messageFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  onClick={() => setActiveFilter(filter.key)}
+                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+                    activeFilter === filter.key ? 'bg-primary text-white' : 'bg-white text-gray-600 border border-gray-200 hover:text-primary'
+                  }`}
+                >
+                  {filter.label}
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${activeFilter === filter.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{filter.count}</span>
+                </button>
+              ))}
+            </div>
+
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((item) => (
                   <div key={item} className="h-28 rounded-2xl border border-gray-100 bg-white animate-pulse" />
                 ))}
               </div>
-            ) : messages.length ? (
+            ) : filteredMessages.length ? (
               <div className="space-y-6">
                 {Object.entries(groupedMessages).map(([type, items]) => (
                   <section key={type}>
@@ -232,8 +264,8 @@ export default function Messages() {
             ) : (
               <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
                 <MailOpen className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                <h2 className="text-lg font-bold text-gray-900">暂无消息</h2>
-                <p className="mt-2 text-sm text-gray-500">订阅校招、收藏职位或完成会员订单后，相关更新会出现在这里。</p>
+                <h2 className="text-lg font-bold text-gray-900">暂无匹配消息</h2>
+                <p className="mt-2 text-sm text-gray-500">切换筛选条件，或订阅校招、收藏职位、记录投递后查看更新。</p>
               </div>
             )}
           </>
