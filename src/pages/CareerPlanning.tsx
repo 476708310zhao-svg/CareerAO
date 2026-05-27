@@ -37,6 +37,15 @@ const buildRoadmap = (role: string, timeline: string) => [
 ];
 
 type BackendCareerPlan = {
+  resources?: Array<{
+    category?: string;
+    items?: string[];
+  }>;
+  milestones?: Array<{
+    month?: number;
+    focus?: string;
+    actions?: string[];
+  }>;
   phases?: Array<{
     duration?: string;
     goal?: string;
@@ -70,6 +79,12 @@ export default function CareerPlanning() {
     }
     return buildRoadmap(formState.role, formState.timeline);
   }, [backendPlan, formState.role, formState.timeline]);
+
+  const recommendedResources = backendPlan?.resources?.length
+    ? backendPlan.resources.flatMap((resource) => resource.items?.map((item) => `${resource.category || '推荐资源'}：${item}`) || []).slice(0, 5)
+    : ['系统设计入门清单', 'LeetCode 高频 150 题', '行为面试 STAR 案例库'];
+
+  const milestones = backendPlan?.milestones?.length ? backendPlan.milestones.slice(0, 4) : [];
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -221,7 +236,7 @@ export default function CareerPlanning() {
                   <BookOpen className="w-5 h-5 text-amber-500 mr-2" />
                   推荐资源
                 </h3>
-                {['系统设计入门清单', 'LeetCode 高频 150 题', '行为面试 STAR 案例库'].map((item) => (
+                {recommendedResources.map((item) => (
                   <div key={item} className="p-3 border border-gray-100 rounded-xl mb-3 text-sm font-medium text-gray-700 bg-gray-50">
                     {item}
                   </div>
@@ -231,6 +246,25 @@ export default function CareerPlanning() {
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
+              {milestones.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-gray-900 mb-4 flex items-center">
+                    <Calendar className="w-5 h-5 text-primary mr-2" />
+                    关键里程碑
+                  </h3>
+                  <div className="space-y-4">
+                    {milestones.map((milestone) => (
+                      <div key={`${milestone.month}-${milestone.focus}`} className="border-l-2 border-primary/30 pl-4">
+                        <p className="text-xs font-bold text-primary mb-1">第 {milestone.month || '-'} 个月</p>
+                        <p className="text-sm font-bold text-gray-900">{milestone.focus || '阶段重点'}</p>
+                        {Boolean(milestone.actions?.length) && (
+                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{milestone.actions?.slice(0, 2).join(' / ')}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </aside>
           </div>
         ) : (

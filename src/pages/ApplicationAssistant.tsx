@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { AlertCircle, CheckCircle2, Clipboard, Copy, FileText, Sparkles, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, CheckCircle2, Clipboard, Copy, FileText, RotateCcw, Sparkles, Zap } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
 const sampleAnswers = [
@@ -23,15 +25,72 @@ const extractKeywords = (text: string) => {
   return keywords.filter((keyword) => text.toLowerCase().includes(keyword.toLowerCase()));
 };
 
+const STORAGE_KEY = 'careerai_application_assistant_last';
+
 export default function ApplicationAssistant() {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [jdText, setJdText] = useState('');
   const [resumeText, setResumeText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
+  const [checkedItems, setCheckedItems] = useState<string[]>([]);
 
   const matchedKeywords = useMemo(() => extractKeywords(`${jdText} ${resumeText}`), [jdText, resumeText]);
   const missingHints = ['补充量化结果', '突出和 JD 对应的关键词', '准备 2 个 STAR 案例'];
+  const matchScore = resumeText ? 86 : 72;
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      setJdText(parsed.jdText || '');
+      setResumeText(parsed.resumeText || '');
+      setAiSummary(parsed.aiSummary || '');
+      setCheckedItems(Array.isArray(parsed.checkedItems) ? parsed.checkedItems : []);
+      setShowResults(Boolean(parsed.showResults));
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      jdText,
+      resumeText,
+      aiSummary,
+      checkedItems,
+      showResults,
+    }));
+  }, [aiSummary, checkedItems, jdText, resumeText, showResults]);
+
+  const copyText = async (text: string, message = '已复制到剪贴板') => {
+    if (!text.trim()) {
+      showToast('暂无可复制内容', 'info');
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    showToast(message, 'success');
+  };
+
+  const buildReport = () => [
+    `岗位匹配度：${matchScore}%`,
+    `关键词命中：${(matchedKeywords.length ? matchedKeywords : ['Communication', 'Ownership', 'Problem Solving']).join(', ')}`,
+    aiSummary ? `\nAI 分析：\n${aiSummary}` : '',
+    `\n投递前建议：\n${missingHints.map((hint) => `- ${hint}${checkedItems.includes(hint) ? '（已完成）' : ''}`).join('\n')}`,
+  ].filter(Boolean).join('\n');
+
+  const resetWorkspace = () => {
+    setJdText('');
+    setResumeText('');
+    setAiSummary('');
+    setCheckedItems([]);
+    setShowResults(false);
+    localStorage.removeItem(STORAGE_KEY);
+    showToast('已清空本次网申分析', 'success');
+  };
 
   const handleAnalyze = async () => {
     if (!jdText.trim()) return;
@@ -73,14 +132,24 @@ export default function ApplicationAssistant() {
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <section className="mb-8">
-          <p className="text-sm font-semibold text-primary mb-2">Application Assistant</p>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 flex items-center">
-            <Sparkles className="w-8 h-8 text-primary mr-3" />
-            网申助手
-          </h1>
-          <p className="text-gray-600 mt-3 max-w-2xl">
-            粘贴目标岗位 JD 和简历片段，快速生成匹配度分析、开放题回答方向和投递前检查清单。
-          </p>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-primary mb-2">Application Assistant</p>
+              <h1 className="text-3xl md:text-4xl font-black text-gray-900 flex items-center">
+                <Sparkles className="w-8 h-8 text-primary mr-3" />
+                网申助手
+              </h1>
+              <p className="text-gray-600 mt-3 max-w-2xl">
+                粘贴目标岗位 JD 和简历片段，快速生成匹配度分析、开放题回答方向和投递前检查清单。
+              </p>
+            </div>
+            {(jdText || resumeText || showResults) && (
+              <button onClick={resetWorkspace} className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-white hover:text-gray-900 transition-colors w-fit">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                重新开始
+              </button>
+            )}
+          </div>
         </section>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -118,6 +187,26 @@ export default function ApplicationAssistant() {
             >
               {isAnalyzing ? 'AI 正在分析...' : <><Zap className="w-5 h-5 mr-2" />开始智能分析</>}
             </button>
+
+            {showResults && (
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h2 className="text-sm font-bold text-gray-900 mb-3">下一步动作</h2>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <button onClick={() => copyText(buildReport(), '分析报告已复制')} className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-black transition-colors">
+                    <Copy className="w-4 h-4 mr-2" />
+                    复制报告
+                  </button>
+                  <button onClick={() => navigate('/ai-interview', { state: { jd: jdText } })} className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors">
+                    AI 面试
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </button>
+                  <button onClick={() => navigate('/resume-editor', { state: { jd: jdText, resume: resumeText } })} className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors">
+                    优化简历
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           <section>
@@ -142,7 +231,7 @@ export default function ApplicationAssistant() {
                     <h2 className="text-lg font-bold text-gray-900 mb-1">岗位匹配度</h2>
                     <p className="text-sm text-gray-500">基于 JD 关键词和简历片段的快速评估</p>
                   </div>
-                  <div className="text-4xl font-black text-primary">{resumeText ? 86 : 72}%</div>
+                  <div className="text-4xl font-black text-primary">{matchScore}%</div>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
@@ -163,7 +252,7 @@ export default function ApplicationAssistant() {
                       <div key={item.question} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                         <h4 className="font-bold text-sm text-gray-900 mb-2">{item.question}</h4>
                         <p className="text-sm text-gray-700 leading-relaxed mb-3">{item.answer}</p>
-                        <button className="text-xs flex items-center text-primary hover:text-primary-hover font-medium">
+                        <button onClick={() => copyText(item.answer, '回答模板已复制')} className="text-xs flex items-center text-primary hover:text-primary-hover font-medium">
                           <Copy className="w-3.5 h-3.5 mr-1" />
                           复制回答
                         </button>
@@ -177,8 +266,18 @@ export default function ApplicationAssistant() {
                   <ul className="space-y-3">
                     {missingHints.map((hint, index) => (
                       <li key={hint} className="flex items-start">
-                        {index === 0 ? <AlertCircle className="w-5 h-5 text-amber-500 mr-2 shrink-0" /> : <CheckCircle2 className="w-5 h-5 text-green-500 mr-2 shrink-0" />}
-                        <span className="text-sm text-gray-700">{hint}</span>
+                        <button
+                          onClick={() => setCheckedItems((current) => current.includes(hint) ? current.filter((item) => item !== hint) : [...current, hint])}
+                          className="mt-0.5 mr-2"
+                          aria-label={checkedItems.includes(hint) ? `取消${hint}` : `完成${hint}`}
+                        >
+                          {checkedItems.includes(hint)
+                            ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            : index === 0
+                              ? <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+                              : <CheckCircle2 className="w-5 h-5 text-gray-300 shrink-0" />}
+                        </button>
+                        <span className={`text-sm ${checkedItems.includes(hint) ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{hint}</span>
                       </li>
                     ))}
                   </ul>
