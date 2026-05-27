@@ -85,6 +85,7 @@ export default function JobDetail() {
         setIsLoading(false);
         return;
       }
+
       setIsLoading(true);
       setErrorMessage('');
       try {
@@ -101,6 +102,7 @@ export default function JobDetail() {
         if (!cancelled) setIsLoading(false);
       }
     };
+
     fetchJob();
     return () => {
       cancelled = true;
