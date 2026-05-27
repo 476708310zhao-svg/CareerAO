@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Book, ChevronDown, FileText, HeadphonesIcon, HelpCircle, MessageCircle, Search, Send, X } from 'lucide-react';
+import { ArrowRight, Book, Briefcase, ChevronDown, FileText, HeadphonesIcon, HelpCircle, MessageCircle, Mic, RotateCcw, Search, Send, Sparkles, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
@@ -51,6 +51,13 @@ const faqs: Faq[] = [
     q: '会员和普通用户有什么区别？',
     a: '会员功能会逐步解锁更高频次的 AI 面试、简历优化、薪资对比和高级求职工具。具体权益以会员页面展示为准。',
   },
+];
+
+const quickLinks = [
+  { label: '优化简历', desc: '进入简历库，按 JD 润色经历', href: '/my-resume', icon: Sparkles },
+  { label: '找职位', desc: '搜索职位并记录投递进展', href: '/jobs', icon: Briefcase },
+  { label: 'AI 面试', desc: '用目标岗位开启模拟面试', href: '/ai-interview', icon: Mic },
+  { label: '联系团队', desc: '提交合作或服务问题', href: '/contact', icon: HeadphonesIcon },
 ];
 
 export default function HelpCenter() {
@@ -153,6 +160,13 @@ export default function HelpCenter() {
               <div className="p-12 text-center">
                 <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 font-medium">没有找到相关帮助内容</p>
+                <button
+                  onClick={() => { setSearchQuery(''); setActiveCategory('热门问题'); }}
+                  className="mt-5 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-hover"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  清空筛选
+                </button>
               </div>
             )}
           </div>
@@ -161,6 +175,23 @@ export default function HelpCenter() {
         <aside className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-lg font-bold text-gray-900 mb-4">快捷入口</h2>
+            <div className="space-y-2 mb-4">
+              {quickLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} to={item.href} className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-3 hover:border-primary/20 hover:bg-primary/5 transition-colors">
+                    <div className="flex items-center min-w-0">
+                      <Icon className="w-5 h-5 mr-3 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900">{item.label}</p>
+                        <p className="text-xs text-gray-500 line-clamp-1">{item.desc}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
             <Link to="/terms" className="flex items-center p-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700"><FileText className="w-5 h-5 mr-3 text-blue-500" />服务条款</Link>
             <Link to="/privacy" className="flex items-center p-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700"><FileText className="w-5 h-5 mr-3 text-emerald-500" />隐私政策</Link>
           </div>

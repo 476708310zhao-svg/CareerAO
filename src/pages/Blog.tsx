@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bookmark, BookOpen, Calendar, Clock, Eye, Search, ThumbsUp, TrendingUp, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Bookmark, BookOpen, Calendar, Clock, Eye, FileText, Mic, Search, ThumbsUp, TrendingUp, User } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
@@ -223,6 +224,32 @@ export default function Blog() {
               <h3 className="text-lg font-bold mb-2">打造你的求职知识库</h3>
               <p className="text-gray-300 text-sm mb-4">收藏和点赞内容后，后续可以用于推荐更适合你的校招、社招和面试资料。</p>
               <button onClick={() => showToast('已开启个性化推荐', 'success')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">开启推荐</button>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">读完继续行动</h3>
+              <div className="space-y-3">
+                <Link to="/my-resume" className="group flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 p-4 hover:bg-primary/5 hover:border-primary/20 transition-colors">
+                  <div className="flex items-center">
+                    <FileText className="w-5 h-5 text-primary mr-3" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">优化简历表达</p>
+                      <p className="text-xs text-gray-500 mt-0.5">把文章方法应用到简历版本</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary" />
+                </Link>
+                <Link to="/ai-interview" className="group flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 p-4 hover:bg-primary/5 hover:border-primary/20 transition-colors">
+                  <div className="flex items-center">
+                    <Mic className="w-5 h-5 text-primary mr-3" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">练一场 AI 面试</p>
+                      <p className="text-xs text-gray-500 mt-0.5">用 STAR 和项目表达做模拟追问</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary" />
+                </Link>
+              </div>
             </div>
           </aside>
         </div>
