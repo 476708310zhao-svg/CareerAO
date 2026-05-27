@@ -34,7 +34,7 @@ type Experience = {
 };
 
 const filters = {
-  companies: ['全部', 'Google', 'Meta', 'Amazon', 'Microsoft', '字节跳动', '腾讯', '阿里巴巴', '华为'],
+  companies: ['全部', 'Google', 'Meta', 'Amazon', 'Microsoft', 'ByteDance', 'Tencent', 'Alibaba', 'Huawei'],
   roles: ['全部', 'Software Engineer', 'Frontend Developer', 'Backend Developer', 'Product Manager', 'Data Analyst', '算法工程师'],
   rounds: ['全部', '一面', '二面', '三面', 'HR面', '交叉面', 'VO'],
 };
@@ -56,14 +56,14 @@ const fallbackExperiences: Experience[] = [
   },
   {
     id: 'fallback-byte',
-    title: '字节跳动前端实习一二面复盘',
+    title: 'ByteDance 前端实习一二面复盘',
     author: '前端同学',
-    company: '字节跳动',
+    company: 'ByteDance',
     role: 'Frontend Developer',
     round: '二面',
     type: '面试',
     date: '近期',
-    content: '重点考察 JavaScript 基础、React Hooks、项目性能优化和手写代码。二面会深挖业务理解和协作方式。',
+    content: '重点考察 JavaScript 基础、React Hooks、项目性能优化和手写代码。二面会深化业务理解和协作方式。',
     likes: 96,
     comments: 8,
     tags: ['前端', 'React', '实习'],
@@ -78,7 +78,7 @@ const mapExperience = (item: any): Experience => ({
   role: item.position || item.role || '未知岗位',
   round: item.round || item.type || '面试',
   type: item.type || '面试',
-  date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '近期',
+  date: item.createdAt ? new Date(item.createdAt).toLocaleDateString('zh-CN') : '近期',
   content: item.content || '',
   likes: item.likesCount || item.likes || 0,
   comments: item.commentsCount || item.comments || 0,
@@ -173,7 +173,7 @@ export default function InterviewExperiences() {
         role: newPost.role,
         round: newPost.round,
         type: '面试',
-        date: new Date().toLocaleDateString(),
+        date: new Date().toLocaleDateString('zh-CN'),
         content: newPost.content,
         likes: 0,
         comments: 0,
@@ -322,7 +322,7 @@ export default function InterviewExperiences() {
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <PenTool className="w-5 h-5 mr-2 text-blue-600" /> 发布面经
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="关闭">
                 <X className="w-5 h-5" />
               </button>
             </div>
