@@ -9,12 +9,12 @@ const sampleAnswers = [
   {
     question: 'Why are you interested in this role?',
     answer:
-      'I am interested in this role because it combines product impact with hands-on engineering depth. My previous experience building React and TypeScript applications taught me how to translate ambiguous requirements into reliable user-facing features. This role is especially attractive because the JD emphasizes collaboration, ownership, and scalable frontend architecture, which are areas where I can contribute quickly while continuing to grow.',
+      'I am interested in this role because it combines product impact with hands-on execution. My previous experience taught me how to translate ambiguous requirements into reliable user-facing features, and this role matches my strengths in ownership, collaboration, and structured problem solving.',
   },
   {
     question: 'Describe a challenging technical problem you solved.',
     answer:
-      'In a recent project, our team faced slow page rendering after adding several data-heavy views. I profiled the bottleneck, split expensive components, memoized derived data, and introduced lazy loading for non-critical panels. As a result, initial render time dropped noticeably and the user flow became smoother. The experience helped me build a more systematic approach to diagnosing performance issues.',
+      'In a recent project, our team faced slow page rendering after adding several data-heavy views. I profiled the bottleneck, split expensive components, memoized derived data, and introduced lazy loading for non-critical panels. As a result, the core user flow became noticeably smoother.',
   },
 ];
 
@@ -53,7 +53,7 @@ export default function ApplicationAssistant() {
           ],
         }),
       });
-      setAiSummary(response.choices?.[0]?.message?.content || '');
+      setAiSummary(response.choices?.[0]?.message?.content || response.data?.content || '');
     } catch (error) {
       console.warn('Application analysis fallback:', error);
       setAiSummary('');
@@ -79,7 +79,7 @@ export default function ApplicationAssistant() {
             网申助手
           </h1>
           <p className="text-gray-600 mt-3 max-w-2xl">
-            粘贴岗位 JD 和简历片段，快速生成匹配度分析、开放题回答和投递前检查清单。
+            粘贴目标岗位 JD 和简历片段，快速生成匹配度分析、开放题回答方向和投递前检查清单。
           </p>
         </section>
 
@@ -105,7 +105,7 @@ export default function ApplicationAssistant() {
               </h2>
               <textarea
                 className="w-full h-36 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none text-sm outline-none"
-                placeholder="可选：粘贴你最相关的一段项目或实习经历..."
+                placeholder="可选：粘贴你最相关的一段项目、实习或经历..."
                 value={resumeText}
                 onChange={(event) => setResumeText(event.target.value)}
               />
@@ -116,7 +116,7 @@ export default function ApplicationAssistant() {
               disabled={isAnalyzing || !jdText.trim()}
               className="w-full py-4 rounded-xl font-bold text-white text-lg flex items-center justify-center transition-all bg-primary hover:bg-primary-hover disabled:bg-primary/50 disabled:cursor-not-allowed"
             >
-              {isAnalyzing ? 'AI 正在解析...' : <><Zap className="w-5 h-5 mr-2" />开始智能分析</>}
+              {isAnalyzing ? 'AI 正在分析...' : <><Zap className="w-5 h-5 mr-2" />开始智能分析</>}
             </button>
           </section>
 
