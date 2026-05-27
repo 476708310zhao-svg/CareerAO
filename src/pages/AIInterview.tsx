@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AlertCircle, BarChart, Bot, CheckCircle2, Code2, MessageSquare, Mic, Play, Send, Square, Target } from 'lucide-react';
+import { AlertCircle, BarChart, Bot, CheckCircle2, Code2, Copy, MessageSquare, Mic, Play, Send, Square, Target } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts';
 
 import SEO from '../components/SEO';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
 type InterviewMessage = { role: 'ai' | 'user'; text: string };
@@ -24,6 +25,7 @@ const radarData = [
 
 export default function AIInterview() {
   const location = useLocation();
+  const { showToast } = useToast();
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [isInterviewEnded, setIsInterviewEnded] = useState(false);
   const [selectedRole, setSelectedRole] = useState('Software Engineer');
@@ -147,6 +149,24 @@ export default function AIInterview() {
     setIsListening(true);
   };
 
+  const buildInterviewReport = () => [
+    `AI 模拟面试复盘`,
+    `公司：${selectedCompany}`,
+    `岗位：${selectedRole}`,
+    `类型：${activeType.name}`,
+    `难度：${selectedDifficulty}`,
+    '',
+    '综合反馈：表达结构比较清晰，下一步建议加强结果量化，把“做了什么”转化为“带来了什么业务或工程价值”。',
+    '',
+    '面试记录：',
+    ...messages.map((message, index) => `${index + 1}. ${message.role === 'ai' ? 'AI 面试官' : '我'}：${message.text}`),
+  ].join('\n');
+
+  const copyInterviewReport = async () => {
+    await navigator.clipboard.writeText(buildInterviewReport());
+    showToast('面试复盘已复制', 'success');
+  };
+
   if (isInterviewEnded) {
     return (
       <main className="pt-24 pb-16 min-h-screen bg-gray-50">
@@ -200,9 +220,15 @@ export default function AIInterview() {
                   </ul>
                 </div>
               </div>
-              <button onClick={() => { setIsInterviewStarted(false); setIsInterviewEnded(false); }} className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-hover font-bold">
-                再练一次
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button onClick={copyInterviewReport} className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-black font-bold inline-flex items-center justify-center">
+                  <Copy className="w-4 h-4 mr-2" />
+                  复制复盘报告
+                </button>
+                <button onClick={() => { setIsInterviewStarted(false); setIsInterviewEnded(false); }} className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-hover font-bold">
+                  再练一次
+                </button>
+              </div>
             </div>
           </div>
         </div>

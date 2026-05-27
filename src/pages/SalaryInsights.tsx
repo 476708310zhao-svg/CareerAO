@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Award, BarChart3, Building2, DollarSign, MapPin, Search, TrendingUp } from 'lucide-react';
+import { Award, BarChart3, Building2, Calculator, Copy, DollarSign, MapPin, Search, TrendingUp } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import SEO from '../components/SEO';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
 type SalaryStats = {
@@ -42,19 +43,57 @@ const formatMoney = (value?: number, fallback?: number) => {
 };
 
 export default function SalaryInsights() {
+  const { showToast } = useToast();
   const [company, setCompany] = useState('Google');
   const [role, setRole] = useState('Software Engineer');
   const [location, setLocation] = useState('San Francisco, CA');
+  const [query, setQuery] = useState({ company: 'Google', role: 'Software Engineer', location: 'San Francisco, CA' });
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<SalaryStats | null>(null);
   const [offers, setOffers] = useState<Offer[]>(fallbackOffers);
   const [errorMessage, setErrorMessage] = useState('');
+  const [offerTotal, setOfferTotal] = useState('280000');
 
   const selectedFallback = fallbackLevels[1];
   const chartData = useMemo(
     () => fallbackLevels.map((item) => ({ level: item.level, Base: item.base, Stock: item.stock, Bonus: item.bonus })),
     [],
   );
+  const effectiveTotal = stats?.avgTotal || selectedFallback.total * 1000;
+  const offerAmount = Number(offerTotal.replace(/[^0-9.]/g, '')) || 0;
+  const offerDelta = offerAmount ? Math.round(((offerAmount - effectiveTotal) / effectiveTotal) * 100) : 0;
+  const offerAdvice = offerDelta >= 10
+    ? '高于当前参考区间，可以重点确认股票归属、签证支持和团队成长空间。'
+    : offerDelta >= -5
+      ? '接近市场参考，可以围绕 Base、签字费和搬家补贴做温和谈判。'
+      : '低于当前参考区间，建议准备同类岗位数据和个人匹配点，争取上调。';
+
+  const submitSearch = () => {
+    setQuery({
+      company: company.trim() || 'Google',
+      role: role.trim() || 'Software Engineer',
+      location: location.trim() || 'San Francisco, CA',
+    });
+  };
+
+  const applyPreset = (nextCompany: string, nextRole: string, nextLocation: string) => {
+    setCompany(nextCompany);
+    setRole(nextRole);
+    setLocation(nextLocation);
+    setQuery({ company: nextCompany, role: nextRole, location: nextLocation });
+  };
+
+  const copySummary = async () => {
+    const summary = [
+      `${query.company} · ${query.role} · ${query.location}`,
+      `Total: ${formatMoney(stats?.avgTotal, selectedFallback.total)}`,
+      `Base: ${formatMoney(stats?.avgBase, selectedFallback.base)} / Stock: ${formatMoney(stats?.avgStock, selectedFallback.stock)} / Bonus: ${formatMoney(stats?.avgBonus, selectedFallback.bonus)}`,
+      offerAmount ? `我的 Offer: $${offerAmount.toLocaleString()}，相对参考值 ${offerDelta >= 0 ? '+' : ''}${offerDelta}%` : '',
+      offerAmount ? `建议：${offerAdvice}` : '',
+    ].filter(Boolean).join('\n');
+    await navigator.clipboard.writeText(summary);
+    showToast('薪资摘要已复制', 'success');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +103,7 @@ export default function SalaryInsights() {
       try {
         let market: any = null;
         try {
-          const marketParams = new URLSearchParams({ job_title: role, company, location, region: 'NA' });
+          const marketParams = new URLSearchParams({ job_title: query.role, company: query.company, location: query.location, region: 'NA' });
           const marketResponse = await apiFetch(`/api/proxy/salaries/market?${marketParams}`);
           market = marketResponse.data?.[0] || null;
         } catch (marketError) {
@@ -80,21 +119,21 @@ export default function SalaryInsights() {
           });
         }
 
-        const params = new URLSearchParams({ position: role, company, region: location });
+        const params = new URLSearchParams({ position: query.role, company: query.company, region: query.location });
         const statsResponse = await apiFetch(`/api/proxy/salaries/statistics?${params}`);
         if (!cancelled && !market && statsResponse.data && !statsResponse.useMock) {
           setStats(statsResponse.data);
         }
 
-        const listParams = new URLSearchParams({ position: role, company, region: location, page: '1', pageSize: '10' });
+        const listParams = new URLSearchParams({ position: query.role, company: query.company, region: query.location, page: '1', pageSize: '10' });
         const listResponse = await apiFetch(`/api/proxy/salaries?${listParams}`);
         if (!cancelled && listResponse.data?.list?.length) {
           setOffers(
             listResponse.data.list.map((item: any) => ({
-              company: item.company || company,
-              role: item.position || role,
+              company: item.company || query.company,
+              role: item.position || query.role,
               level: item.level || 'N/A',
-              location: item.location || location,
+              location: item.location || query.location,
               tc: `$${Number(item.totalCompensation || 0).toLocaleString()}`,
               yoe: `${item.yearsOfExperience || 0} yrs`,
               date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '近期',
@@ -112,7 +151,7 @@ export default function SalaryInsights() {
     return () => {
       cancelled = true;
     };
-  }, [company, role, location]);
+  }, [query]);
 
   return (
     <main className="pt-24 pb-16 min-h-screen bg-gray-50">
@@ -130,20 +169,31 @@ export default function SalaryInsights() {
           <div className="bg-white rounded-2xl p-2 grid md:grid-cols-[1fr_1fr_1fr_auto] gap-2 shadow-lg">
             <label className="flex items-center bg-gray-50 rounded-xl px-4 py-3">
               <Building2 className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
-              <input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="公司" className="bg-transparent border-none outline-none w-full text-gray-900" />
+              <input value={company} onChange={(event) => setCompany(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && submitSearch()} placeholder="公司" className="bg-transparent border-none outline-none w-full text-gray-900" />
             </label>
             <label className="flex items-center bg-gray-50 rounded-xl px-4 py-3">
               <BarChart3 className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
-              <input value={role} onChange={(event) => setRole(event.target.value)} placeholder="岗位" className="bg-transparent border-none outline-none w-full text-gray-900" />
+              <input value={role} onChange={(event) => setRole(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && submitSearch()} placeholder="岗位" className="bg-transparent border-none outline-none w-full text-gray-900" />
             </label>
             <label className="flex items-center bg-gray-50 rounded-xl px-4 py-3">
               <MapPin className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
-              <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="地区" className="bg-transparent border-none outline-none w-full text-gray-900" />
+              <input value={location} onChange={(event) => setLocation(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && submitSearch()} placeholder="地区" className="bg-transparent border-none outline-none w-full text-gray-900" />
             </label>
-            <button className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium flex items-center justify-center">
+            <button onClick={submitSearch} className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-medium flex items-center justify-center">
               <Search className="w-5 h-5 mr-2" />
               搜索薪资
             </button>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {[
+              ['Google', 'Software Engineer', 'San Francisco, CA'],
+              ['Meta', 'Product Manager', 'New York, NY'],
+              ['Amazon', 'Data Scientist', 'Seattle, WA'],
+            ].map(([presetCompany, presetRole, presetLocation]) => (
+              <button key={`${presetCompany}-${presetRole}`} onClick={() => applyPreset(presetCompany, presetRole, presetLocation)} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold text-white transition-colors">
+                {presetCompany} · {presetRole}
+              </button>
+            ))}
           </div>
         </section>
 
@@ -154,13 +204,19 @@ export default function SalaryInsights() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-deep">{company} · {role}</h2>
-                  <p className="text-gray-500 mt-1 flex items-center"><MapPin className="w-4 h-4 mr-1" />{location} · 样本数 {stats?.count || offers.length}</p>
+                  <h2 className="text-2xl font-bold text-deep">{query.company} · {query.role}</h2>
+                  <p className="text-gray-500 mt-1 flex items-center"><MapPin className="w-4 h-4 mr-1" />{query.location} · 样本数 {stats?.count || offers.length}</p>
                 </div>
-                <span className="bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-medium flex items-center w-fit">
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  {isLoading ? '更新中' : '数据已同步'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={copySummary} className="bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium flex items-center w-fit transition-colors">
+                    <Copy className="w-4 h-4 mr-1" />
+                    复制摘要
+                  </button>
+                  <span className="bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-medium flex items-center w-fit">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    {isLoading ? '更新中' : '数据已同步'}
+                  </span>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-4 gap-4">
@@ -208,7 +264,24 @@ export default function SalaryInsights() {
               <Award className="w-8 h-8 text-primary mb-4" />
               <h3 className="text-lg font-bold mb-2">贡献你的薪资数据</h3>
               <p className="text-gray-300 text-sm mb-5">匿名分享 offer 信息，帮助更多留学生打破信息差。</p>
-              <button className="w-full bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold">匿名添加薪资</button>
+              <button onClick={() => showToast('薪资贡献入口正在接入账号系统，当前可先使用下方 Offer 对标。', 'info')} className="w-full bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold">匿名添加薪资</button>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <h3 className="font-bold text-deep mb-4 flex items-center">
+                <Calculator className="w-5 h-5 text-primary mr-2" />
+                Offer 对标
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">输入你的总包，快速判断和当前参考值的差距，辅助谈薪准备。</p>
+              <label className="flex items-center bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                <DollarSign className="w-5 h-5 text-gray-400 mr-2" />
+                <input value={offerTotal} onChange={(event) => setOfferTotal(event.target.value)} className="bg-transparent border-none outline-none w-full text-gray-900 font-bold" placeholder="例如 280000" />
+              </label>
+              <div className={`mt-4 p-4 rounded-xl border ${offerDelta >= 0 ? 'bg-green-50 border-green-100 text-green-800' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
+                <div className="text-xs font-bold uppercase tracking-wider opacity-70">相对参考值</div>
+                <div className="text-3xl font-black mt-1">{offerDelta >= 0 ? '+' : ''}{offerDelta}%</div>
+                <p className="text-xs leading-relaxed mt-2">{offerAdvice}</p>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
