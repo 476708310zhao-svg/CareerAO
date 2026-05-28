@@ -49,7 +49,7 @@ const Footer = () => {
                   }}
                 />
                 <QrCode className="w-12 h-12 hidden mb-1" />
-                <span className="text-[10px] hidden text-gray-400">请替换二维码</span>
+                <span className="text-[10px] hidden text-gray-400">微信咨询</span>
               </div>
             </div>
             <p className="text-base font-bold text-gray-900 mb-1">扫码添加微信</p>
@@ -70,9 +70,9 @@ const Footer = () => {
             </a>
           </div>
           <div className="flex space-x-4">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 cursor-pointer transition-colors">
+            <Link to="/contact" aria-label="联系我们" className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 cursor-pointer transition-colors">
               <Globe className="w-4 h-4" />
-            </div>
+            </Link>
           </div>
         </div>
       </div>

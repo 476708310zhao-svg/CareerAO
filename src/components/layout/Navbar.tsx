@@ -8,6 +8,11 @@ import { useToast } from '../../contexts/ToastContext';
 import { apiFetch } from '../../lib/api';
 import Logo from '../Logo';
 
+const isRouteActive = (pathname: string, href: string) => {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
+};
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -80,7 +85,7 @@ const Navbar = () => {
             {navCategories.map((category) => {
               const isActiveDropdown = activeNavDropdown === category.title;
               const hasActiveLink = category.sections.some((section) =>
-                section.links.some((link) => location.pathname === link.href),
+                section.links.some((link) => isRouteActive(location.pathname, link.href)),
               );
 
               return (
@@ -115,7 +120,7 @@ const Navbar = () => {
                               </div>
                               <div className="flex flex-col space-y-6">
                                 {section.links.map((link) => {
-                                  const isLinkActive = location.pathname === link.href;
+                                  const isLinkActive = isRouteActive(location.pathname, link.href);
                                   return (
                                     <Link key={link.href} to={link.href} className="group block">
                                       <div className="flex items-center">
@@ -271,6 +276,19 @@ const Navbar = () => {
 
       {isOpen && (
         <div className="lg:hidden bg-white border-b border-gray-100 px-4 pt-4 pb-6 space-y-6 shadow-lg max-h-[80vh] overflow-y-auto">
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="搜索职位、公司、面经..."
+              className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-16 text-sm outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+            />
+            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white">
+              搜索
+            </button>
+          </form>
           {navCategories.map((category) => (
             <div key={category.title} className="space-y-3">
               <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-2">{category.title}</h3>
@@ -279,7 +297,7 @@ const Navbar = () => {
                   <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{section.title}</h4>
                   <div className="space-y-1">
                     {section.links.map((link) => {
-                      const isLinkActive = location.pathname === link.href;
+                      const isLinkActive = isRouteActive(location.pathname, link.href);
                       return (
                         <Link
                           key={link.href}
