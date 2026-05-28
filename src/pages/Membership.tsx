@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, CheckCircle2, Crown, History, Loader2, Sparkles, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Copy, Crown, History, Loader2, Sparkles, Zap } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -154,6 +154,19 @@ export default function Membership() {
     }
   };
 
+  const copyOrderInfo = async () => {
+    if (!currentOrder) return;
+    const text = [
+      '职引会员订单',
+      `订单号：${currentOrder.orderNo || currentOrder.order_no || '-'}`,
+      `套餐：${currentOrder.planName || currentOrder.plan_name || selectedPlan.label}`,
+      `金额：${formatAmount(currentOrder.amount)}`,
+      `状态：${currentOrder.status || (currentOrder.mock ? '模拟支付已确认' : '待支付')}`,
+    ].join('\n');
+    await navigator.clipboard.writeText(text);
+    showToast('订单信息已复制', 'success');
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 pt-24 pb-20">
       <SEO
@@ -270,7 +283,13 @@ export default function Membership() {
 
         {currentOrder && (
           <section className="max-w-5xl mx-auto mb-12 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">当前订单</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-bold text-gray-900">当前订单</h2>
+              <button onClick={copyOrderInfo} className="inline-flex w-fit items-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold text-gray-600 hover:border-blue-200 hover:text-blue-700">
+                <Copy className="mr-1.5 h-4 w-4" />
+                复制订单信息
+              </button>
+            </div>
             <div className="grid sm:grid-cols-4 gap-4 text-sm">
               <div><span className="text-gray-500">订单号</span><p className="font-mono text-gray-900 mt-1 break-all">{currentOrder.orderNo}</p></div>
               <div><span className="text-gray-500">套餐</span><p className="font-bold text-gray-900 mt-1">{currentOrder.planName}</p></div>

@@ -18,7 +18,7 @@ import {
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
 
-// Mock Data
+// Static policy reference data. Keep official links visible so users can verify the latest rules.
 const COUNTRIES = ['美国', '英国', '加拿大', '澳大利亚', '香港特别行政区'];
 
 const VISA_DATA: Record<string, any[]> = {

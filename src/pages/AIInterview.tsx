@@ -84,7 +84,7 @@ export default function AIInterview() {
   };
 
   const startInterview = () => {
-    const greeting = `Welcome to your ${activeType.name} mock interview for ${selectedRole} at ${selectedCompany}. Please introduce yourself briefly, then we will start the first question.`;
+    const greeting = `欢迎进入 ${selectedCompany} ${selectedRole} 的${activeType.name}模拟。请先用 1 分钟做自我介绍，我会根据你的回答继续追问。`;
     setMessages([{ role: 'ai', text: greeting }]);
     setIsInterviewEnded(false);
     setIsInterviewStarted(true);
@@ -124,12 +124,12 @@ export default function AIInterview() {
       });
       const reply =
         response.choices?.[0]?.message?.content ||
-        'Thanks. Let me ask a follow-up: can you quantify the impact and explain what trade-off you made?';
+        '谢谢。继续追问一下：你能否量化这段经历的影响，并说明当时做过哪些取舍？';
       setMessages((current) => [...current, { role: 'ai', text: reply }]);
       speak(reply);
     } catch (error) {
       console.error('Interview chat failed:', error);
-      const fallback = 'I could not connect to the AI service right now. Please continue by explaining your approach, impact, and reflection.';
+      const fallback = '当前 AI 服务暂时连接失败。你可以先继续补充：你的具体做法、带来的影响，以及这段经历后的反思。';
       setMessages((current) => [...current, { role: 'ai', text: fallback }]);
     } finally {
       setIsAiThinking(false);
