@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Bot,
   Building2,
   Briefcase,
   ChevronDown,
@@ -9,10 +10,12 @@ import {
   MessageSquare,
   PenTool,
   Search,
+  Sparkles,
   ThumbsUp,
   User,
   X,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
@@ -86,8 +89,10 @@ const mapExperience = (item: any): Experience => ({
 });
 
 export default function InterviewExperiences() {
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [posts, setPosts] = useState<Experience[]>(fallbackExperiences);
+  const [likedPosts, setLikedPosts] = useState<Set<Experience['id']>>(new Set());
   const [activeCompany, setActiveCompany] = useState('全部');
   const [activeRole, setActiveRole] = useState('全部');
   const [activeRound, setActiveRound] = useState('全部');
@@ -140,6 +145,49 @@ export default function InterviewExperiences() {
       return matchesFilters && matchesSearch;
     });
   }, [activeCompany, activeRole, activeRound, posts, searchQuery]);
+
+  const hasActiveFilters =
+    activeCompany !== '全部' ||
+    activeRole !== '全部' ||
+    activeRound !== '全部' ||
+    Boolean(searchQuery.trim());
+
+  const clearFilters = () => {
+    setActiveCompany('全部');
+    setActiveRole('全部');
+    setActiveRound('全部');
+    setSearchQuery('');
+  };
+
+  const toggleLike = (postId: Experience['id']) => {
+    setLikedPosts((current) => {
+      const next = new Set(current);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+        showToast('已收藏这条备考经验', 'success');
+      }
+      return next;
+    });
+  };
+
+  const startInterviewPractice = (post: Experience) => {
+    navigate('/ai-interview', {
+      state: {
+        company: post.company,
+        role: post.role,
+        jd: [
+          post.title,
+          `公司：${post.company}`,
+          `岗位：${post.role}`,
+          `轮次：${post.round}`,
+          `面经重点：${post.content}`,
+          post.tags.length ? `标签：${post.tags.join('、')}` : '',
+        ].filter(Boolean).join('\n'),
+      },
+    });
+  };
 
   const handlePublish = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -229,9 +277,20 @@ export default function InterviewExperiences() {
         <div className="flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-1/4">
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm sticky top-24">
-              <div className="flex items-center mb-4 text-gray-800">
-                <Filter className="w-5 h-5 mr-2" />
-                <h2 className="font-bold text-lg">筛选条件</h2>
+              <div className="flex items-center justify-between mb-4 text-gray-800">
+                <div className="flex items-center">
+                  <Filter className="w-5 h-5 mr-2" />
+                  <h2 className="font-bold text-lg">筛选条件</h2>
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="text-xs font-medium text-gray-500 hover:text-blue-600"
+                  >
+                    清空
+                  </button>
+                )}
               </div>
               {[
                 ['公司', filters.companies, activeCompany, setActiveCompany, Building2],
@@ -258,6 +317,21 @@ export default function InterviewExperiences() {
                   </div>
                 </div>
               ))}
+              <div className="mt-6 rounded-2xl bg-gray-900 p-5 text-white">
+                <div className="flex items-center gap-2 text-sm font-semibold text-blue-100">
+                  <Sparkles className="h-4 w-4" />
+                  AI 备考动作
+                </div>
+                <p className="mt-2 text-sm leading-6 text-gray-300">选中目标公司和岗位后，可以直接用面经内容生成模拟面试。</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/ai-interview')}
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-blue-50"
+                >
+                  <Bot className="mr-2 h-4 w-4" />
+                  进入 AI 面试
+                </button>
+              </div>
             </div>
           </aside>
 
@@ -289,15 +363,32 @@ export default function InterviewExperiences() {
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">{post.content}</p>
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-50 gap-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 pt-4 border-t border-gray-50 gap-4">
                       <div className="flex gap-2 flex-wrap">
                         {post.tags.slice(0, 4).map((tag) => (
                           <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">#{tag}</span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
-                        <span className="flex items-center"><ThumbsUp className="w-4 h-4 mr-1.5" /> {post.likes}</span>
+                      <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-gray-500">
+                        <button
+                          type="button"
+                          onClick={() => toggleLike(post.id)}
+                          className={`flex items-center rounded-lg px-2 py-1 transition-colors ${
+                            likedPosts.has(post.id) ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <ThumbsUp className="w-4 h-4 mr-1.5" fill={likedPosts.has(post.id) ? 'currentColor' : 'none'} />
+                          {post.likes + (likedPosts.has(post.id) ? 1 : 0)}
+                        </button>
                         <span className="flex items-center"><MessageSquare className="w-4 h-4 mr-1.5" /> {post.comments}</span>
+                        <button
+                          type="button"
+                          onClick={() => startInterviewPractice(post)}
+                          className="inline-flex items-center rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+                        >
+                          <Bot className="mr-1.5 h-3.5 w-3.5" />
+                          AI 模拟
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -308,7 +399,12 @@ export default function InterviewExperiences() {
                 <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h2 className="text-lg font-medium text-gray-900 mb-2">未找到匹配的面经</h2>
                 <p className="text-gray-500 mb-6">可以换个关键词，或发布第一篇相关经验。</p>
-                <button onClick={() => setIsModalOpen(true)} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-6 py-2.5 rounded-xl font-medium transition-colors">分享我的面经</button>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  {hasActiveFilters && (
+                    <button onClick={clearFilters} className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-6 py-2.5 rounded-xl font-medium transition-colors">清空筛选</button>
+                  )}
+                  <button onClick={() => setIsModalOpen(true)} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-6 py-2.5 rounded-xl font-medium transition-colors">分享我的面经</button>
+                </div>
               </div>
             )}
           </section>
