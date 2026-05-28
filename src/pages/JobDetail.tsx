@@ -147,6 +147,36 @@ export default function JobDetail() {
     });
   };
 
+  const optimizeResume = () => {
+    if (!job) return;
+    navigate('/my-resume/new', {
+      state: {
+        role: job.title,
+        jd: job.description || `${job.company} ${job.title} ${job.location}`,
+      },
+    });
+  };
+
+  const shareJob = async () => {
+    if (!job) return;
+    const shareUrl = `https://www.zhiyincareer.com/jobs/${job.id}`;
+    const shareText = `${job.company} 正在招聘 ${job.title}：${shareUrl}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${job.title} - ${job.company}`, text: shareText, url: shareUrl });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        showToast('职位链接已复制', 'success');
+      }
+    } catch (error) {
+      if ((error as Error)?.name !== 'AbortError') {
+        await navigator.clipboard.writeText(shareText).catch(() => undefined);
+        showToast('职位链接已复制', 'success');
+      }
+    }
+  };
+
   const trackApplicationAndOpen = async () => {
     if (!job?.applyUrl) return;
     if (!isAuthenticated) {
@@ -245,7 +275,7 @@ export default function JobDetail() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-primary/10 transition-colors" aria-label="分享职位">
+                    <button onClick={shareJob} className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-primary/10 transition-colors" aria-label="分享职位">
                       <Share2 className="w-5 h-5" />
                     </button>
                     <button
@@ -283,6 +313,10 @@ export default function JobDetail() {
                   <button onClick={startInterview} className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
                     <Bot className="w-5 h-5 mr-2" />
                     用此 JD 模拟面试
+                  </button>
+                  <button onClick={optimizeResume} className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 mr-2 text-primary" />
+                    用此 JD 优化简历
                   </button>
                 </div>
               </div>
@@ -338,6 +372,14 @@ export default function JobDetail() {
                         </li>
                       ))}
                     </ul>
+                    <div className="grid grid-cols-1 gap-2">
+                      <button onClick={optimizeResume} className="w-full bg-primary hover:bg-primary-hover text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
+                        按该 JD 优化简历
+                      </button>
+                      <button onClick={startInterview} className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                        进入模拟面试
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
