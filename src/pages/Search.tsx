@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Briefcase, ChevronRight, FileText, Search as SearchIcon } from 'lucide-react';
+import { Building2, Briefcase, ChevronRight, Clock, FileText, RotateCcw, Search as SearchIcon, Sparkles } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import { apiFetch } from '../lib/api';
@@ -12,6 +12,8 @@ type SearchResults = {
 };
 
 const emptyResults: SearchResults = { jobs: [], companies: [], experiences: [] };
+const popularSearches = ['Software Engineer', 'Data Analyst', 'Google', 'OPT', '简历优化', '面经'];
+const RECENT_SEARCHES_KEY = 'careerai_recent_searches';
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +21,32 @@ export default function Search() {
   const [activeTab, setActiveTab] = useState<'all' | 'jobs' | 'companies' | 'experiences'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<SearchResults>(emptyResults);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (saved) setRecentSearches(JSON.parse(saved).slice(0, 6));
+    } catch (error) {
+      console.warn('Recent searches fallback:', error);
+    }
+  }, []);
+
+  const runSearch = (value: string) => {
+    const nextQuery = value.trim();
+    if (!nextQuery) return;
+    const nextRecent = [nextQuery, ...recentSearches.filter((item) => item !== nextQuery)].slice(0, 6);
+    setRecentSearches(nextRecent);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(nextRecent));
+    setActiveTab('all');
+    setSearchParams({ q: nextQuery });
+  };
+
+  const clearSearch = () => {
+    setResults(emptyResults);
+    setActiveTab('all');
+    setSearchParams({});
+  };
 
   useEffect(() => {
     if (!query.trim()) {
@@ -81,7 +109,7 @@ export default function Search() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const newQuery = String(formData.get('q') || '').trim();
-    if (newQuery) setSearchParams({ q: newQuery });
+    runSearch(newQuery);
   };
 
   const renderJobs = () => (
@@ -167,8 +195,56 @@ export default function Search() {
           </form>
         </div>
 
+        {!query && (
+          <section className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h1 className="text-lg font-bold text-gray-900">热门搜索</h1>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {popularSearches.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => runSearch(item)}
+                    className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-600 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-bold text-gray-900">最近搜索</h2>
+              </div>
+              {recentSearches.length ? (
+                <div className="space-y-2">
+                  {recentSearches.map((item) => (
+                    <button key={item} type="button" onClick={() => runSearch(item)} className="flex w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-primary/5 hover:text-primary">
+                      {item}
+                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-gray-500">搜索职位、公司或面经后，这里会保留最近使用的关键词。</p>
+              )}
+            </div>
+          </section>
+        )}
+
         {query && (
           <>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <p className="text-sm text-gray-500">正在搜索：<span className="font-semibold text-gray-900">{query}</span></p>
+              <button onClick={clearSearch} className="inline-flex items-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-600 shadow-sm ring-1 ring-gray-100 hover:text-primary">
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                重新搜索
+              </button>
+            </div>
             <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
               {[
                 ['all', '全部结果', hasResults ? results.jobs.length + results.companies.length + results.experiences.length : 0],
@@ -220,8 +296,14 @@ export default function Search() {
                 )}
 
                 {!hasResults && (
-                  <div className="text-center py-12 text-gray-500">
-                    未找到与 "{query}" 相关的结果
+                  <div className="rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center text-gray-500 shadow-sm">
+                    <SearchIcon className="mx-auto mb-4 h-10 w-10 text-gray-300" />
+                    <h2 className="text-lg font-bold text-gray-900">未找到与 "{query}" 相关的结果</h2>
+                    <p className="mt-2 text-sm">可以换一个关键词，或直接进入对应工具继续筛选。</p>
+                    <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                      <Link to="/jobs" className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">浏览职位</Link>
+                      <Link to="/interview-experiences" className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary/30 hover:text-primary">查看面经</Link>
+                    </div>
                   </div>
                 )}
               </div>

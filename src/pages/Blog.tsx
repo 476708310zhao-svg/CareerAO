@@ -6,9 +6,25 @@ import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
+type BlogPost = {
+  id: string | number;
+  title: string;
+  excerpt: string;
+  category: string;
+  author: string;
+  date: string;
+  readTime: string;
+  tags: string[];
+  views: number;
+  likes: number;
+  imageUrl: string;
+  recommended: boolean;
+  url?: string;
+};
+
 const categories = ['全部', '简历优化', '面试技巧', '行业分析', '薪资谈判', '职场发展', '笔试真题'];
 
-const fallbackPosts = [
+const fallbackPosts: BlogPost[] = [
   {
     id: 1,
     title: '如何写出更容易通过 ATS 的留学生简历',
@@ -56,9 +72,9 @@ const fallbackPosts = [
 export default function Blog() {
   const [activeCategory, setActiveCategory] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
-  const [posts, setPosts] = useState(fallbackPosts);
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(new Set());
-  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
+  const [posts, setPosts] = useState<BlogPost[]>(fallbackPosts);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<BlogPost['id']>>(new Set());
+  const [likedPosts, setLikedPosts] = useState<Set<BlogPost['id']>>(new Set());
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -79,6 +95,7 @@ export default function Blog() {
           likes: 0,
           imageUrl: fallbackPosts[index % fallbackPosts.length].imageUrl,
           recommended: index < 3,
+          url: article.url,
         })));
       })
       .catch((error) => console.warn('Blog news fallback:', error));
@@ -91,9 +108,9 @@ export default function Blog() {
       const matchesSearch = !query || post.title.toLowerCase().includes(query) || post.tags.some((tag) => tag.toLowerCase().includes(query));
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, posts, searchQuery]);
 
-  const toggleBookmark = (event: React.MouseEvent, postId: number) => {
+  const toggleBookmark = (event: React.MouseEvent, postId: BlogPost['id']) => {
     event.stopPropagation();
     setBookmarkedPosts((current) => {
       const next = new Set(current);
@@ -108,7 +125,7 @@ export default function Blog() {
     });
   };
 
-  const toggleLike = (event: React.MouseEvent, postId: number) => {
+  const toggleLike = (event: React.MouseEvent, postId: BlogPost['id']) => {
     event.stopPropagation();
     setLikedPosts((current) => {
       const next = new Set(current);
@@ -116,6 +133,15 @@ export default function Blog() {
       else next.add(postId);
       return next;
     });
+  };
+
+  const openOriginal = (event: React.MouseEvent, post: BlogPost) => {
+    event.stopPropagation();
+    if (!post.url) {
+      showToast('该内容暂无外部原文链接', 'info');
+      return;
+    }
+    window.open(post.url, '_blank', 'noopener,noreferrer');
   };
 
   const recommendedPosts = posts.filter((post) => post.recommended);
@@ -176,16 +202,23 @@ export default function Blog() {
                           {post.tags.map((tag) => <span key={tag} className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">#{tag}</span>)}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-gray-400 font-medium gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-gray-400 font-medium">
                         <div className="flex items-center gap-4">
                           <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1" />{post.author}</span>
                           <span className="hidden sm:flex items-center"><Calendar className="w-3.5 h-3.5 mr-1" />{post.date}</span>
                           <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1" />{post.readTime}</span>
                         </div>
-                        <button onClick={(event) => toggleLike(event, post.id)} className={`flex items-center hover:text-blue-500 ${likedPosts.has(post.id) ? 'text-blue-500' : ''}`}>
-                          <ThumbsUp className="w-4 h-4 mr-1" fill={likedPosts.has(post.id) ? 'currentColor' : 'none'} />
-                          {post.likes + (likedPosts.has(post.id) ? 1 : 0)}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {post.url && (
+                            <button onClick={(event) => openOriginal(event, post)} className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-primary/10 hover:text-primary">
+                              阅读原文 <ArrowRight className="ml-1 h-3 w-3" />
+                            </button>
+                          )}
+                          <button onClick={(event) => toggleLike(event, post.id)} className={`flex items-center hover:text-blue-500 ${likedPosts.has(post.id) ? 'text-blue-500' : ''}`}>
+                            <ThumbsUp className="w-4 h-4 mr-1" fill={likedPosts.has(post.id) ? 'currentColor' : 'none'} />
+                            {post.likes + (likedPosts.has(post.id) ? 1 : 0)}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
