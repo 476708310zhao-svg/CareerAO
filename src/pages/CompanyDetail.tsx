@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Briefcase, Building2, ChevronRight, Globe, MapPin, MessageSquare, Star, TrendingUp, Users } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Bot, Briefcase, Building2, ChevronRight, Globe, MapPin, MessageSquare, Search, Star, TrendingUp, Users } from 'lucide-react';
 
 import SEO from '../components/SEO';
 import { apiFetch } from '../lib/api';
@@ -41,8 +41,24 @@ const normalizeUrl = (url?: string) => {
   return url.startsWith('http') ? url : `https://${url}`;
 };
 
+const normalizeCompany = (data: any): CompanyDetailData => ({
+  ...fallbackCompany,
+  ...data,
+  id: data?.id || data?.companyId || data?.name || fallbackCompany.id,
+  name: data?.displayName || data?.name || data?.nameEn || fallbackCompany.name,
+  logoUrl: data?.logoUrl || data?.logo || data?.companyLogo,
+  industry: data?.industry || data?.industryL1 || fallbackCompany.industry,
+  headquarters: data?.headquarters || data?.hqCity || data?.hqCountry || data?.location || fallbackCompany.headquarters,
+  websiteUrl: data?.websiteUrl || data?.website || data?.url,
+  description: data?.description || data?.intro || data?.summary || fallbackCompany.description,
+  jobs: Array.isArray(data?.jobs) ? data.jobs : [],
+  experiences: Array.isArray(data?.experiences) ? data.experiences : [],
+  salaries: Array.isArray(data?.salaries) ? data.salaries : [],
+});
+
 export default function CompanyDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'about' | 'jobs' | 'experiences' | 'salaries'>('about');
@@ -54,10 +70,24 @@ export default function CompanyDetail() {
       try {
         if (!id) throw new Error('Missing company id');
         const response = await apiFetch(`/api/proxy/companies/${id}`);
-        if (!cancelled) setCompany(response.data || fallbackCompany);
+        const baseCompany = normalizeCompany(response.data || fallbackCompany);
+        const keyword = baseCompany.name === fallbackCompany.name ? String(id) : baseCompany.name;
+        const [jobsResult, experiencesResult, salariesResult] = await Promise.allSettled([
+          apiFetch(`/api/proxy/jobs?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=6`),
+          apiFetch(`/api/proxy/experiences?keyword=${encodeURIComponent(keyword)}&page=1&pageSize=6`),
+          apiFetch(`/api/proxy/salaries?company=${encodeURIComponent(keyword)}&page=1&pageSize=6`),
+        ]);
+        if (!cancelled) {
+          setCompany({
+            ...baseCompany,
+            jobs: baseCompany.jobs?.length ? baseCompany.jobs : jobsResult.status === 'fulfilled' ? jobsResult.value.data?.list || [] : [],
+            experiences: baseCompany.experiences?.length ? baseCompany.experiences : experiencesResult.status === 'fulfilled' ? experiencesResult.value.data?.list || [] : [],
+            salaries: baseCompany.salaries?.length ? baseCompany.salaries : salariesResult.status === 'fulfilled' ? salariesResult.value.data?.list || [] : [],
+          });
+        }
       } catch (error) {
         console.warn('Company detail fallback:', error);
-        if (!cancelled) setCompany(fallbackCompany);
+        if (!cancelled) setCompany(normalizeCompany(fallbackCompany));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -84,6 +114,17 @@ export default function CompanyDetail() {
   const jobs = company.jobs || [];
   const experiences = company.experiences || [];
   const salaries = company.salaries || [];
+  const companyQuery = encodeURIComponent(company.name);
+
+  const startCompanyInterview = () => {
+    navigate('/ai-interview', {
+      state: {
+        company: company.name,
+        role: jobs[0]?.title || jobs[0]?.jobTitle || 'Software Engineer',
+        jd: `${company.name} 公司背景：${company.description || ''}\n目标岗位：${jobs[0]?.title || jobs[0]?.jobTitle || '通用岗位'}\n请围绕公司业务、岗位要求和常见行为面试进行模拟。`,
+      },
+    });
+  };
 
   return (
     <main className="min-h-screen pt-24 pb-12 bg-gray-50">
@@ -115,6 +156,20 @@ export default function CompanyDetail() {
                   <Globe className="w-4 h-4 mr-1" /> 访问官网
                 </a>
               )}
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link to={`/jobs?keyword=${companyQuery}`} className="inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  查看相关职位
+                </Link>
+                <button onClick={startCompanyInterview} className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary/40 hover:text-primary">
+                  <Bot className="mr-2 h-4 w-4" />
+                  公司模拟面试
+                </button>
+                <Link to={`/search?q=${companyQuery}`} className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary/40 hover:text-primary">
+                  <Search className="mr-2 h-4 w-4" />
+                  全站搜索
+                </Link>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
               {[
@@ -155,6 +210,18 @@ export default function CompanyDetail() {
               <div className="max-w-3xl text-gray-600">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">关于 {company.name}</h2>
                 <p className="leading-relaxed">{company.description || '暂无公司介绍。'}</p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ['职位机会', `${company.name} 当前聚合 ${jobs.length} 个岗位线索`],
+                    ['面试准备', experiences.length ? '可结合真实面经准备轮次问题' : '暂无面经时可先用 AI 生成模拟题'],
+                    ['薪资参考', salaries.length ? '已聚合薪资样本用于谈薪参考' : '可前往薪资查询页按岗位检索'],
+                  ].map(([title, desc]) => (
+                    <div key={title} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                      <div className="font-bold text-gray-900">{title}</div>
+                      <p className="mt-1 text-sm leading-6 text-gray-500">{desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -176,7 +243,13 @@ export default function CompanyDetail() {
                     </div>
                   </Link>
                 ))}
-                {!jobs.length && <div className="text-center text-gray-500 py-8">暂无在招职位</div>}
+                {!jobs.length && (
+                  <div className="text-center text-gray-500 py-8">
+                    <Briefcase className="mx-auto mb-3 h-8 w-8 text-gray-300" />
+                    <p>暂无在招职位</p>
+                    <Link to={`/jobs?keyword=${companyQuery}`} className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">去职位页继续搜索</Link>
+                  </div>
+                )}
               </div>
             )}
 
@@ -195,7 +268,13 @@ export default function CompanyDetail() {
                     </div>
                   </Link>
                 ))}
-                {!experiences.length && <div className="text-center text-gray-500 py-8">暂无面经分享</div>}
+                {!experiences.length && (
+                  <div className="text-center text-gray-500 py-8">
+                    <MessageSquare className="mx-auto mb-3 h-8 w-8 text-gray-300" />
+                    <p>暂无面经分享</p>
+                    <button onClick={startCompanyInterview} className="mt-3 text-sm font-semibold text-primary hover:underline">先用 AI 生成公司模拟面试</button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -213,7 +292,13 @@ export default function CompanyDetail() {
                     </div>
                   </div>
                 ))}
-                {!salaries.length && <div className="text-center text-gray-500 py-8">暂无薪资样本</div>}
+                {!salaries.length && (
+                  <div className="text-center text-gray-500 py-8">
+                    <TrendingUp className="mx-auto mb-3 h-8 w-8 text-gray-300" />
+                    <p>暂无薪资样本</p>
+                    <Link to={`/salary-insights?company=${companyQuery}`} className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">去薪资查询页检索</Link>
+                  </div>
+                )}
               </div>
             )}
           </div>

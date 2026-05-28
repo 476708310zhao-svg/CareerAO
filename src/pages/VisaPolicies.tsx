@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
+  Bookmark,
   Globe, 
   Search, 
   FileText, 
@@ -10,8 +11,11 @@ import {
   ChevronDown,
   ChevronRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
+import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
 
 // Mock Data
@@ -99,9 +103,48 @@ export default function VisaPolicies() {
   const [activeCountry, setActiveCountry] = useState('美国');
   const [expandedVisaId, setExpandedVisaId] = useState<string | null>('us-opt');
   const [searchQuery, setSearchQuery] = useState('');
+  const [savedVisaIds, setSavedVisaIds] = useState<string[]>([]);
   
   const [trackingNumber, setTrackingNumber] = useState('');
   const { showToast } = useToast();
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('careerai_saved_visas');
+      if (saved) setSavedVisaIds(JSON.parse(saved));
+    } catch (error) {
+      console.warn('Visa saved list fallback:', error);
+    }
+  }, []);
+
+  const persistSavedVisas = (next: string[]) => {
+    setSavedVisaIds(next);
+    localStorage.setItem('careerai_saved_visas', JSON.stringify(next));
+  };
+
+  const toggleSavedVisa = (visaId: string) => {
+    const next = savedVisaIds.includes(visaId)
+      ? savedVisaIds.filter((id) => id !== visaId)
+      : [...savedVisaIds, visaId];
+    persistSavedVisas(next);
+    showToast(next.includes(visaId) ? '已加入签证关注清单' : '已从关注清单移除', 'success');
+  };
+
+  const copyMaterials = async (visa: any) => {
+    const text = [
+      visa.name,
+      '申请资格：',
+      visa.eligibility,
+      '',
+      '必备材料：',
+      ...visa.materials.map((item: string, index: number) => `${index + 1}. ${item}`),
+      '',
+      '申请流程：',
+      ...visa.steps.map((step: any, index: number) => `${index + 1}. ${step.title} - ${step.desc}`),
+    ].join('\n');
+    await navigator.clipboard.writeText(text);
+    showToast('材料清单已复制', 'success');
+  };
 
   const handleSetReminder = () => {
     showToast('签证提醒已设置！将在截止日期前为您发送通知。', 'success');
@@ -125,6 +168,12 @@ export default function VisaPolicies() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
+      <SEO
+        title="签证政策解读"
+        description="整理 OPT、H-1B、Graduate Route 等留学生求职常见签证政策、申请材料、时间节点和官方资源。"
+        keywords="OPT,H1B,留学生签证,工作签证,签证政策,Graduate Route"
+        canonical="https://www.zhiyincareer.com/visa-policies"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
@@ -192,6 +241,11 @@ export default function VisaPolicies() {
                           <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-xs font-semibold">
                             {visa.type}
                           </span>
+                          {savedVisaIds.includes(visa.id) && (
+                            <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-xs font-semibold">
+                              已关注
+                            </span>
+                          )}
                         </div>
                         <p className="text-gray-500 text-sm line-clamp-1">{visa.description}</p>
                       </div>
@@ -203,9 +257,33 @@ export default function VisaPolicies() {
                       <div className="px-6 pb-6 pt-2 border-t border-gray-50 bg-gray-50/50">
                         
                         <div className="mb-6 mt-4">
-                          <h3 className="text-sm font-bold text-gray-900 flex items-center mb-2">
-                            <ShieldCheck className="w-5 h-5 mr-2 text-emerald-600" /> 申请资格
-                          </h3>
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                            <h3 className="text-sm font-bold text-gray-900 flex items-center">
+                              <ShieldCheck className="w-5 h-5 mr-2 text-emerald-600" /> 申请资格
+                            </h3>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleSavedVisa(visa.id)}
+                                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                  savedVisaIds.includes(visa.id)
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-200 hover:text-blue-700'
+                                }`}
+                              >
+                                <Bookmark className="mr-1.5 h-3.5 w-3.5" fill={savedVisaIds.includes(visa.id) ? 'currentColor' : 'none'} />
+                                {savedVisaIds.includes(visa.id) ? '已关注' : '关注政策'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => copyMaterials(visa)}
+                                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-emerald-200 hover:text-emerald-700"
+                              >
+                                <Copy className="mr-1.5 h-3.5 w-3.5" />
+                                复制清单
+                              </button>
+                            </div>
+                          </div>
                           <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-xl border border-gray-100">
                             {visa.eligibility}
                           </p>
@@ -329,6 +407,11 @@ export default function VisaPolicies() {
                   <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded">毕业前90天</span>
                 </div>
               </div>
+              {savedVisaIds.length > 0 && (
+                <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+                  已关注 {savedVisaIds.length} 个签证政策，后续可以按清单安排材料和截止日期。
+                </div>
+              )}
 
               <button onClick={handleSetReminder} className="w-full text-blue-600 bg-blue-50 hover:bg-blue-100 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center">
                 <Bell className="w-4 h-4 mr-2" /> 订阅官方节点提醒
@@ -341,19 +424,19 @@ export default function VisaPolicies() {
               <ul className="space-y-3">
                 <li>
                   <a href="https://www.uscis.gov/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    USCIS (美国移民局) 官网
+                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />USCIS (美国移民局) 官网</span>
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.gov.uk/government/organisations/uk-visas-and-immigration" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    Gov.uk UKVI 官网
+                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />Gov.uk UKVI 官网</span>
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.ailalawyer.com/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    寻找持牌移民律师
+                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />寻找持牌移民律师</span>
                     <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                   </a>
                 </li>

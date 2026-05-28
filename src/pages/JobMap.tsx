@@ -162,6 +162,11 @@ export default function JobMap() {
   }, [selectedCity]);
 
   const totalJobs = useMemo(() => mapData.reduce((sum, point) => sum + point.count, 0), [mapData]);
+  const topCities = useMemo(() => [...mapData].sort((a, b) => b.count - a.count).slice(0, 5), [mapData]);
+  const topCompanies = useMemo(
+    () => Array.from(new Set(mapData.flatMap((point) => point.topCompanies))).slice(0, 8),
+    [mapData],
+  );
 
   return (
     <main className="min-h-screen pt-24 pb-12 bg-gray-50 flex flex-col relative">
@@ -182,8 +187,8 @@ export default function JobMap() {
           </div>
         </section>
 
-        <section className="flex flex-col flex-1 pb-16">
-          <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative min-h-[600px] overflow-hidden flex items-center justify-center">
+        <section className="grid flex-1 gap-6 pb-16 lg:grid-cols-[1fr_320px]">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative min-h-[600px] overflow-hidden flex items-center justify-center">
             <div className="w-full h-full max-w-5xl relative">
               <ComposableMap projection="geoAlbersUsa" className="w-full h-full">
                 <Geographies geography={geoUrl}>
@@ -227,6 +232,50 @@ export default function JobMap() {
               )}
             </div>
           </div>
+          <aside className="space-y-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-bold text-gray-900">热门城市排行</h2>
+              <p className="mt-1 text-sm text-gray-500">点击城市可以直接查看岗位分布和精选职位。</p>
+              <div className="mt-4 space-y-3">
+                {topCities.map((point, index) => (
+                  <button
+                    key={point.id}
+                    type="button"
+                    onClick={() => setSelectedCity(point)}
+                    className="flex w-full items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-left hover:border-primary/30 hover:bg-white"
+                  >
+                    <span>
+                      <span className="mr-2 text-xs font-black text-primary">#{index + 1}</span>
+                      <span className="font-semibold text-gray-900">{point.city}</span>
+                    </span>
+                    <span className="text-sm font-bold text-gray-500">{point.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-bold text-gray-900">聚合公司</h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {topCompanies.map((company) => (
+                  <button
+                    key={company}
+                    type="button"
+                    onClick={() => navigate(`/jobs?keyword=${encodeURIComponent(company)}`)}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-primary/30 hover:text-primary"
+                  >
+                    {company}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gray-900 p-5 text-white shadow-sm">
+              <h2 className="text-base font-bold">城市策略建议</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-300">先锁定岗位密度高的城市，再结合薪资、生活成本和签证支持情况筛选投递优先级。</p>
+              <button onClick={() => navigate('/career-planning')} className="mt-4 flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-blue-50">
+                生成求职规划 <ChevronRight className="ml-1 h-4 w-4" />
+              </button>
+            </div>
+          </aside>
         </section>
       </div>
 
