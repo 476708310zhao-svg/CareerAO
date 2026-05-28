@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Bookmark, Briefcase, CalendarDays, ExternalLink, LogIn, RefreshCw, Trash2 } from 'lucide-react';
+import { Bookmark, Briefcase, CalendarDays, Copy, ExternalLink, LogIn, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 import { favoritesEmitter } from '../utils/favorites';
 
@@ -18,8 +19,10 @@ type FavoriteItem = {
 
 export default function Favorites() {
   const { isAuthenticated, openAuthModal } = useAuth();
+  const { showToast } = useToast();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [activeType, setActiveType] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -29,7 +32,14 @@ export default function Favorites() {
     { key: 'campus', label: '校招', count: favorites.filter((item) => item.type === 'campus').length },
   ];
 
-  const visibleFavorites = activeType ? favorites.filter((item) => item.type === activeType) : favorites;
+  const visibleFavorites = favorites.filter((item) => {
+    const matchesType = activeType ? item.type === activeType : true;
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || [item.title, item.subtitle, item.targetId, item.type]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+    return matchesType && matchesSearch;
+  });
 
   const loadFavorites = async () => {
     if (!isAuthenticated) {
@@ -76,6 +86,21 @@ export default function Favorites() {
     }
   };
 
+  const copyFavoritesList = async () => {
+    if (!visibleFavorites.length) {
+      showToast('暂无可复制的收藏', 'info');
+      return;
+    }
+    const text = visibleFavorites.map((item, index) => {
+      const url = item.type === 'campus'
+        ? 'https://www.zhiyincareer.com/campus-calendar'
+        : `https://www.zhiyincareer.com/jobs/${item.targetId}`;
+      return `${index + 1}. ${item.title || item.targetId}\n类型：${item.type === 'campus' ? '校招' : '职位'}\n备注：${item.subtitle || '无'}\n链接：${url}`;
+    }).join('\n\n');
+    await navigator.clipboard.writeText(text);
+    showToast('收藏清单已复制', 'success');
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 pt-24 pb-12">
       <SEO
@@ -95,10 +120,16 @@ export default function Favorites() {
             <p className="text-gray-500 mt-3">职位和校招机会会同步到账号，方便后续投递、提醒和复盘。</p>
           </div>
           {isAuthenticated && (
-            <button onClick={loadFavorites} className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              刷新收藏
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={copyFavoritesList} className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors">
+                <Copy className="w-4 h-4 mr-2" />
+                复制清单
+              </button>
+              <button onClick={loadFavorites} className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                刷新收藏
+              </button>
+            </div>
           )}
         </section>
 
@@ -119,6 +150,19 @@ export default function Favorites() {
               </div>
             )}
 
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                ['全部收藏', favorites.length],
+                ['职位收藏', favorites.filter((item) => item.type === 'job').length],
+                ['校招收藏', favorites.filter((item) => item.type === 'campus').length],
+              ].map(([label, value]) => (
+                <div key={label as string} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <p className="text-sm text-gray-500">{label as string}</p>
+                  <p className="mt-2 text-2xl font-black text-gray-900">{value as number}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
               {typeTabs.map((tab) => (
                 <button
@@ -132,6 +176,18 @@ export default function Favorites() {
                   <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${activeType === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{tab.count}</span>
                 </button>
               ))}
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+              <div className="flex items-center rounded-xl bg-gray-50 px-4 py-3">
+                <Search className="mr-3 h-5 w-5 shrink-0 text-gray-400" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="搜索收藏的职位、公司或校招机会..."
+                  className="w-full bg-transparent text-sm text-gray-900 outline-none"
+                />
+              </div>
             </div>
 
             {isLoading ? (

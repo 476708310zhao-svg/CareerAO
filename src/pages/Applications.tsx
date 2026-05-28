@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Briefcase, CalendarClock, ExternalLink, FileText, Inbox, LogIn, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Briefcase, CalendarClock, Copy, ExternalLink, FileText, Inbox, LogIn, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
 type ApplicationItem = {
@@ -64,6 +65,7 @@ const formatDate = (value?: string) => {
 
 export default function Applications() {
   const { isAuthenticated, openAuthModal } = useAuth();
+  const { showToast } = useToast();
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [statistics, setStatistics] = useState<ApplicationStats>({});
   const [activeStatus, setActiveStatus] = useState('');
@@ -88,6 +90,17 @@ export default function Applications() {
         .some((value) => String(value).toLowerCase().includes(keyword));
     });
   }, [applications, searchQuery]);
+
+  const pipelineProgress = useMemo(() => {
+    const total = statistics.total || applications.length || 0;
+    if (!total) return 0;
+    const weighted =
+      (statistics.applied || 0) * 20 +
+      (statistics.viewed || 0) * 40 +
+      (statistics.interview || 0) * 70 +
+      (statistics.offer || 0) * 100;
+    return Math.min(100, Math.round(weighted / total));
+  }, [applications.length, statistics]);
 
   const nextActionLabel = (status: string) => {
     if (status === 'applied') return '建议 5-7 天后检查邮箱或官网状态';
@@ -137,6 +150,28 @@ export default function Applications() {
     }
   };
 
+  const copyFollowUpList = async () => {
+    if (!visibleApplications.length) {
+      showToast('暂无可复制的投递记录', 'info');
+      return;
+    }
+
+    const text = visibleApplications.map((item, index) => {
+      const job = item.jobSnapshot?.title ? item.jobSnapshot : item.job || {};
+      const statusLabel = item.statusText || statusTabs.find((tab) => tab.key === item.status)?.label || item.status || '已投递';
+      return [
+        `${index + 1}. ${job.company || '公司待同步'} - ${job.title || `职位 #${item.jobId}`}`,
+        `状态：${statusLabel}`,
+        `投递时间：${formatDate(item.appliedAt)}`,
+        `下一步：${nextActionLabel(item.status)}`,
+        job.applyUrl ? `官网链接：${job.applyUrl}` : '',
+      ].filter(Boolean).join('\n');
+    }).join('\n\n');
+
+    await navigator.clipboard.writeText(text);
+    showToast('跟进清单已复制', 'success');
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 pt-24 pb-12">
       <SEO
@@ -158,13 +193,22 @@ export default function Applications() {
           </div>
 
           {isAuthenticated && (
-            <button
-              onClick={() => loadApplications(activeStatus)}
-              className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              刷新记录
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={copyFollowUpList}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                复制跟进清单
+              </button>
+              <button
+                onClick={() => loadApplications(activeStatus)}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:border-primary/30 hover:text-primary transition-colors"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                刷新记录
+              </button>
+            </div>
           )}
         </section>
 
@@ -186,6 +230,19 @@ export default function Applications() {
                   <p className="mt-2 text-2xl font-black text-gray-900">{card.value}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">投递阶段进度</h2>
+                  <p className="mt-1 text-xs text-gray-500">按已投递、已查看、面试和 Offer 状态估算整体推进情况。</p>
+                </div>
+                <span className="text-2xl font-black text-primary">{pipelineProgress}%</span>
+              </div>
+              <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-gray-100">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pipelineProgress}%` }} />
+              </div>
             </div>
 
             <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
