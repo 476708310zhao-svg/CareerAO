@@ -28,7 +28,7 @@ const FILTER_OPTIONS = {
 const PAGE_SIZE = 10;
 
 interface Job {
-  id: number;
+  id: number | string;
   title: string;
   company: string;
   companyLogo: string;
@@ -42,6 +42,7 @@ interface Job {
   postedAt: string;
   viewCount: number;
   applyCount: number;
+  sourceLabel?: string;
 }
 
 function formatDate(dateStr: string) {
@@ -287,11 +288,11 @@ const Jobs = () => {
                 <div className="space-y-4">
                   {jobs.map((job, index) => (
                     <motion.div
-                      key={job.id}
+                      key={String(job.id)}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.04 }}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      onClick={() => navigate(`/jobs/${encodeURIComponent(String(job.id))}`)}
                       className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -317,6 +318,7 @@ const Jobs = () => {
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2">
+                              {job.sourceLabel && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-semibold">{job.sourceLabel}</span>}
                               {job.jobType && <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">{job.jobType}</span>}
                               {job.industry && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">{job.industry}</span>}
                               {job.visaSponsored && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">支持签证</span>}

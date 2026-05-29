@@ -22,7 +22,7 @@ import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
 type JobDetailData = {
-  id: number;
+  id: number | string;
   title: string;
   company: string;
   companyLogo?: string;
@@ -35,6 +35,8 @@ type JobDetailData = {
   postedAt?: string;
   description?: string;
   applyUrl?: string;
+  sourceLabel?: string;
+  tags?: string[];
 };
 
 const fallbackAnalysis = {
@@ -51,7 +53,7 @@ const fallbackAnalysis = {
 const stripHtml = (html = '') => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const normalizeJob = (data: any): JobDetailData => ({
-  id: Number(data.id),
+  id: data.id,
   title: data.title || '',
   company: data.company || '',
   companyLogo: data.companyLogo || data.logo || '',
@@ -64,6 +66,8 @@ const normalizeJob = (data: any): JobDetailData => ({
   postedAt: data.postedAt || '',
   description: data.description || '',
   applyUrl: data.applyUrl || data.url || '',
+  sourceLabel: data.sourceLabel || '',
+  tags: data.tags || [],
 });
 
 export default function JobDetail() {
@@ -235,7 +239,7 @@ export default function JobDetail() {
 
   const metaTitle = `${job.title} - ${job.company}${job.location ? ` | ${job.location}` : ''}`;
   const metaDescription = `${job.company} 正在招聘 ${job.title}${job.location ? `，地点：${job.location}` : ''}${job.salary ? `，薪资：${job.salary}` : ''}。职引为留学生整理职位详情、投递入口和面试准备建议。`;
-  const jobId = Number(job.id);
+  const jobId = String(job.id);
 
   return (
     <>
@@ -293,6 +297,7 @@ export default function JobDetail() {
                 <div className="flex flex-wrap gap-2 mb-6">
                   {job.jobType && <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">{job.jobType}</span>}
                   {job.industry && <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">{job.industry}</span>}
+                  {job.sourceLabel && <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">来源：{job.sourceLabel}</span>}
                   <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium">
                     {job.visaSponsored ? '支持签证' : '身份要求以官网为准'}
                   </span>
@@ -329,6 +334,20 @@ export default function JobDetail() {
                   <p className="text-gray-500">该职位暂未提供详细 JD，请以前往官网后的信息为准。</p>
                 )}
               </div>
+
+              {Boolean(job.requirements?.length) && (
+                <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
+                  <h2 className="text-xl font-bold text-deep mb-5">岗位要求</h2>
+                  <ul className="space-y-3">
+                    {job.requirements?.slice(0, 8).map((item) => (
+                      <li key={item} className="flex gap-3 text-gray-600 leading-relaxed">
+                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
 
             <aside className="space-y-6">

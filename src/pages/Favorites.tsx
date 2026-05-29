@@ -75,7 +75,7 @@ export default function Favorites() {
       const next = favorites.filter((favorite) => favorite.id !== item.id);
       setFavorites(next);
       if (item.type === 'job') {
-        favoritesEmitter.emit('update', next.filter((favorite) => favorite.type === 'job').map((favorite) => Number(favorite.targetId)).filter(Number.isFinite));
+        favoritesEmitter.emit('update', next.filter((favorite) => favorite.type === 'job').map((favorite) => String(favorite.targetId)));
       }
       if (item.type === 'campus') {
         favoritesEmitter.emit('update:campus', next.filter((favorite) => favorite.type === 'campus').map((favorite) => String(favorite.targetId)));

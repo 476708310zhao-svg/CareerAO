@@ -448,7 +448,7 @@ const RecommendedJobs = () => {
             {jobs.map((job) => (
               <Link
                 key={job.id}
-                to={`/jobs/${job.id}`}
+                to={`/jobs/${encodeURIComponent(String(job.id))}`}
                 className="block bg-white rounded-2xl p-7 border border-gray-100 shadow-[0_5px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:border-primary/20 transition-all duration-300 group relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-bl-2xl text-xs font-black shadow-sm">

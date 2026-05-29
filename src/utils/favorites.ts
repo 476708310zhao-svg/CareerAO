@@ -143,22 +143,23 @@ export function useCampusFavorites() {
 }
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const saved = localStorage.getItem('careerai_favorites');
     if (saved) {
       try {
-        setFavorites(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setFavorites(Array.isArray(parsed) ? parsed.map(String) : []);
       } catch (e) {
         console.error('Failed to parse favorites');
       }
     }
 
     // Listen for cross-component updates
-    const handleUpdate = (newFavorites: number[]) => {
-      setFavorites(newFavorites);
+    const handleUpdate = (newFavorites: FavoriteTargetId[]) => {
+      setFavorites(newFavorites.map(String));
     };
 
     favoritesEmitter.on('update', handleUpdate);
@@ -174,7 +175,7 @@ export function useFavorites() {
         if (cancelled) return;
         const list = response.data || [];
         const remoteFavorites = Array.isArray(list)
-          ? list.map((item: any) => Number(item.targetId)).filter((id: number) => Number.isFinite(id))
+          ? list.map((item: any) => String(item.targetId)).filter(Boolean)
           : [];
         setFavorites(remoteFavorites);
         localStorage.setItem('careerai_favorites', JSON.stringify(remoteFavorites));
@@ -189,13 +190,13 @@ export function useFavorites() {
     };
   }, [isAuthenticated]);
 
-  const persistLocalFavorites = (nextFavorites: number[]) => {
+  const persistLocalFavorites = (nextFavorites: string[]) => {
     setFavorites(nextFavorites);
     localStorage.setItem('careerai_favorites', JSON.stringify(nextFavorites));
     favoritesEmitter.emit('update', nextFavorites);
   };
 
-  const syncFavorite = async (jobId: number, shouldFavorite: boolean, meta?: FavoriteMeta) => {
+  const syncFavorite = async (jobId: FavoriteTargetId, shouldFavorite: boolean, meta?: FavoriteMeta) => {
     if (!isAuthenticated) return;
 
     if (shouldFavorite) {
@@ -212,11 +213,12 @@ export function useFavorites() {
     });
   };
 
-  const toggleFavorite = (jobId: number, meta?: FavoriteMeta) => {
-    const shouldFavorite = !favorites.includes(jobId);
-    const newFavorites = favorites.includes(jobId)
-      ? favorites.filter(id => id !== jobId)
-      : [...favorites, jobId];
+  const toggleFavorite = (jobId: FavoriteTargetId, meta?: FavoriteMeta) => {
+    const normalizedId = String(jobId);
+    const shouldFavorite = !favorites.includes(normalizedId);
+    const newFavorites = favorites.includes(normalizedId)
+      ? favorites.filter(id => id !== normalizedId)
+      : [...favorites, normalizedId];
 
     persistLocalFavorites(newFavorites);
     syncFavorite(jobId, shouldFavorite, meta).catch((error) => {
@@ -225,7 +227,7 @@ export function useFavorites() {
     });
   };
 
-  const isFavorite = (jobId: number) => favorites.includes(jobId);
+  const isFavorite = (jobId: FavoriteTargetId) => favorites.includes(String(jobId));
 
   return { favorites, toggleFavorite, isFavorite };
 }
