@@ -89,16 +89,18 @@ async function startServer() {
   // Generic Proxy endpoint for real Mini-Program API
   app.all('/api/proxy/*', async (req, res) => {
     try {
-      const REAL_API_BASE_URL = process.env.REAL_API_BASE_URL || 'http://localhost:3001';
+      const REAL_API_BASE_URL = process.env.REAL_API_BASE_URL || process.env.VITE_API_BASE_URL || '';
       
-      if (REAL_API_BASE_URL === 'http://localhost:3001') {
+      if (!REAL_API_BASE_URL) {
         return res.json({ useMock: true });
       }
 
       // Extract the target path, e.g., /api/proxy/jobs -> /api/jobs
       const targetPath = req.params[0]; 
       const queryParams = new URLSearchParams(req.query as Record<string, string>).toString();
-      const url = `${REAL_API_BASE_URL}/api/${targetPath}${queryParams ? `?${queryParams}` : ''}`;
+      const baseUrl = REAL_API_BASE_URL.replace(/\/$/, '');
+      const apiPrefix = baseUrl.endsWith('/api') ? '' : '/api';
+      const url = `${baseUrl}${apiPrefix}/${targetPath}${queryParams ? `?${queryParams}` : ''}`;
 
       const response = await fetch(url, {
         method: req.method,
