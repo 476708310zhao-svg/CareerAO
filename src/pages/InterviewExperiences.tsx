@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bot,
-  Building2,
   Briefcase,
+  Building2,
   ChevronDown,
   Clock,
   Filter,
@@ -37,9 +37,9 @@ type Experience = {
 };
 
 const filters = {
-  companies: ['全部', 'Google', 'Meta', 'Amazon', 'Microsoft', 'ByteDance', 'Tencent', 'Alibaba', 'Huawei'],
-  roles: ['全部', 'Software Engineer', 'Frontend Developer', 'Backend Developer', 'Product Manager', 'Data Analyst', '算法工程师'],
-  rounds: ['全部', '一面', '二面', '三面', 'HR面', '交叉面', 'VO'],
+  companies: ['全部', 'Google', 'Meta', 'Amazon', 'Microsoft', 'ByteDance', 'Tencent', 'Alibaba', 'Huawei', 'Goldman Sachs', 'McKinsey'],
+  roles: ['全部', 'Software Engineer', 'Frontend Engineer', 'Backend Engineer', 'Product Manager', 'Data Analyst', 'Machine Learning Engineer', 'Business Analyst', 'Investment Banking Analyst'],
+  rounds: ['全部', '一面', '二面', '三面', 'HR 面', 'Virtual Onsite', 'Super Day', 'Case Interview'],
 };
 
 const fallbackExperiences: Experience[] = [
@@ -49,10 +49,10 @@ const fallbackExperiences: Experience[] = [
     author: '匿名用户',
     company: 'Google',
     role: 'Software Engineer',
-    round: 'VO',
-    type: '面试',
+    round: 'Virtual Onsite',
+    type: '技术面试',
     date: '近期',
-    content: '四轮面试包含算法、系统设计和行为面试。算法题重视沟通，建议边写边解释思路、复杂度和测试用例。',
+    content: '四轮面试包含算法、系统设计和行为面。算法题重视沟通，建议边写边解释思路、复杂度和测试用例。',
     likes: 128,
     comments: 12,
     tags: ['算法', '系统设计', 'BQ'],
@@ -62,9 +62,9 @@ const fallbackExperiences: Experience[] = [
     title: 'ByteDance 前端实习一二面复盘',
     author: '前端同学',
     company: 'ByteDance',
-    role: 'Frontend Developer',
+    role: 'Frontend Engineer',
     round: '二面',
-    type: '面试',
+    type: '技术面试',
     date: '近期',
     content: '重点考察 JavaScript 基础、React Hooks、项目性能优化和手写代码。二面会深化业务理解和协作方式。',
     likes: 96,
@@ -97,6 +97,7 @@ export default function InterviewExperiences() {
   const [activeRole, setActiveRole] = useState('全部');
   const [activeRound, setActiveRound] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dataSource, setDataSource] = useState('后端面经库');
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -114,11 +115,15 @@ export default function InterviewExperiences() {
     const loadExperiences = async () => {
       setIsLoading(true);
       try {
-        const response = await apiFetch('/api/proxy/experiences?page=1&pageSize=20');
+        const response = await apiFetch('/api/proxy/experiences?page=1&pageSize=30');
         const list = response.data?.list || [];
-        if (!cancelled && list.length) setPosts(list.map(mapExperience));
+        if (!cancelled && list.length) {
+          setPosts(list.map(mapExperience));
+          setDataSource(response.data?.source === 'database+curated' ? '数据库与精选面经库' : '数据库面经库');
+        }
       } catch (error) {
         console.warn('Experience list fallback:', error);
+        if (!cancelled) setDataSource('本地兜底面经');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -241,7 +246,7 @@ export default function InterviewExperiences() {
     <main className="min-h-screen bg-gray-50 pt-24 pb-12">
       <SEO
         title="笔经面经"
-        description="查看和分享真实面试经验，按公司、岗位和轮次筛选，帮助留学生准备技术面、行为面和 HR 面。"
+        description="查看和分享真实面试经验，按公司、岗位和轮次筛选，帮助留学生准备技术面、行为面、Case 和 HR 面。"
         keywords="面经,笔经,留学生面试,大厂面试,技术面试,行为面试"
         canonical="https://www.zhiyincareer.com/interview-experiences"
       />
@@ -254,6 +259,7 @@ export default function InterviewExperiences() {
             <div>
               <h1 className="text-3xl font-black text-gray-900">大厂面经库</h1>
               <p className="text-gray-500 mt-1">按公司、岗位和轮次筛选真实经验，快速摸清面试重点。</p>
+              <p className="text-xs text-gray-400 mt-1">{posts.length} 条面经 · {dataSource}</p>
             </div>
           </div>
 
@@ -283,11 +289,7 @@ export default function InterviewExperiences() {
                   <h2 className="font-bold text-lg">筛选条件</h2>
                 </div>
                 {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="text-xs font-medium text-gray-500 hover:text-blue-600"
-                  >
+                  <button type="button" onClick={clearFilters} className="text-xs font-medium text-gray-500 hover:text-blue-600">
                     清空
                   </button>
                 )}

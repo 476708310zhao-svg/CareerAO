@@ -1,111 +1,82 @@
-import React, { useEffect, useState } from 'react';
-import { 
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  Bell,
   Bookmark,
-  Globe, 
-  Search, 
-  FileText, 
-  CheckCircle2, 
-  HelpCircle, 
-  Bell, 
-  Clock, 
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  ShieldCheck,
-  AlertCircle,
+  Clock,
   Copy,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Globe,
+  HelpCircle,
+  Search,
+  ShieldCheck,
 } from 'lucide-react';
+
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
+import { apiFetch } from '../lib/api';
 
-// Static policy reference data. Keep official links visible so users can verify the latest rules.
-const COUNTRIES = ['美国', '英国', '加拿大', '澳大利亚', '香港特别行政区'];
-
-const VISA_DATA: Record<string, any[]> = {
-  '美国': [
-    {
-      id: 'us-opt',
-      name: 'F-1 OPT (Optional Practical Training)',
-      type: '实习工作授权',
-      description: '允许持有F-1签证的学生在完成学位后，获得最多一年（STEM专业可延长至3年）的在美工作许可，工作内容需与专业相关。',
-      eligibility: '在美全职学习至少满一学年的F-1学生，且未曾使用过同等学位的OPT。',
-      materials: [
-        'I-765表格 (Application for Employment Authorization)',
-        '新签发的I-20表格 (带DSO的OPT推荐批注)',
-        '有效护照及F-1签证页扫描件',
-        '最新的I-94入境记录',
-        '两张彩色护照格式照片',
-        '申请费支付凭证'
-      ],
-      steps: [
-        { title: '联系学校申请', desc: '向所在学校的国际学生办公室 (ISSO) 提交OPT申请，获取带有OPT推荐的新I-20。' },
-        { title: '准备申请材料', desc: '收集并核对所有必需材料，确保照片合规、表格填写无误。' },
-        { title: '向USCIS递交申请', desc: '在拿到新I-20的30天内，向美国移民局 (USCIS) 在线或邮寄提交I-765申请。' },
-        { title: '等待审批与EAD卡', desc: '取得收据号并等待审批（通常需要2-3个月，可申请加急），获批后收取EAD工卡。' }
-      ],
-      faqs: [
-        { q: '最早可以什么时候申请OPT？', a: '最早可以在项目结束日期（Program End Date）前90天开始提交申请。' },
-        { q: '如果不小心错过了申请期限怎么办？', a: '必须在项目结束后的60天宽限期（Grace Period）内提交，且USCIS必须在此期限内收到申请，否则将失去OPT资格。' },
-        { q: 'OPT期间找不到工作怎么办？', a: 'OPT期间累计失业期（Unemployment Days）不能超过90天，STEM OPT延期可增加额外60天。超过则视为非法逗留。' }
-      ]
-    },
-    {
-      id: 'us-h1b',
-      name: 'H-1B 特殊专业人员工作签证',
-      type: '正式工作签证',
-      description: '美国最主要的工作签证类别，发放给具备专业技能的外国人，通常要求申请人具有学士及以上学位。采用抽签制度。',
-      eligibility: '获得美国雇主的Offer，职位要求学士或以上学位，且所学专业与职位对口。需要雇主提供Sponsorship。',
-      materials: [
-        'LCA (劳工情况申请) 获批文件',
-        'I-129表格',
-        '雇主支持信函',
-        '学位证书及成绩单的评估报告',
-        '简历与工作经历证明'
-      ],
-      steps: [
-        { title: '电子注册抽签', desc: '每年3月份，雇主在USCIS系统为外籍员工进行H-1B电子抽签注册。' },
-        { title: '中签并提交LCA', desc: '如幸运中签，雇主需向美国劳工部提交LCA申请。' },
-        { title: '递交I-129申请包裹', desc: 'LCA获批后，雇主在90天内向USCIS正式递交H-1B申请包裹。' },
-        { title: '审批与生效', desc: 'USCIS审核通过后发放I-797获批通知，H-1B身份将在当年的10月1日正式生效。' }
-      ],
-      faqs: [
-        { q: 'H-1B一次有效几年？', a: '首次获批通常为3年，到期后可以再延期3年，总上限为6年。如果在第6年内已启动绿卡申请，则可以继续无限期延长。' }
-      ]
-    }
-  ],
-  '英国': [
-    {
-      id: 'uk-psw',
-      name: 'Graduate Route (PSW毕业生签证)',
-      type: '毕业生工作签证',
-      description: '为在英国完成本科及以上学位的国际留学生提供的毕业后在英求职和工作的签证。本科/硕士可获得2年，博士可获得3年。',
-      eligibility: '持有有效的Tier 4 (General) 或 Student 签证，并在合规的高校成功完成本科、硕士或博士学位。',
-      materials: [
-        '有效护照或旅行证件',
-        'BRP (生物信息卡) 或签证页',
-        '申请CAS时的确认号',
-        '警察局注册信（若之前有开具）'
-      ],
-      steps: [
-        { title: '学校上报完成学业', desc: '等待学校主动向UKVI通知你已经顺利完成学业。' },
-        { title: '在线递交申请', desc: '在当前学生签证到期前，通过Gov.uk网站在线提交Graduate visa申请。' },
-        { title: '身份认证', desc: '使用UK Immigration: ID Check App进行身份信息扫描和验证（部分需去签证中心录指纹）。' },
-        { title: '等待下签', desc: '通常审核时间为8周左右，获批后将邮寄新的BRP卡（或获得数字凭证）。' }
-      ],
-      faqs: [
-        { q: 'PSW可以续签吗？', a: 'Graduate visa具有不可续签性 (Non-extendable)，签证到期后必须转为其他类型签证（如Skilled Worker Worker visa）才能继续留英。' }
-      ]
-    }
-  ]
+type VisaPolicy = {
+  id: string;
+  country: string;
+  title: string;
+  type: string;
+  audience: string;
+  summary: string;
+  highlights: string[];
+  steps: string[];
+  materials: string[];
+  timeline: string;
+  officialUrl: string;
+  tags: string[];
+  lastReviewed?: string;
 };
 
+const fallbackPolicies: VisaPolicy[] = [
+  {
+    id: 'us-opt',
+    country: '美国',
+    title: 'F-1 OPT 工作许可',
+    type: '毕业后工作许可',
+    audience: '美国 F-1 留学生',
+    summary: '适合毕业后在美国从事与专业相关工作的同学，普通 OPT 通常最长 12 个月，STEM 专业可继续申请延期。',
+    highlights: ['毕业前 90 天可启动申请', '拿到带 OPT 推荐的 I-20 后再提交 I-765', 'EAD 生效前不能开始工作'],
+    steps: ['向学校国际学生办公室提交 OPT 申请', '获取带 DSO 推荐的新版 I-20', '通过 USCIS 在线提交 I-765', '等待 EAD 审批并记录就业状态'],
+    materials: ['护照与 F-1 签证页', '最新 I-94', '带 OPT 推荐的 I-20', 'I-765 申请', '证件照与申请费'],
+    timeline: '建议在毕业前 90 天开始准备，避免错过毕业后 60 天宽限期。',
+    officialUrl: 'https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/students-and-employment/optional-practical-training-opt-for-f-1-students',
+    tags: ['OPT', 'F-1', 'EAD'],
+  },
+  {
+    id: 'us-h1b',
+    country: '美国',
+    title: 'H-1B Specialty Occupation',
+    type: '雇主担保工作签证',
+    audience: '需要美国雇主 Sponsor 的求职者',
+    summary: '适合专业岗位雇佣，通常由雇主发起电子注册、抽签和正式申请。',
+    highlights: ['雇主主导申请', '每年注册窗口通常在春季', '中签后提交完整 I-129 申请包'],
+    steps: ['确认岗位和雇主 Sponsor 意愿', '雇主完成电子注册', '中签后准备 LCA 与申请材料', 'USCIS 审批后按生效日期入职或转身份'],
+    materials: ['Offer 与岗位说明', '学历与成绩材料', 'LCA', 'I-129 申请包', '雇主支持信'],
+    timeline: '求职时就应确认 Sponsor 政策，抽签窗口和生效日以 USCIS 当年公告为准。',
+    officialUrl: 'https://www.uscis.gov/working-in-the-united-states/h-1b-specialty-occupations',
+    tags: ['H-1B', 'Sponsor', 'USCIS'],
+  },
+];
+
 export default function VisaPolicies() {
+  const [policies, setPolicies] = useState<VisaPolicy[]>(fallbackPolicies);
+  const [countries, setCountries] = useState<string[]>(['美国']);
   const [activeCountry, setActiveCountry] = useState('美国');
   const [expandedVisaId, setExpandedVisaId] = useState<string | null>('us-opt');
   const [searchQuery, setSearchQuery] = useState('');
   const [savedVisaIds, setSavedVisaIds] = useState<string[]>([]);
-  
   const [trackingNumber, setTrackingNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataSource, setDataSource] = useState('后端政策接口');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -115,6 +86,40 @@ export default function VisaPolicies() {
     } catch (error) {
       console.warn('Visa saved list fallback:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadPolicies = async () => {
+      setIsLoading(true);
+      try {
+        const response = await apiFetch('/api/proxy/content/visa-policies');
+        const data = response.data || {};
+        const items = Array.isArray(data.items) && data.items.length ? data.items : fallbackPolicies;
+        if (cancelled) return;
+        setPolicies(items);
+        const nextCountries = Array.isArray(data.countries) && data.countries.length
+          ? data.countries
+          : [...new Set(items.map((item: VisaPolicy) => item.country))];
+        setCountries(nextCountries);
+        setActiveCountry((current) => nextCountries.includes(current) ? current : nextCountries[0]);
+        setExpandedVisaId(items[0]?.id || null);
+        setDataSource(data.source === 'curated_official_links' ? '官方链接政策库' : '本地兜底政策');
+      } catch (error) {
+        console.warn('Visa policy fallback:', error);
+        if (!cancelled) {
+          setPolicies(fallbackPolicies);
+          setCountries(['美国']);
+          setDataSource('本地兜底政策');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    loadPolicies();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const persistSavedVisas = (next: string[]) => {
@@ -130,24 +135,26 @@ export default function VisaPolicies() {
     showToast(next.includes(visaId) ? '已加入签证关注清单' : '已从关注清单移除', 'success');
   };
 
-  const copyMaterials = async (visa: any) => {
+  const copyMaterials = async (visa: VisaPolicy) => {
     const text = [
-      visa.name,
-      '申请资格：',
-      visa.eligibility,
+      visa.title,
+      `适用人群：${visa.audience}`,
+      `申请要点：${visa.summary}`,
       '',
       '必备材料：',
-      ...visa.materials.map((item: string, index: number) => `${index + 1}. ${item}`),
+      ...visa.materials.map((item, index) => `${index + 1}. ${item}`),
       '',
       '申请流程：',
-      ...visa.steps.map((step: any, index: number) => `${index + 1}. ${step.title} - ${step.desc}`),
+      ...visa.steps.map((step, index) => `${index + 1}. ${step}`),
+      '',
+      `官方链接：${visa.officialUrl}`,
     ].join('\n');
     await navigator.clipboard.writeText(text);
     showToast('材料清单已复制', 'success');
   };
 
   const handleSetReminder = () => {
-    showToast('签证提醒已设置！将在截止日期前为您发送通知。', 'success');
+    showToast('签证提醒已设置，后续可接入账号级通知。', 'success');
   };
 
   const handleTrackStatus = (e: React.FormEvent) => {
@@ -156,27 +163,31 @@ export default function VisaPolicies() {
       showToast('请输入申请受理号 / Receipt Number', 'error');
       return;
     }
-    showToast(`受理号 ${trackingNumber} 查询中... 当前状态：Case Is Being Actively Reviewed`, 'info');
+    showToast(`受理号 ${trackingNumber} 已记录。正式查询请以对应移民局官网为准。`, 'info');
   };
 
-  const countryVisas = VISA_DATA[activeCountry] || [];
-  
-  const filteredVisas = countryVisas.filter(visa => 
-    visa.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    visa.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredVisas = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return policies.filter((visa) => {
+      const matchesCountry = visa.country === activeCountry;
+      const matchesSearch =
+        !query ||
+        visa.title.toLowerCase().includes(query) ||
+        visa.summary.toLowerCase().includes(query) ||
+        visa.tags.join(' ').toLowerCase().includes(query);
+      return matchesCountry && matchesSearch;
+    });
+  }, [activeCountry, policies, searchQuery]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
       <SEO
         title="签证政策解读"
-        description="整理 OPT、H-1B、Graduate Route 等留学生求职常见签证政策、申请材料、时间节点和官方资源。"
-        keywords="OPT,H1B,留学生签证,工作签证,签证政策,Graduate Route"
+        description="整理 OPT、H-1B、Graduate Route、PGWP、485 等留学生求职常见签证政策、申请材料、时间节点和官方资源。"
+        keywords="OPT,H1B,留学生签证,工作签证,签证政策,Graduate Route,PGWP"
         canonical="https://www.zhiyincareer.com/visa-policies"
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div className="flex items-center space-x-3">
             <div className="bg-emerald-100 p-3 rounded-xl border border-emerald-200">
@@ -184,15 +195,16 @@ export default function VisaPolicies() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">签证政策解读</h1>
-              <p className="text-gray-500 mt-1">留学生工作签证申请指南与进度追踪，助力丝滑入职</p>
+              <p className="text-gray-500 mt-1">从后端政策接口读取常见工作签证清单，并保留官方核验入口。</p>
+              <p className="text-xs text-gray-400 mt-1">{policies.length} 条政策 · {dataSource}</p>
             </div>
           </div>
-          
+
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="搜索签证类型或关键词..." 
+            <input
+              type="text"
+              placeholder="搜索签证类型或关键词..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-white shadow-sm"
@@ -201,22 +213,19 @@ export default function VisaPolicies() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          
-          {/* Main Content Area */}
           <div className="lg:w-2/3 space-y-6">
-            
-            {/* Country Filters */}
             <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm flex overflow-x-auto scrollbar-hide space-x-2">
-              {COUNTRIES.map(country => (
+              {countries.map((country) => (
                 <button
                   key={country}
                   onClick={() => {
                     setActiveCountry(country);
-                    setExpandedVisaId(VISA_DATA[country]?.[0]?.id || null);
+                    const first = policies.find((item) => item.country === country);
+                    setExpandedVisaId(first?.id || null);
                   }}
                   className={`whitespace-nowrap px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    activeCountry === country 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' 
+                    activeCountry === country
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -225,41 +234,35 @@ export default function VisaPolicies() {
               ))}
             </div>
 
-            {/* Visa List */}
-            {filteredVisas.length > 0 ? (
+            {isLoading ? (
+              <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 text-gray-500">正在同步签证政策内容...</div>
+            ) : filteredVisas.length > 0 ? (
               <div className="space-y-4">
-                {filteredVisas.map(visa => (
+                {filteredVisas.map((visa) => (
                   <div key={visa.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-emerald-200">
-                    {/* Accordion Header */}
-                    <div 
+                    <div
                       className="p-6 cursor-pointer flex justify-between items-center bg-white"
                       onClick={() => setExpandedVisaId(expandedVisaId === visa.id ? null : visa.id)}
                     >
                       <div>
-                        <div className="flex items-center space-x-3 mb-1">
-                          <h2 className="text-xl font-bold text-gray-900">{visa.name}</h2>
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-xs font-semibold">
-                            {visa.type}
-                          </span>
+                        <div className="flex flex-wrap items-center gap-3 mb-1">
+                          <h2 className="text-xl font-bold text-gray-900">{visa.title}</h2>
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-xs font-semibold">{visa.type}</span>
                           {savedVisaIds.includes(visa.id) && (
-                            <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-xs font-semibold">
-                              已关注
-                            </span>
+                            <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-xs font-semibold">已关注</span>
                           )}
                         </div>
-                        <p className="text-gray-500 text-sm line-clamp-1">{visa.description}</p>
+                        <p className="text-gray-500 text-sm line-clamp-1">{visa.summary}</p>
                       </div>
                       <ChevronDown className={`w-6 h-6 text-gray-400 transition-transform duration-300 flex-shrink-0 ${expandedVisaId === visa.id ? 'rotate-180' : ''}`} />
                     </div>
 
-                    {/* Accordion Body */}
                     {expandedVisaId === visa.id && (
                       <div className="px-6 pb-6 pt-2 border-t border-gray-50 bg-gray-50/50">
-                        
                         <div className="mb-6 mt-4">
                           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                             <h3 className="text-sm font-bold text-gray-900 flex items-center">
-                              <ShieldCheck className="w-5 h-5 mr-2 text-emerald-600" /> 申请资格
+                              <ShieldCheck className="w-5 h-5 mr-2 text-emerald-600" /> 适用人群
                             </h3>
                             <div className="flex gap-2">
                               <button
@@ -285,19 +288,18 @@ export default function VisaPolicies() {
                             </div>
                           </div>
                           <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-xl border border-gray-100">
-                            {visa.eligibility}
+                            {visa.audience}。{visa.summary}
                           </p>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-6 mb-8">
-                          {/* Materials */}
                           <div>
                             <h3 className="text-sm font-bold text-gray-900 flex items-center mb-3">
                               <FileText className="w-5 h-5 mr-2 text-emerald-600" /> 必备材料
                             </h3>
                             <ul className="space-y-2">
-                              {visa.materials.map((item: string, idx: number) => (
-                                <li key={idx} className="flex items-start text-sm text-gray-600">
+                              {visa.materials.map((item) => (
+                                <li key={item} className="flex items-start text-sm text-gray-600">
                                   <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500 flex-shrink-0 mt-0.5" />
                                   <span>{item}</span>
                                 </li>
@@ -305,46 +307,37 @@ export default function VisaPolicies() {
                             </ul>
                           </div>
 
-                          {/* Steps */}
                           <div>
                             <h3 className="text-sm font-bold text-gray-900 flex items-center mb-3">
                               <Clock className="w-5 h-5 mr-2 text-emerald-600" /> 申请流程
                             </h3>
                             <div className="space-y-4">
-                              {visa.steps.map((step: any, idx: number) => (
-                                <div key={idx} className="flex flex-col relative before:absolute before:left-[11px] before:top-6 before:w-px before:h-full before:bg-gray-200 last:before:hidden">
+                              {visa.steps.map((step, idx) => (
+                                <div key={step} className="flex flex-col relative before:absolute before:left-[11px] before:top-6 before:w-px before:h-full before:bg-gray-200 last:before:hidden">
                                   <div className="flex items-center space-x-3">
                                     <div className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold border border-emerald-200 z-10">
                                       {idx + 1}
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">{step.title}</h4>
+                                    <h4 className="font-semibold text-gray-900 text-sm">{step}</h4>
                                   </div>
-                                  <p className="text-xs text-gray-500 pl-9 mt-1 pb-2">{step.desc}</p>
                                 </div>
                               ))}
                             </div>
                           </div>
                         </div>
 
-                        {/* FAQs */}
                         <div>
                           <h3 className="text-sm font-bold text-gray-900 flex items-center mb-3">
-                            <HelpCircle className="w-5 h-5 mr-2 text-emerald-600" /> 常见问题解答
+                            <HelpCircle className="w-5 h-5 mr-2 text-emerald-600" /> 时间节点与官方入口
                           </h3>
                           <div className="space-y-3">
-                            {visa.faqs.map((faq: any, idx: number) => (
-                              <div key={idx} className="bg-white p-4 rounded-xl border border-gray-100">
-                                <p className="font-semibold text-sm text-gray-900 mb-1 flex items-start">
-                                  <span className="text-emerald-500 mr-2">Q:</span> {faq.q}
-                                </p>
-                                <p className="text-sm text-gray-600 flex items-start">
-                                  <span className="text-gray-400 mr-2">A:</span> {faq.a}
-                                </p>
-                              </div>
-                            ))}
+                            <div className="bg-white p-4 rounded-xl border border-gray-100 text-sm text-gray-600">{visa.timeline}</div>
+                            <a href={visa.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+                              查看官方页面
+                              <ExternalLink className="ml-1.5 h-4 w-4" />
+                            </a>
                           </div>
                         </div>
-
                       </div>
                     )}
                   </div>
@@ -354,62 +347,54 @@ export default function VisaPolicies() {
               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
                 <Globe className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">该地区签证政策完善中</h3>
-                <p className="text-gray-500">我们将尽快更新或添加该地区的最新政策解读</p>
+                <p className="text-gray-500">我们将继续补充该地区的最新政策解读和官方入口。</p>
               </div>
             )}
           </div>
 
-          {/* Sidebar Area: Tracker and Reminders */}
           <div className="lg:w-1/3 space-y-6">
-            
-            {/* Tracker Applet */}
             <div className="bg-gray-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none"></div>
-              
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none" />
               <div className="flex items-center space-x-2 mb-2">
                 <Search className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-xl font-bold">签证状态追踪</h3>
+                <h3 className="text-xl font-bold">签证状态记录</h3>
               </div>
-              <p className="text-sm text-gray-400 mb-6">输入USCIS/UKVI/移民局官方提供的受理号码，一键查询最新状态。</p>
-              
+              <p className="text-sm text-gray-400 mb-6">记录 USCIS、UKVI、IRCC 等官方受理号，正式状态请以官方系统为准。</p>
               <form onSubmit={handleTrackStatus}>
-                <input 
-                  type="text" 
-                  placeholder="Receipt Number (例如: IOE091...)" 
+                <input
+                  type="text"
+                  placeholder="Receipt Number / Application Number"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors mb-3"
                 />
                 <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20">
-                  立即查询
+                  记录并提醒
                 </button>
               </form>
             </div>
 
-            {/* Application Reminders */}
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group">
               <div className="absolute right-0 top-0 w-16 h-16 bg-blue-50 rounded-bl-full flex items-start justify-end p-3">
                 <Bell className="w-5 h-5 text-blue-400 group-hover:animate-bounce" />
               </div>
-              
               <h3 className="text-lg font-bold text-gray-900 mb-2">设置签证提醒</h3>
               <p className="text-sm text-gray-500 mb-5 max-w-[85%]">
-                错过宽限期或抽签登记窗口将导致严重后果。设置提醒，不错过任何重要Deadline。
+                关注政策后可按清单准备材料，后续可以继续接入账号级截止日期提醒。
               </p>
-
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium text-gray-700 flex items-center"><AlertCircle className="w-4 h-4 mr-1 text-orange-400" /> H-1B 抽签注册</span>
-                  <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded">每年3月初</span>
+                  <span className="font-medium text-gray-700 flex items-center"><AlertCircle className="w-4 h-4 mr-1 text-orange-400" /> H-1B 注册窗口</span>
+                  <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded">以 USCIS 公告为准</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="font-medium text-gray-700 flex items-center"><AlertCircle className="w-4 h-4 mr-1 text-red-400" /> OPT 申请窗口</span>
-                  <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded">毕业前90天</span>
+                  <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded">毕业前后重点关注</span>
                 </div>
               </div>
               {savedVisaIds.length > 0 && (
                 <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
-                  已关注 {savedVisaIds.length} 个签证政策，后续可以按清单安排材料和截止日期。
+                  已关注 {savedVisaIds.length} 个签证政策，可按清单安排材料和截止日期。
                 </div>
               )}
 
@@ -418,31 +403,19 @@ export default function VisaPolicies() {
               </button>
             </div>
 
-            {/* Quick Links / Help */}
             <div className="bg-gradient-to-br from-emerald-50 to-white rounded-2xl p-6 border border-emerald-100 shadow-sm">
               <h3 className="text-sm font-bold text-emerald-900 mb-4 uppercase tracking-wider">官方资源链接</h3>
               <ul className="space-y-3">
-                <li>
-                  <a href="https://www.uscis.gov/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />USCIS (美国移民局) 官网</span>
-                    <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </li>
-                <li>
-                  <a href="https://www.gov.uk/government/organisations/uk-visas-and-immigration" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />Gov.uk UKVI 官网</span>
-                    <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </li>
-                <li>
-                  <a href="https://www.ailalawyer.com/" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
-                    <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />寻找持牌移民律师</span>
-                    <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </li>
+                {filteredVisas.slice(0, 5).map((visa) => (
+                  <li key={visa.id}>
+                    <a href={visa.officialUrl} target="_blank" rel="noopener noreferrer" className="flex justify-between items-center text-sm text-gray-700 hover:text-emerald-700 group transition-colors">
+                      <span className="inline-flex items-center"><ExternalLink className="mr-2 h-4 w-4 text-emerald-400" />{visa.title}</span>
+                      <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
-
           </div>
         </div>
       </div>

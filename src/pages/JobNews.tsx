@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  BookOpen,
   Bookmark,
   ChevronRight,
   Clock,
@@ -44,30 +43,28 @@ type Article = {
 };
 
 const categories: Category[] = [
-  { label: '全部', tab: 'all', description: '综合求职资讯' },
-  { label: '行业资讯', tab: 'news', description: '科技、金融、咨询等行业动态' },
-  { label: '校招动态', tab: 'news', description: '校招、实习、New Grad 信息' },
-  { label: '干货分享', tab: 'tip', description: '简历、面试、网申技巧' },
-  { label: '签证政策', tab: 'policy', description: 'OPT、H-1B、工签政策' },
-  { label: '职场洞察', tab: 'data', description: '薪资、裁员和市场数据' },
+  { label: '全部', tab: 'all', description: '聚合行业动态、招聘趋势、政策变化和求职方法' },
+  { label: '行业资讯', tab: 'news', description: '科技、金融、咨询和产品行业动态' },
+  { label: '求职干货', tab: 'tip', description: '简历、网申、面试和 Offer 谈判方法' },
+  { label: '签证政策', tab: 'policy', description: 'OPT、H-1B、Graduate Route 等政策入口' },
+  { label: '职场洞察', tab: 'data', description: '薪资、招聘市场和就业趋势数据' },
 ];
 
 const tabToCategory: Record<string, string> = {
   news: '行业资讯',
-  tip: '干货分享',
+  tip: '求职干货',
   data: '职场洞察',
   policy: '签证政策',
 };
 
 const categoryImages: Record<string, string> = {
   行业资讯: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=800&auto=format&fit=crop&q=70',
-  校招动态: 'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800&auto=format&fit=crop&q=70',
-  干货分享: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=70',
+  求职干货: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=70',
   签证政策: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop&q=70',
   职场洞察: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=70',
 };
 
-const hotTags = ['H1B', 'OPT', '简历', '面经', '校招', '裁员', '薪资', 'AI', 'LinkedIn', '北美求职'];
+const hotTags = ['H-1B', 'OPT', '简历', '面经', '校招', '裁员', '薪资', 'AI', 'LinkedIn', '北美求职'];
 
 const estimateReadTime = (text: string) => {
   const words = Math.max(1, text.replace(/\s+/g, ' ').trim().length);
@@ -93,8 +90,8 @@ const normalizeArticle = (article: any, index: number, activeLabel: string): Art
     url: article.url || '',
     category,
     source,
-    time: article.time || (article.pubDate ? new Date(article.pubDate).toLocaleDateString() : '近期'),
-    tags: [category, source].filter(Boolean).slice(0, 3),
+    time: article.time || (article.pubDate ? new Date(article.pubDate).toLocaleDateString('zh-CN') : estimateReadTime(excerpt)),
+    tags: [category, source, ...(Array.isArray(article.tags) ? article.tags : [])].filter(Boolean).slice(0, 4),
     imageUrl: article.imageUrl || categoryImages[category] || categoryImages['行业资讯'],
     views: article.views || 1200 + seed * 17,
     likes: article.likes || 12 + (seed % 320),
@@ -109,6 +106,7 @@ export default function JobNews() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [dataSource, setDataSource] = useState('后端资讯聚合');
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Set<string | number>>(new Set());
   const [likedArticles, setLikedArticles] = useState<Set<string | number>>(new Set());
   const { showToast } = useToast();
@@ -118,16 +116,18 @@ export default function JobNews() {
     setErrorMessage('');
     try {
       const keyword = searchQuery.trim();
-      const params = new URLSearchParams({ tab: activeCategory.tab });
+      const params = new URLSearchParams({ tab: activeCategory.tab, limit: '72' });
       if (keyword) params.set('keyword', keyword);
 
       const response = await apiFetch(`/api/proxy/news?${params.toString()}`);
       const rawArticles: any[] = response.articles || response.data?.articles || response.data?.list || [];
+      setDataSource(response.source === 'cache' ? '缓存资讯聚合' : 'RSS 与精选内容聚合');
       setArticles(rawArticles.map((article, index) => normalizeArticle(article, index, activeCategory.label)));
     } catch (error) {
       console.warn('News fetch failed:', error);
       setArticles([]);
-      setErrorMessage('资讯暂时加载失败，请稍后重试。');
+      setDataSource('本地兜底内容');
+      setErrorMessage('资讯暂时加载失败，请稍后刷新。');
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +139,6 @@ export default function JobNews() {
   }, [fetchNews]);
 
   const recommendedArticles = useMemo(() => articles.filter((article) => article.isRecommended).slice(0, 4), [articles]);
-  const categoryMeta = useMemo(() => categories.find((item) => item.label === activeCategory.label) || categories[0], [activeCategory]);
 
   const handleBookmark = (event: React.MouseEvent, articleId: string | number) => {
     event.stopPropagation();
@@ -167,7 +166,7 @@ export default function JobNews() {
 
   const handleShare = async (event: React.MouseEvent, article: Article) => {
     event.stopPropagation();
-    const shareText = article.url || `https://www.zhiyincareer.com/news`;
+    const shareText = article.url || 'https://www.zhiyincareer.com/news';
     await navigator.clipboard?.writeText(shareText).catch(() => undefined);
     showToast('文章链接已复制', 'success');
   };
@@ -180,7 +179,7 @@ export default function JobNews() {
     <main className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
       <SEO
         title="求职资讯"
-        description="聚合留学生求职资讯、校招动态、签证政策、简历面试干货和职场数据洞察。"
+        description="聚合留学生求职资讯、行业动态、校招趋势、签证政策、简历面试干货和职场数据洞察。"
         keywords="求职资讯, 求职新闻, H1B政策, 校招资讯, 简历优化, 面试技巧"
         canonical="https://www.zhiyincareer.com/news"
       />
@@ -193,14 +192,14 @@ export default function JobNews() {
             </div>
             <div>
               <h1 className="text-3xl font-black text-gray-900">求职资讯</h1>
-              <p className="text-gray-500 mt-1">连接后端资讯源，持续追踪行业、校招、签证和求职干货。</p>
+              <p className="text-gray-500 mt-1">连接后端资讯源，持续追踪行业、校招、签证和求职方法。</p>
             </div>
           </div>
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索：H1B、简历、大厂、校招..."
+              placeholder="搜索：H-1B、简历、大厂、校招..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none bg-white shadow-sm"
@@ -229,8 +228,9 @@ export default function JobNews() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between gap-4">
               <div>
                 <div className="text-sm text-gray-500">当前频道</div>
-                <h2 className="text-xl font-black text-gray-900 mt-1">{categoryMeta.label}</h2>
-                <p className="text-sm text-gray-500 mt-1">{categoryMeta.description}</p>
+                <h2 className="text-xl font-black text-gray-900 mt-1">{activeCategory.label}</h2>
+                <p className="text-sm text-gray-500 mt-1">{activeCategory.description}</p>
+                <p className="text-xs text-gray-400 mt-2">{articles.length} 条内容 · {dataSource}</p>
               </div>
               <button
                 onClick={fetchNews}
@@ -303,7 +303,7 @@ export default function JobNews() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-400 font-medium">
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                             <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1" />{article.source}</span>
-                            <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1" />{article.time || estimateReadTime(article.excerpt)}</span>
+                            <span className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1" />{article.time}</span>
                             <span className="flex items-center"><Eye className="w-3.5 h-3.5 mr-1" />{article.views.toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export default function JobNews() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex flex-col items-center justify-center">
-                <BookOpen className="w-12 h-12 text-gray-300 mb-4" />
+                <Newspaper className="w-12 h-12 text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{errorMessage || '暂未找到相关资讯'}</h3>
                 <p className="text-gray-500">可以换一个关键词，或稍后刷新后端资讯源。</p>
                 <button onClick={() => { setSearchQuery(''); setActiveCategory(categories[0]); }} className="mt-6 text-primary hover:underline font-medium text-sm">

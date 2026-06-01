@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Book, Briefcase, ChevronDown, FileText, HeadphonesIcon, HelpCircle, MessageCircle, Mic, RotateCcw, Search, Send, Sparkles, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -6,11 +6,15 @@ import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
 import { apiFetch } from '../lib/api';
 
-type Faq = {
-  id: number;
+type HelpArticle = {
+  id: string;
   category: string;
-  q: string;
-  a: string;
+  title: string;
+  summary: string;
+  answer: string;
+  links?: Array<{ label: string; href: string }>;
+  tags?: string[];
+  updatedAt?: string;
 };
 
 type ChatMessage = {
@@ -18,52 +22,51 @@ type ChatMessage = {
   text: string;
 };
 
-const categories = ['热门问题', '新手指南', '简历优化', '职位申请', '面试准备', '账号权限'];
-
-const faqs: Faq[] = [
+const fallbackArticles: HelpArticle[] = [
   {
-    id: 1,
+    id: 'resume-ai',
     category: '简历优化',
-    q: '如何使用 AI 优化我的简历？',
-    a: '进入“我的简历”页面，选择一个简历版本后打开编辑器。你可以针对经历或项目使用 AI 润色，也可以粘贴目标 JD，让系统围绕关键词和岗位要求优化表达。',
+    title: '如何使用 AI 优化我的简历？',
+    summary: '按目标 JD 优化经历表达、关键词和 ATS 可读性。',
+    answer: '进入我的简历页面，选择简历版本后打开编辑器。你可以粘贴目标 JD，让系统围绕岗位关键词、项目结果和动词表达给出建议。',
+    links: [{ label: '我的简历', href: '/my-resume' }],
+    tags: ['AI 简历', 'ATS'],
   },
   {
-    id: 2,
-    category: '职位申请',
-    q: '平台上的职位数据来自哪里？',
-    a: '网页端通过统一代理接口读取后端职位数据，例如职位列表使用 /api/proxy/jobs，职位详情使用 /api/proxy/jobs/:id。后端会统一处理数据源、缓存和字段格式。',
+    id: 'jobs-real-data',
+    category: '职位搜索',
+    title: '职位数据来自哪里？',
+    summary: '官网通过统一代理接口读取后端职位数据。',
+    answer: '职位列表使用 /api/proxy/jobs，详情页使用 /api/proxy/jobs/:id。后端会统一处理公开数据源、缓存和字段格式。',
+    links: [{ label: '职位搜索', href: '/jobs' }],
+    tags: ['职位数据'],
   },
   {
-    id: 3,
-    category: '面试准备',
-    q: '如何开启 AI 模拟面试？',
-    a: '进入 AI 面试页面，选择目标岗位、公司和面试类型后即可开始。也可以从职位详情页带入 JD，让追问更贴合岗位要求。',
-  },
-  {
-    id: 4,
-    category: '新手指南',
-    q: '校招日历适合哪些用户？',
-    a: '校招日历适合正在准备秋招、春招、暑期实习和海外投递的同学，用来追踪网申开启、截止时间、笔试安排和官方申请入口。',
-  },
-  {
-    id: 5,
-    category: '账号权限',
-    q: '会员和普通用户有什么区别？',
-    a: '会员功能会逐步解锁更高频次的 AI 面试、简历优化、薪资对比和高级求职工具。具体权益以会员页面展示为准。',
+    id: 'ai-interview',
+    category: 'AI 面试',
+    title: '如何开启 AI 模拟面试？',
+    summary: '选择目标岗位、公司和面试类型后即可开始。',
+    answer: '进入 AI 面试页后填写目标岗位，也可以从职位详情或面经库带入上下文，生成更贴近岗位要求的追问。',
+    links: [{ label: 'AI 面试', href: '/ai-interview' }],
+    tags: ['模拟面试'],
   },
 ];
 
 const quickLinks = [
   { label: '优化简历', desc: '进入简历库，按 JD 润色经历', href: '/my-resume', icon: Sparkles },
-  { label: '找职位', desc: '搜索职位并记录投递进展', href: '/jobs', icon: Briefcase },
+  { label: '找职位', desc: '搜索职位并记录投递进度', href: '/jobs', icon: Briefcase },
   { label: 'AI 面试', desc: '用目标岗位开启模拟面试', href: '/ai-interview', icon: Mic },
   { label: '联系团队', desc: '提交合作或服务问题', href: '/contact', icon: HeadphonesIcon },
 ];
 
 export default function HelpCenter() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('热门问题');
-  const [expandedFaqId, setExpandedFaqId] = useState<number | null>(1);
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const [expandedArticleId, setExpandedArticleId] = useState<string | null>('resume-ai');
+  const [articles, setArticles] = useState<HelpArticle[]>(fallbackArticles);
+  const [categories, setCategories] = useState<string[]>(['全部', '职位搜索', '简历优化', 'AI 面试']);
+  const [dataSource, setDataSource] = useState('产品知识库');
+  const [isLoading, setIsLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -72,14 +75,52 @@ export default function HelpCenter() {
   ]);
   const { showToast } = useToast();
 
-  const filteredFaqs = useMemo(() => {
+  useEffect(() => {
+    let cancelled = false;
+    const loadHelp = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (activeCategory !== '全部') params.set('category', activeCategory);
+        if (searchQuery.trim()) params.set('keyword', searchQuery.trim());
+        const response = await apiFetch(`/api/proxy/content/help-center?${params.toString()}`);
+        const data = response.data || {};
+        if (cancelled) return;
+        const nextArticles = Array.isArray(data.items) && data.items.length ? data.items : fallbackArticles;
+        setArticles(nextArticles);
+        if (Array.isArray(data.categories) && data.categories.length) setCategories(data.categories);
+        setDataSource(data.source === 'product_knowledge_base' ? '后端产品知识库' : '本地兜底内容');
+        setExpandedArticleId(nextArticles[0]?.id || null);
+      } catch (error) {
+        console.warn('Help content fallback:', error);
+        if (!cancelled) {
+          setArticles(fallbackArticles);
+          setDataSource('本地兜底内容');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    const timer = window.setTimeout(loadHelp, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeCategory, searchQuery]);
+
+  const filteredArticles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return faqs.filter((faq) => {
-      const matchesCategory = activeCategory === '全部' || activeCategory === '热门问题' || faq.category === activeCategory;
-      const matchesSearch = !query || faq.q.toLowerCase().includes(query) || faq.a.toLowerCase().includes(query);
+    return articles.filter((article) => {
+      const matchesCategory = activeCategory === '全部' || article.category === activeCategory;
+      const matchesSearch =
+        !query ||
+        article.title.toLowerCase().includes(query) ||
+        article.summary.toLowerCase().includes(query) ||
+        article.answer.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, articles, searchQuery]);
 
   const handleSendMessage = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -114,8 +155,8 @@ export default function HelpCenter() {
     <main className="min-h-screen bg-gray-50 pt-24 pb-12 relative">
       <SEO
         title="帮助中心"
-        description="查看职引常见问题、功能说明、账号权限、简历优化和 AI 面试使用指南。"
-        keywords="帮助中心,职引客服,简历优化帮助,AI面试帮助"
+        description="查看职引常见问题、功能说明、账号权限、简历优化、职位搜索和 AI 面试使用指南。"
+        keywords="帮助中心,职引客服,简历优化帮助,AI面试帮助,职位搜索帮助"
         canonical="https://www.zhiyincareer.com/help-center"
       />
 
@@ -128,13 +169,13 @@ export default function HelpCenter() {
             <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="搜索问题，例如：如何修改简历？" className="w-full pl-12 pr-24 py-4 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none bg-white shadow-sm" />
             <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-xl text-sm font-medium">搜索</button>
           </form>
+          <p className="mt-4 text-xs text-gray-400">{articles.length} 条帮助内容 · {dataSource}</p>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1fr_360px] gap-8">
         <section className="space-y-6">
           <div className="flex overflow-x-auto pb-2 gap-2">
-            <button onClick={() => setActiveCategory('全部')} className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium border ${activeCategory === '全部' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200'}`}>全部</button>
             {categories.map((category) => (
               <button key={category} onClick={() => setActiveCategory(category)} className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium border ${activeCategory === category ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200'}`}>{category}</button>
             ))}
@@ -144,15 +185,34 @@ export default function HelpCenter() {
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 flex items-center"><Book className="w-5 h-5 mr-2 text-primary" />常见问题</h2>
             </div>
-            {filteredFaqs.length ? (
+            {isLoading ? (
+              <div className="p-12 text-center text-gray-500">正在同步帮助内容...</div>
+            ) : filteredArticles.length ? (
               <div className="divide-y divide-gray-50">
-                {filteredFaqs.map((faq) => (
-                  <div key={faq.id}>
-                    <button onClick={() => setExpandedFaqId(expandedFaqId === faq.id ? null : faq.id)} className="w-full p-6 text-left flex justify-between items-start hover:bg-gray-50 transition-colors">
-                      <span className={`font-medium ${expandedFaqId === faq.id ? 'text-primary' : 'text-gray-900'}`}>{faq.q}</span>
-                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedFaqId === faq.id ? 'rotate-180 text-primary' : ''}`} />
+                {filteredArticles.map((article) => (
+                  <div key={article.id}>
+                    <button onClick={() => setExpandedArticleId(expandedArticleId === article.id ? null : article.id)} className="w-full p-6 text-left flex justify-between items-start hover:bg-gray-50 transition-colors">
+                      <span>
+                        <span className={`block font-medium ${expandedArticleId === article.id ? 'text-primary' : 'text-gray-900'}`}>{article.title}</span>
+                        <span className="mt-1 block text-sm text-gray-500">{article.summary}</span>
+                      </span>
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedArticleId === article.id ? 'rotate-180 text-primary' : ''}`} />
                     </button>
-                    {expandedFaqId === faq.id && <p className="px-6 pb-6 text-sm text-gray-600 leading-relaxed bg-gray-50/50">{faq.a}</p>}
+                    {expandedArticleId === article.id && (
+                      <div className="px-6 pb-6 text-sm text-gray-600 leading-relaxed bg-gray-50/50">
+                        <p>{article.answer}</p>
+                        {!!article.links?.length && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {article.links.map((link) => (
+                              <Link key={link.href} to={link.href} className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-primary border border-primary/20 hover:bg-primary/5">
+                                {link.label}
+                                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -161,7 +221,7 @@ export default function HelpCenter() {
                 <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 font-medium">没有找到相关帮助内容</p>
                 <button
-                  onClick={() => { setSearchQuery(''); setActiveCategory('热门问题'); }}
+                  onClick={() => { setSearchQuery(''); setActiveCategory('全部'); }}
                   className="mt-5 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-hover"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
