@@ -72,6 +72,34 @@ const Navbar = () => {
     setSearchQuery('');
   };
 
+  const accountMenu = (
+    <>
+      <Link to="/my-resume" onClick={() => setIsDropdownOpen(false)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+        <User className="w-4 h-4 mr-2" />
+        个人中心
+      </Link>
+      <Link to="/favorites" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+        <Bookmark className="w-4 h-4 mr-2" />
+        我的收藏
+      </Link>
+      <Link to="/messages" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+        <span className="flex items-center">
+          <Bell className="w-4 h-4 mr-2" />
+          消息中心
+        </span>
+        {unreadCount > 0 && (
+          <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </Link>
+      <Link to="/applications" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+        <FileText className="w-4 h-4 mr-2" />
+        投递追踪
+      </Link>
+    </>
+  );
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -124,13 +152,7 @@ const Navbar = () => {
                                   return (
                                     <Link key={link.href} to={link.href} className="group block">
                                       <div className="flex items-center">
-                                        <span
-                                          className={`font-bold text-base ${
-                                            isLinkActive
-                                              ? 'text-primary'
-                                              : 'text-gray-900 group-hover:text-primary transition-colors'
-                                          }`}
-                                        >
+                                        <span className={`font-bold text-base ${isLinkActive ? 'text-primary' : 'text-gray-900 group-hover:text-primary transition-colors'}`}>
                                           {link.name}
                                         </span>
                                         {link.badge && (
@@ -179,10 +201,7 @@ const Navbar = () => {
 
             {isAuthenticated && user ? (
               <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
-                >
+                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center space-x-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
                   <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
                     {user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}
                   </div>
@@ -196,52 +215,9 @@ const Navbar = () => {
                       <p className="text-sm font-medium text-gray-900 truncate">{user.nickname}</p>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{user.email || user.phone || '已登录'}</p>
                     </div>
-                    <div className="py-1">
-                      <Link
-                        to="/my-resume"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        个人中心
-                      </Link>
-                      <Link
-                        to="/favorites"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
-                      >
-                        <Bookmark className="w-4 h-4 mr-2" />
-                        我的收藏
-                      </Link>
-                      <Link
-                        to="/messages"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
-                      >
-                        <span className="flex items-center">
-                          <Bell className="w-4 h-4 mr-2" />
-                          消息中心
-                        </span>
-                        {unreadCount > 0 && (
-                          <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
-                        )}
-                      </Link>
-                      <Link
-                        to="/applications"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        投递追踪
-                      </Link>
-                    </div>
+                    <div className="py-1">{accountMenu}</div>
                     <div className="py-1 border-t border-gray-50">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
+                      <button onClick={handleLogout} className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                         <LogOut className="w-4 h-4 mr-2" />
                         退出登录
                       </button>
@@ -254,21 +230,14 @@ const Navbar = () => {
                 <button onClick={() => openAuthModal('login')} className="text-deep font-medium text-sm hover:text-primary transition-colors">
                   登录
                 </button>
-                <button
-                  onClick={() => openAuthModal('register')}
-                  className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm"
-                >
+                <button onClick={() => openAuthModal('register')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">
                   免费注册
                 </button>
               </>
             )}
           </div>
 
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-600 hover:bg-gray-50"
-            aria-label={isOpen ? '关闭导航' : '打开导航'}
-          >
+          <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-600 hover:bg-gray-50" aria-label={isOpen ? '关闭导航' : '打开导航'}>
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -289,6 +258,7 @@ const Navbar = () => {
               搜索
             </button>
           </form>
+
           {navCategories.map((category) => (
             <div key={category.title} className="space-y-3">
               <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-2">{category.title}</h3>
@@ -299,21 +269,11 @@ const Navbar = () => {
                     {section.links.map((link) => {
                       const isLinkActive = isRouteActive(location.pathname, link.href);
                       return (
-                        <Link
-                          key={link.href}
-                          to={link.href}
-                          className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                            isLinkActive ? 'text-primary bg-primary/5' : 'text-gray-600 hover:text-primary hover:bg-gray-50'
-                          }`}
-                        >
+                        <Link key={link.href} to={link.href} className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${isLinkActive ? 'text-primary bg-primary/5' : 'text-gray-600 hover:text-primary hover:bg-gray-50'}`}>
                           <div className="flex items-center">
                             {link.name}
                             {link.badge && (
-                              <span
-                                className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                  link.badge === 'HOT' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-                                }`}
-                              >
+                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${link.badge === 'HOT' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
                                 {link.badge}
                               </span>
                             )}
@@ -326,6 +286,7 @@ const Navbar = () => {
               ))}
             </div>
           ))}
+
           <div className="pt-4 border-t border-gray-100 flex flex-col space-y-3">
             {isAuthenticated && user ? (
               <>
@@ -356,26 +317,17 @@ const Navbar = () => {
                   <FileText className="w-5 h-5 mr-3 text-gray-400" />
                   投递追踪
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium"
-                >
+                <button onClick={handleLogout} className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium">
                   <LogOut className="w-5 h-5 mr-3 text-red-400" />
                   退出登录
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={() => openAuthModal('login')}
-                  className="w-full text-center px-4 py-2 border border-gray-200 rounded-md text-deep font-medium bg-white"
-                >
+                <button onClick={() => openAuthModal('login')} className="w-full text-center px-4 py-2 border border-gray-200 rounded-md text-deep font-medium bg-white">
                   登录
                 </button>
-                <button
-                  onClick={() => openAuthModal('register')}
-                  className="w-full text-center px-4 py-2 rounded-md text-white font-medium bg-primary"
-                >
+                <button onClick={() => openAuthModal('register')} className="w-full text-center px-4 py-2 rounded-md text-white font-medium bg-primary">
                   免费注册
                 </button>
               </>

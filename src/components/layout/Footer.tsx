@@ -42,8 +42,8 @@ const Footer = () => {
                   src="/wechat-qr.jpg"
                   alt="职引微信二维码"
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
+                  onError={(event) => {
+                    const target = event.target as HTMLImageElement;
                     target.style.display = 'none';
                     target.nextElementSibling?.classList.remove('hidden');
                   }}
@@ -60,12 +60,7 @@ const Footer = () => {
         <div className="border-t border-gray-100 pt-8 mt-12 flex flex-col md:flex-row justify-between items-center text-gray-400 text-sm">
           <div className="flex flex-col md:flex-row items-center md:space-x-6 space-y-4 md:space-y-0 mb-4 md:mb-0">
             <p>© 2026 职引. All rights reserved.</p>
-            <a
-              href="https://beian.miit.gov.cn/"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-primary transition-colors"
-            >
+            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
               蜀ICP备2026003605号
             </a>
           </div>
