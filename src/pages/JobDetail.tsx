@@ -26,7 +26,7 @@ type JobDetailData = {
   title: string;
   company: string;
   companyLogo?: string;
-  location: string;
+  location?: string;
   salary?: string;
   jobType?: string;
   industry?: string;
@@ -41,12 +41,12 @@ type JobDetailData = {
 
 const fallbackAnalysis = {
   score: 84,
-  matched: ['React', 'TypeScript', '项目协作', '英文沟通'],
-  gaps: ['系统设计', '云服务经验', '复杂业务指标量化'],
+  matched: ['JD 关键词提取', '项目经历映射', '英文表达', '岗位动机'],
+  gaps: ['业务指标量化', '系统设计案例', '签证与入职时间说明'],
   suggestions: [
-    '简历中优先突出和岗位 JD 对应的技术栈，尤其是可量化的性能优化、业务增长或工程效率指标。',
-    '面试前准备 2 个 STAR 案例，覆盖跨团队协作、处理不确定需求和技术难点拆解。',
-    '如果岗位提到云平台或分布式系统，可以提前准备一个小型架构设计案例作为补充。',
+    '简历顶部优先放和该岗位直接对应的技能栈、项目成果和量化指标。',
+    '面试前准备 2 个 STAR 案例，覆盖跨团队协作、模糊需求拆解和技术难点推进。',
+    '如果岗位涉及签证或跨地区入职，建议提前准备身份状态、毕业时间和可入职时间说明。',
   ],
 };
 
@@ -61,14 +61,21 @@ const normalizeJob = (data: any): JobDetailData => ({
   salary: data.salary || '',
   jobType: data.jobType || data.type || '全职',
   industry: data.industry || '',
-  requirements: data.requirements || data.tags || [],
+  requirements: Array.isArray(data.requirements) ? data.requirements : Array.isArray(data.tags) ? data.tags : [],
   visaSponsored: Boolean(data.visaSponsored),
   postedAt: data.postedAt || '',
   description: data.description || '',
   applyUrl: data.applyUrl || data.url || '',
   sourceLabel: data.sourceLabel || '',
-  tags: data.tags || [],
+  tags: Array.isArray(data.tags) ? data.tags : [],
 });
+
+function formatDateDisplay(value?: string) {
+  if (!value) return '最近更新';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+}
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -84,6 +91,7 @@ export default function JobDetail() {
 
   useEffect(() => {
     let cancelled = false;
+
     const fetchJob = async () => {
       if (!id) {
         setIsLoading(false);
@@ -92,16 +100,21 @@ export default function JobDetail() {
 
       setIsLoading(true);
       setErrorMessage('');
+
       try {
-        const response = await apiFetch(`/api/proxy/jobs/${id}`);
+        const response = await apiFetch(`/api/proxy/jobs/${encodeURIComponent(id)}`);
         if (!cancelled && response.code === 0 && response.data) {
           setJob(normalizeJob(response.data));
         } else if (!cancelled) {
+          setJob(null);
           setErrorMessage(response.message || '职位数据暂时不可用。');
         }
       } catch (error) {
         console.error('Failed to fetch job:', error);
-        if (!cancelled) setErrorMessage('职位详情加载失败，请稍后重试。');
+        if (!cancelled) {
+          setJob(null);
+          setErrorMessage('职位详情加载失败，请稍后重试。');
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -114,6 +127,10 @@ export default function JobDetail() {
   }, [id]);
 
   const plainDescription = useMemo(() => stripHtml(job?.description).slice(0, 600), [job?.description]);
+  const requirementList = useMemo(
+    () => [...new Set([...(job?.requirements || []), ...(job?.tags || [])].filter(Boolean))].slice(0, 8),
+    [job?.requirements, job?.tags],
+  );
 
   const jsonLd = job
     ? {
@@ -156,7 +173,7 @@ export default function JobDetail() {
     navigate('/my-resume/new', {
       state: {
         role: job.title,
-        jd: job.description || `${job.company} ${job.title} ${job.location}`,
+        jd: job.description || `${job.company} ${job.title} ${job.location || ''}`,
       },
     });
   };
@@ -182,7 +199,11 @@ export default function JobDetail() {
   };
 
   const trackApplicationAndOpen = async () => {
-    if (!job?.applyUrl) return;
+    if (!job?.applyUrl) {
+      showToast('该职位暂未提供官网投递链接', 'info');
+      return;
+    }
+
     if (!isAuthenticated) {
       openAuthModal('login');
       showToast('请先登录，再记录投递进度。', 'info');
@@ -246,7 +267,7 @@ export default function JobDetail() {
       <SEO
         title={metaTitle}
         description={metaDescription}
-        keywords={`${job.title},${job.company},${job.location},留学生求职,海归招聘,校招职位`}
+        keywords={`${job.title},${job.company},${job.location || ''},留学生求职,海归招聘,校招职位`}
         canonical={`https://www.zhiyincareer.com/jobs/${job.id}`}
         jsonLd={jsonLd}
       />
@@ -299,9 +320,11 @@ export default function JobDetail() {
                   {job.industry && <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">{job.industry}</span>}
                   {job.sourceLabel && <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">来源：{job.sourceLabel}</span>}
                   <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium">
-                    {job.visaSponsored ? '支持签证' : '身份要求以官网为准'}
+                    {job.visaSponsored ? '签证友好' : '身份要求以官网为准'}
                   </span>
-                  {job.postedAt && <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm flex items-center"><Clock className="w-4 h-4 mr-1.5" />{job.postedAt}</span>}
+                  <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm flex items-center">
+                    <Clock className="w-4 h-4 mr-1.5" />{formatDateDisplay(job.postedAt)}
+                  </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -312,7 +335,7 @@ export default function JobDetail() {
                       job.applyUrl ? 'bg-primary hover:bg-primary-hover text-white disabled:bg-primary/60' : 'bg-gray-100 text-gray-400'
                     }`}
                   >
-                    {isApplying ? '正在记录投递...' : '记录投递并打开官网'}
+                    {isApplying ? '正在记录投递...' : job.applyUrl ? '记录投递并打开官网' : '暂无官网投递链接'}
                     <ExternalLink className="w-4 h-4 ml-2 opacity-80" />
                   </button>
                   <button onClick={startInterview} className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
@@ -331,15 +354,15 @@ export default function JobDetail() {
                 {job.description ? (
                   <div className="prose prose-gray max-w-none prose-li:text-gray-600 prose-p:text-gray-600" dangerouslySetInnerHTML={{ __html: job.description }} />
                 ) : (
-                  <p className="text-gray-500">该职位暂未提供详细 JD，请以前往官网后的信息为准。</p>
+                  <p className="text-gray-500">该职位暂未提供完整 JD，请以前往官网后的信息为准。</p>
                 )}
               </div>
 
-              {Boolean(job.requirements?.length) && (
+              {requirementList.length > 0 && (
                 <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
                   <h2 className="text-xl font-bold text-deep mb-5">岗位要求</h2>
                   <ul className="space-y-3">
-                    {job.requirements?.slice(0, 8).map((item) => (
+                    {requirementList.map((item) => (
                       <li key={item} className="flex gap-3 text-gray-600 leading-relaxed">
                         <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                         <span>{item}</span>

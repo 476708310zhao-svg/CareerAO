@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
@@ -20,8 +20,8 @@ import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
 const FILTER_OPTIONS = {
-  regions: ['全部', '中国', '美国', '香港', '新加坡', '英国', '其他'],
-  industries: ['全部', '互联网', '金融', '新能源', '咨询', '国央企', '通信/硬件'],
+  regions: ['全部', '美国', '中国', '香港', '新加坡', '英国', '其他'],
+  industries: ['全部', '互联网', 'AI', '金融', '咨询', '新能源', '通信/硬件', '金融科技'],
   types: ['全部', '全职', '实习', '兼职'],
 };
 
@@ -31,34 +31,45 @@ interface Job {
   id: number | string;
   title: string;
   company: string;
-  companyLogo: string;
-  location: string;
-  region: string;
-  salary: string;
-  jobType: string;
-  industry: string;
-  requirements: string[];
-  visaSponsored: boolean;
-  postedAt: string;
-  viewCount: number;
-  applyCount: number;
+  companyLogo?: string;
+  location?: string;
+  region?: string;
+  salary?: string;
+  jobType?: string;
+  industry?: string;
+  requirements?: string[];
+  visaSponsored?: boolean;
+  postedAt?: string;
+  viewCount?: number;
+  applyCount?: number;
   sourceLabel?: string;
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '';
+function formatDate(dateStr?: string) {
+  if (!dateStr) return '最近更新';
   const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return dateStr;
+
   const diffDays = Math.floor((Date.now() - date.getTime()) / 86400000);
   if (diffDays <= 0) return '今天';
   if (diffDays === 1) return '昨天';
   if (diffDays < 7) return `${diffDays} 天前`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} 周前`;
-  return `${Math.floor(diffDays / 30)} 个月前`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} 个月前`;
+  return date.toISOString().slice(0, 10);
+}
+
+function sourceText(source?: string) {
+  if (!source) return '';
+  if (source === 'live') return '实时职位接口';
+  if (source === 'live_with_local_fallback') return '实时接口 + 本地兜底';
+  if (source === 'local_fallback') return '本地精选兜底';
+  return source;
 }
 
 const Jobs = () => {
   const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -67,12 +78,14 @@ const Jobs = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [dataSource, setDataSource] = useState('');
   const [filters, setFilters] = useState({ region: '全部', industry: '全部', type: '全部' });
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage('');
+
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
       if (searchQuery) params.set('keyword', searchQuery);
@@ -80,15 +93,19 @@ const Jobs = () => {
       if (filters.industry !== '全部') params.set('industry', filters.industry);
       if (filters.type !== '全部') params.set('jobType', filters.type);
 
-      const res = await apiFetch(`/api/proxy/jobs?${params}`);
+      const res = await apiFetch(`/api/proxy/jobs?${params.toString()}`);
+      const list = Array.isArray(res.data?.list) ? res.data.list : [];
+
       if (res.code === 0 && res.data) {
-        setJobs(res.data.list || []);
-        setTotal(res.data.total || 0);
-        setTotalPages(res.data.totalPages || 1);
+        setJobs(list);
+        setTotal(Number(res.data.total) || list.length);
+        setTotalPages(Math.max(Number(res.data.totalPages) || 1, 1));
+        setDataSource(res.data.source || res.meta?.source || '');
       } else {
         setJobs([]);
         setTotal(0);
         setTotalPages(1);
+        setDataSource('');
         setErrorMessage(res.message || '职位数据暂时不可用，请稍后再试。');
       }
     } catch (err) {
@@ -96,6 +113,7 @@ const Jobs = () => {
       setJobs([]);
       setTotal(0);
       setTotalPages(1);
+      setDataSource('');
       setErrorMessage('网络连接不稳定，职位列表加载失败。');
     } finally {
       setIsLoading(false);
@@ -110,8 +128,15 @@ const Jobs = () => {
     setPage(1);
   }, [searchQuery, filters]);
 
+  const activeFilters = useMemo(
+    () => [searchQuery, filters.region, filters.industry, filters.type].filter((item) => item && item !== '全部'),
+    [searchQuery, filters],
+  );
+
   const submitSearch = () => {
-    setSearchQuery(inputValue.trim());
+    const nextValue = (searchInputRef.current?.value ?? inputValue).trim();
+    setInputValue(nextValue);
+    setSearchQuery(nextValue);
   };
 
   const resetFilters = () => {
@@ -124,11 +149,11 @@ const Jobs = () => {
   const visiblePages = () => {
     const pages: (number | '...')[] = [];
     if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      for (let i = 1; i <= totalPages; i += 1) pages.push(i);
     } else {
       pages.push(1);
       if (page > 3) pages.push('...');
-      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i += 1) pages.push(i);
       if (page < totalPages - 2) pages.push('...');
       pages.push(totalPages);
     }
@@ -174,10 +199,12 @@ const Jobs = () => {
               <div className="w-full flex-1 flex items-center pl-4">
                 <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="搜索职位、公司或关键词..."
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
+                  onInput={(event) => setInputValue(event.currentTarget.value)}
                   onKeyDown={(event) => event.key === 'Enter' && submitSearch()}
                   className="w-full h-12 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
                 />
@@ -247,13 +274,16 @@ const Jobs = () => {
 
             <section className="w-full lg:w-3/4">
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <p className="text-gray-500 text-sm">
-                  共找到 <span className="font-bold text-deep">{total}</span> 个职位
-                </p>
-                {(searchQuery || filters.region !== '全部' || filters.industry !== '全部' || filters.type !== '全部') && (
-                  <p className="text-xs text-gray-400">
-                    当前筛选：{[searchQuery, filters.region, filters.industry, filters.type].filter((item) => item && item !== '全部').join(' / ') || '全部'}
+                <div>
+                  <p className="text-gray-500 text-sm">
+                    共找到 <span className="font-bold text-deep">{total}</span> 个职位
                   </p>
+                  {sourceText(dataSource) && (
+                    <p className="text-xs text-gray-400 mt-1">数据来源：{sourceText(dataSource)}</p>
+                  )}
+                </div>
+                {activeFilters.length > 0 && (
+                  <p className="text-xs text-gray-400">当前筛选：{activeFilters.join(' / ')}</p>
                 )}
               </div>
 
@@ -310,7 +340,7 @@ const Jobs = () => {
                             </h3>
                             <div className="flex flex-wrap items-center text-gray-500 text-sm mb-3 gap-x-4 gap-y-1">
                               <span className="flex items-center"><Building2 className="w-4 h-4 mr-1" />{job.company}</span>
-                              <span className="flex items-center"><MapPin className="w-4 h-4 mr-1" />{job.location}</span>
+                              {job.location && <span className="flex items-center"><MapPin className="w-4 h-4 mr-1" />{job.location}</span>}
                               {job.salary && (
                                 <span className="flex items-center text-green-600 font-medium">
                                   <DollarSign className="w-4 h-4 mr-1" />{job.salary}
@@ -321,7 +351,7 @@ const Jobs = () => {
                               {job.sourceLabel && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-semibold">{job.sourceLabel}</span>}
                               {job.jobType && <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">{job.jobType}</span>}
                               {job.industry && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">{job.industry}</span>}
-                              {job.visaSponsored && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">支持签证</span>}
+                              {job.visaSponsored && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">签证友好</span>}
                               {(job.requirements || []).slice(0, 2).map((requirement) => (
                                 <span key={requirement} className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs">
                                   {requirement}
