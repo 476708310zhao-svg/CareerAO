@@ -75,12 +75,13 @@ function sourceText(source?: string) {
 
 const Jobs = () => {
   const isPrerender = isReactSnapPrerender();
+  const [isClientReady, setIsClientReady] = useState(false);
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(() => !isPrerender);
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -109,7 +110,7 @@ const Jobs = () => {
   }, [page, searchQuery, filters]);
 
   const fetchJobs = useCallback(async () => {
-    if (isPrerender) {
+    if (isPrerender || !isClientReady) {
       setIsLoading(false);
       return;
     }
@@ -141,11 +142,18 @@ const Jobs = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchQuery, filters, isPrerender, applyCuratedFallback]);
+  }, [page, searchQuery, filters, isPrerender, isClientReady, applyCuratedFallback]);
 
   useEffect(() => {
+    if (isPrerender) return;
+    setIsLoading(true);
+    setIsClientReady(true);
+  }, [isPrerender]);
+
+  useEffect(() => {
+    if (!isClientReady) return;
     fetchJobs();
-  }, [fetchJobs]);
+  }, [fetchJobs, isClientReady]);
 
   useEffect(() => {
     setPage(1);
@@ -155,7 +163,8 @@ const Jobs = () => {
     () => [searchQuery, filters.region, filters.industry, filters.type].filter((item) => item && item !== '全部'),
     [searchQuery, filters],
   );
-  const shouldShowDataSource = !import.meta.env.PROD && !isPrerender && Boolean(sourceText(dataSource));
+  const isStaticShell = isPrerender || !isClientReady;
+  const shouldShowDataSource = !import.meta.env.PROD && !isStaticShell && Boolean(sourceText(dataSource));
 
   const submitSearch = () => {
     const nextValue = (searchInputRef.current?.value ?? inputValue).trim();
@@ -299,10 +308,10 @@ const Jobs = () => {
             <section className="w-full lg:w-3/4">
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
-                  {isLoading ? (
-                    <p className="text-gray-500 text-sm">职位加载中...</p>
-                  ) : isPrerender ? (
+                  {isStaticShell ? (
                     <p className="text-gray-500 text-sm">职位信息持续更新，打开页面后可实时筛选机会。</p>
+                  ) : isLoading ? (
+                    <p className="text-gray-500 text-sm">职位加载中...</p>
                   ) : (
                     <p className="text-gray-500 text-sm">
                       共找到 <span className="font-bold text-deep">{total}</span> 个职位
@@ -424,14 +433,14 @@ const Jobs = () => {
                         <Search className="w-8 h-8 text-gray-400" />
                       </div>
                       <h3 className="text-lg font-medium text-deep mb-2">
-                        {isPrerender ? '职位信息持续更新' : '暂未找到相关职位'}
+                        {isStaticShell ? '职位信息持续更新' : '暂未找到相关职位'}
                       </h3>
                       <p className="text-gray-500 text-sm mb-6">
-                        {isPrerender
+                        {isStaticShell
                           ? '职引职位搜索支持按地区、行业和岗位类型筛选，帮助留学生更快定位合适机会。'
                           : '可以调整关键词，或放宽地区、行业和岗位类型筛选。'}
                       </p>
-                      {!isPrerender && (
+                      {!isStaticShell && (
                         <button
                           onClick={resetFilters}
                           className="inline-flex items-center px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
