@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   Bookmark,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import SEO from '../components/SEO';
+import { filterCuratedJobs } from '../data/curatedJobs';
 import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
@@ -26,6 +27,9 @@ const FILTER_OPTIONS = {
 };
 
 const PAGE_SIZE = 10;
+
+const isReactSnapPrerender = () =>
+  typeof navigator !== 'undefined' && navigator.userAgent === 'ReactSnap';
 
 interface Job {
   id: number | string;
@@ -64,16 +68,19 @@ function sourceText(source?: string) {
   if (source === 'live') return '实时职位接口';
   if (source === 'live_with_local_fallback') return '实时接口 + 本地兜底';
   if (source === 'local_fallback') return '本地精选兜底';
+  if (source === 'proxy_fallback') return '精选职位';
+  if (source === 'client_fallback') return '精选职位';
   return source;
 }
 
 const Jobs = () => {
+  const isPrerender = isReactSnapPrerender();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !isPrerender);
   const [errorMessage, setErrorMessage] = useState('');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -82,7 +89,31 @@ const Jobs = () => {
   const [filters, setFilters] = useState({ region: '全部', industry: '全部', type: '全部' });
   const { isFavorite, toggleFavorite } = useFavorites();
 
+  const applyCuratedFallback = useCallback((message: string) => {
+    const filtered = filterCuratedJobs({
+      keyword: searchQuery,
+      region: filters.region,
+      industry: filters.industry,
+      jobType: filters.type,
+    });
+    const nextTotalPages = Math.max(Math.ceil(filtered.length / PAGE_SIZE) || 1, 1);
+    const safePage = Math.min(page, nextTotalPages);
+    const start = (safePage - 1) * PAGE_SIZE;
+
+    if (safePage !== page) setPage(safePage);
+    setJobs(filtered.slice(start, start + PAGE_SIZE));
+    setTotal(filtered.length);
+    setTotalPages(nextTotalPages);
+    setDataSource('client_fallback');
+    setErrorMessage(filtered.length ? '' : message);
+  }, [page, searchQuery, filters]);
+
   const fetchJobs = useCallback(async () => {
+    if (isPrerender) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
 
@@ -102,23 +133,15 @@ const Jobs = () => {
         setTotalPages(Math.max(Number(res.data.totalPages) || 1, 1));
         setDataSource(res.data.source || res.meta?.source || '');
       } else {
-        setJobs([]);
-        setTotal(0);
-        setTotalPages(1);
-        setDataSource('');
-        setErrorMessage(res.message || '职位数据暂时不可用，请稍后再试。');
+        applyCuratedFallback(res.message || '职位数据暂时不可用，请稍后再试。');
       }
     } catch (err) {
       console.error('Failed to fetch jobs:', err);
-      setJobs([]);
-      setTotal(0);
-      setTotalPages(1);
-      setDataSource('');
-      setErrorMessage('网络连接不稳定，职位列表加载失败。');
+      applyCuratedFallback('网络连接不稳定，职位列表加载失败。');
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchQuery, filters]);
+  }, [page, searchQuery, filters, isPrerender, applyCuratedFallback]);
 
   useEffect(() => {
     fetchJobs();
@@ -132,6 +155,7 @@ const Jobs = () => {
     () => [searchQuery, filters.region, filters.industry, filters.type].filter((item) => item && item !== '全部'),
     [searchQuery, filters],
   );
+  const shouldShowDataSource = !import.meta.env.PROD && !isPrerender && Boolean(sourceText(dataSource));
 
   const submitSearch = () => {
     const nextValue = (searchInputRef.current?.value ?? inputValue).trim();
@@ -275,10 +299,16 @@ const Jobs = () => {
             <section className="w-full lg:w-3/4">
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
-                  <p className="text-gray-500 text-sm">
-                    共找到 <span className="font-bold text-deep">{total}</span> 个职位
-                  </p>
-                  {sourceText(dataSource) && (
+                  {isLoading ? (
+                    <p className="text-gray-500 text-sm">职位加载中...</p>
+                  ) : isPrerender ? (
+                    <p className="text-gray-500 text-sm">职位信息持续更新，打开页面后可实时筛选机会。</p>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      共找到 <span className="font-bold text-deep">{total}</span> 个职位
+                    </p>
+                  )}
+                  {shouldShowDataSource && (
                     <p className="text-xs text-gray-400 mt-1">数据来源：{sourceText(dataSource)}</p>
                   )}
                 </div>
@@ -336,7 +366,12 @@ const Jobs = () => {
                           </div>
                           <div className="min-w-0">
                             <h3 className="text-lg font-bold text-deep group-hover:text-primary transition-colors mb-1 line-clamp-2">
-                              {job.title}
+                              <Link
+                                to={`/jobs/${encodeURIComponent(String(job.id))}`}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {job.title}
+                              </Link>
                             </h3>
                             <div className="flex flex-wrap items-center text-gray-500 text-sm mb-3 gap-x-4 gap-y-1">
                               <span className="flex items-center"><Building2 className="w-4 h-4 mr-1" />{job.company}</span>
@@ -388,14 +423,22 @@ const Jobs = () => {
                       <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Search className="w-8 h-8 text-gray-400" />
                       </div>
-                      <h3 className="text-lg font-medium text-deep mb-2">暂未找到相关职位</h3>
-                      <p className="text-gray-500 text-sm mb-6">可以调整关键词，或放宽地区、行业和岗位类型筛选。</p>
-                      <button
-                        onClick={resetFilters}
-                        className="inline-flex items-center px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
-                      >
-                        清空筛选
-                      </button>
+                      <h3 className="text-lg font-medium text-deep mb-2">
+                        {isPrerender ? '职位信息持续更新' : '暂未找到相关职位'}
+                      </h3>
+                      <p className="text-gray-500 text-sm mb-6">
+                        {isPrerender
+                          ? '职引职位搜索支持按地区、行业和岗位类型筛选，帮助留学生更快定位合适机会。'
+                          : '可以调整关键词，或放宽地区、行业和岗位类型筛选。'}
+                      </p>
+                      {!isPrerender && (
+                        <button
+                          onClick={resetFilters}
+                          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
+                        >
+                          清空筛选
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
