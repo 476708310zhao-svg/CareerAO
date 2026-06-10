@@ -1,8 +1,16 @@
 import React from 'react';
 
+import SEO from '../components/SEO';
+
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-12 font-sans">
+      <SEO
+        title="服务条款"
+        description="查看职引服务条款，了解账号使用、平台服务、AI 功能免责声明和用户行为规范。"
+        keywords="职引服务条款,用户协议,AI求职平台条款"
+        canonical="https://www.zhiyincareer.com/terms"
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-8">服务条款</h1>
         <p className="text-gray-500 mb-10 pb-6 border-b border-gray-100">生效日期：2024 年 01 月 01 日</p>

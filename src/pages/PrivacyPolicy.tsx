@@ -1,8 +1,16 @@
 import React from 'react';
 
+import SEO from '../components/SEO';
+
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-12 font-sans">
+      <SEO
+        title="隐私政策"
+        description="查看职引隐私政策，了解个人信息收集、使用、保存、共享和保护方式。"
+        keywords="职引隐私政策,个人信息保护,留学生求职平台隐私"
+        canonical="https://www.zhiyincareer.com/privacy"
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-8">隐私政策</h1>
         <p className="text-gray-500 mb-10 pb-6 border-b border-gray-100">最后更新日期：2024 年 03 月 20 日</p>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Users, Target, Zap, Heart, Shield, Globe } from 'lucide-react';
 
+import SEO from '../components/SEO';
+
 export default function AboutTeam() {
   const values = [
     {
@@ -27,6 +29,12 @@ export default function AboutTeam() {
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-12 font-sans">
+      <SEO
+        title="团队介绍"
+        description="了解职引团队、产品使命和服务理念。职引用 AI 和数据能力帮助留学生提升求职效率。"
+        keywords="职引团队,留学生求职平台,AI求职,团队介绍"
+        canonical="https://www.zhiyincareer.com/team"
+      />
       {/* Hero Section */}
       <section className="bg-primary/5 py-20 border-b border-primary/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

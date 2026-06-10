@@ -170,6 +170,13 @@ export default function Search() {
   );
 
   const hasResults = results.jobs.length > 0 || results.companies.length > 0 || results.experiences.length > 0;
+  const totalResults = results.jobs.length + results.companies.length + results.experiences.length;
+  const resultTabs = [
+    { id: 'all', label: '全部结果', count: totalResults },
+    { id: 'jobs', label: '职位', count: results.jobs.length },
+    { id: 'companies', label: '公司', count: results.companies.length },
+    { id: 'experiences', label: '面经', count: results.experiences.length },
+  ] as const;
 
   return (
     <div className="min-h-screen pt-24 pb-12 bg-gray-50">
@@ -239,25 +246,23 @@ export default function Search() {
         {query && (
           <>
             <div className="mb-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-gray-500">正在搜索：<span className="font-semibold text-gray-900">{query}</span></p>
+              <div>
+                <p className="text-sm text-gray-500">{isLoading ? '正在搜索' : '搜索结果'}</p>
+                <h1 className="mt-1 text-2xl font-bold text-gray-900">{query}</h1>
+              </div>
               <button onClick={clearSearch} className="inline-flex items-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-600 shadow-sm ring-1 ring-gray-100 hover:text-primary">
                 <RotateCcw className="mr-1.5 h-4 w-4" />
                 重新搜索
               </button>
             </div>
             <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-              {[
-                ['all', '全部结果', hasResults ? results.jobs.length + results.companies.length + results.experiences.length : 0],
-                ['jobs', '职位', results.jobs.length],
-                ['companies', '公司', results.companies.length],
-                ['experiences', '面经', results.experiences.length],
-              ].map(([id, label, count]) => (
+              {resultTabs.map(({ id, label, count }) => (
                 <button
                   key={id}
                   onClick={() => setActiveTab(id as typeof activeTab)}
                   className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === id ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}
                 >
-                  {label} ({count})
+                  {label}{isLoading ? '' : ` (${count})`}
                 </button>
               ))}
             </div>
