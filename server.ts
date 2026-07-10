@@ -1,7 +1,14 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import dotenv from 'dotenv';
+import multer from 'multer';
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
 import { GoogleGenAI } from '@google/genai';
+
+dotenv.config({ path: '.env.local', override: false });
+dotenv.config({ override: false });
 
 type ProxyJob = {
   id: string;
@@ -281,6 +288,284 @@ function buildProxyJobDetail(id: string) {
   return { code: 0, message: 'success', data: job };
 }
 
+type ResumeTailorReport = {
+  schemaVersion: 'resume-tailor-analysis-v2';
+  currentScore: number;
+  optimizedScore: number;
+  level: string;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  recommendedKeywords: string[];
+  dimensions: Array<{ name: string; score: number; note: string }>;
+  strengths: string[];
+  gaps: string[];
+  suggestions: string[];
+  optimizedResume: string;
+  source: 'ai' | 'heuristic';
+  fallbackReason?: string;
+  generatedAt: string;
+};
+
+type ParsedResumeFile = {
+  resume_name: string;
+  resume_text: string;
+  file_type: 'txt' | 'pdf' | 'docx';
+  char_count: number;
+};
+
+const resumeStopWords = new Set([
+  'the', 'and', 'for', 'with', 'you', 'your', 'our', 'are', 'will', 'can', 'this', 'that', 'from',
+  'have', 'has', 'was', 'were', 'but', 'not', 'all', 'any', 'job', 'role', 'team', 'work', 'using',
+  'use', 'used', 'experience', 'skills', 'ability', 'responsibilities', 'requirements', 'preferred',
+  'qualifications', 'candidate', 'company', 'within', 'across', 'strong', 'excellent', 'including',
+  'need', 'needs', 'hiring', 'hire', 'looking',
+]);
+
+const resumeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (new Set(['.txt', '.pdf', '.docx']).has(ext)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Only TXT, PDF, and DOCX resume files are supported.'));
+  },
+});
+
+const cleanExtractedText = (text: string) =>
+  text
+    .replace(/\r/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+const normalizeResumeText = (value: unknown) => String(value || '').toLowerCase();
+const clampResumeScore = (score: number) => Math.max(0, Math.min(100, Math.round(score)));
+const clampResumeTimeout = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 12000;
+  return Math.max(3000, Math.min(30000, Math.round(parsed)));
+};
+
+const extractResumeKeywords = (text: string) => {
+  const words = normalizeResumeText(text)
+    .replace(/[^a-z0-9+#.\s-]/g, ' ')
+    .split(/\s+/)
+    .map((word) => word.trim().replace(/^[^a-z0-9+#]+|[^a-z0-9+#]+$/g, ''))
+    .filter((word) => word.length >= 3 && !resumeStopWords.has(word));
+  const counts = new Map<string, number>();
+  for (const word of words) counts.set(word, (counts.get(word) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 28).map(([word]) => word);
+};
+
+const toResumeTitleCase = (keyword: string) =>
+  keyword
+    .split(/([/+\-.#])/)
+    .map((part) => (/^[a-z]/.test(part) ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join('');
+
+const uniqueResumeStrings = (value: unknown, limit: number) => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    const text = String(item || '').trim();
+    const key = text.toLowerCase();
+    if (text && !seen.has(key)) {
+      seen.add(key);
+      result.push(text);
+    }
+    if (result.length >= limit) break;
+  }
+  return result;
+};
+
+const normalizeResumeDimensions = (value: unknown, fallback: ResumeTailorReport['dimensions']) => {
+  if (!Array.isArray(value)) return fallback;
+  const normalized = value
+    .map((item: any) => ({
+      name: String(item?.name || '').trim(),
+      score: clampResumeScore(Number(item?.score ?? 0)),
+      note: String(item?.note || '').trim(),
+    }))
+    .filter((item) => item.name && item.note)
+    .slice(0, 6);
+  return normalized.length ? normalized : fallback;
+};
+
+const normalizeResumeAiReport = (raw: any, fallback: ResumeTailorReport): ResumeTailorReport => {
+  const currentScore = clampResumeScore(Number(raw?.currentScore ?? fallback.currentScore));
+  const optimizedScore = clampResumeScore(Math.max(currentScore, Number(raw?.optimizedScore ?? fallback.optimizedScore)));
+  return {
+    schemaVersion: 'resume-tailor-analysis-v2',
+    currentScore,
+    optimizedScore,
+    level: String(raw?.level || fallback.level).trim(),
+    matchedKeywords: uniqueResumeStrings(raw?.matchedKeywords, 14).length ? uniqueResumeStrings(raw?.matchedKeywords, 14) : fallback.matchedKeywords,
+    missingKeywords: uniqueResumeStrings(raw?.missingKeywords, 14).length ? uniqueResumeStrings(raw?.missingKeywords, 14) : fallback.missingKeywords,
+    recommendedKeywords: uniqueResumeStrings(raw?.recommendedKeywords, 10).length ? uniqueResumeStrings(raw?.recommendedKeywords, 10) : fallback.recommendedKeywords,
+    dimensions: normalizeResumeDimensions(raw?.dimensions, fallback.dimensions),
+    strengths: uniqueResumeStrings(raw?.strengths, 5).length ? uniqueResumeStrings(raw?.strengths, 5) : fallback.strengths,
+    gaps: uniqueResumeStrings(raw?.gaps, 6).length ? uniqueResumeStrings(raw?.gaps, 6) : fallback.gaps,
+    suggestions: uniqueResumeStrings(raw?.suggestions, 6).length ? uniqueResumeStrings(raw?.suggestions, 6) : fallback.suggestions,
+    optimizedResume: String(raw?.optimizedResume || fallback.optimizedResume).trim(),
+    source: 'ai',
+    generatedAt: new Date().toISOString(),
+  };
+};
+
+const extractResumeJsonObject = (text: string) => {
+  const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+    throw new Error('AI response was not valid JSON.');
+  }
+};
+
+const withResumeTimeout = async <T,>(promise: Promise<T>, ms: number) =>
+  Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`AI request timed out after ${ms}ms.`)), ms)),
+  ]);
+
+const buildResumeTailorPrompt = (body: any, fallback: ResumeTailorReport) => `You are an expert ATS resume strategist.
+Return one valid JSON object only. No markdown, no comments, no prose outside JSON.
+
+JSON schema:
+{
+  "currentScore": number from 0 to 100,
+  "optimizedScore": number from 0 to 100 and not lower than currentScore,
+  "level": "High Match" | "Medium Match" | "Needs Work",
+  "matchedKeywords": string[],
+  "missingKeywords": string[],
+  "recommendedKeywords": string[],
+  "dimensions": [{"name": string, "score": number from 0 to 100, "note": string}],
+  "strengths": string[],
+  "gaps": string[],
+  "suggestions": string[],
+  "optimizedResume": string
+}
+
+Be concrete, truthful, and do not invent work history.
+
+Target role: ${body.job_title || 'Target Role'}
+Company: ${body.company_name || 'Target Company'}
+Region: ${body.target_region || 'Not specified'}
+
+Heuristic baseline:
+${JSON.stringify({ currentScore: fallback.currentScore, optimizedScore: fallback.optimizedScore, matchedKeywords: fallback.matchedKeywords, missingKeywords: fallback.missingKeywords })}
+
+Resume:
+${String(body.resume_text || '').slice(0, 9000)}
+
+Job description:
+${String(body.job_description || '').slice(0, 9000)}`;
+
+const analyzeResumeTailor = (body: any): ResumeTailorReport => {
+  const resumeText = String(body.resume_text || '');
+  const jobDescription = String(body.job_description || '');
+  const jobTitle = String(body.job_title || 'Target Role');
+  const companyName = String(body.company_name || 'Target Company');
+  const jdKeywords = extractResumeKeywords(jobDescription);
+  const resumeNormalized = normalizeResumeText(resumeText);
+  const matched = jdKeywords.filter((keyword) => resumeNormalized.includes(keyword));
+  const missing = jdKeywords.filter((keyword) => !resumeNormalized.includes(keyword)).slice(0, 12);
+  const matchRatio = jdKeywords.length ? matched.length / jdKeywords.length : 0;
+  const currentScore = clampResumeScore(36 + matchRatio * 48 + (resumeText.length > 900 ? 12 : resumeText.length > 400 ? 8 : 3));
+  const optimizedScore = clampResumeScore(currentScore + Math.max(12, Math.min(24, missing.length * 3)));
+  const recommendedKeywords = missing.slice(0, 8).map(toResumeTitleCase);
+  const matchedKeywords = matched.slice(0, 12).map(toResumeTitleCase);
+  const missingKeywords = missing.map(toResumeTitleCase);
+  const possessiveCompany = companyName.endsWith('s') ? `${companyName}'` : `${companyName}'s`;
+  return {
+    schemaVersion: 'resume-tailor-analysis-v2',
+    currentScore,
+    optimizedScore,
+    level: currentScore >= 82 ? 'High Match' : currentScore >= 65 ? 'Medium Match' : 'Needs Work',
+    matchedKeywords,
+    missingKeywords,
+    recommendedKeywords,
+    dimensions: [
+      { name: 'JD Keyword Coverage', score: clampResumeScore(matchRatio * 100), note: `${matched.length}/${jdKeywords.length || 1} priority JD keywords are reflected in the resume.` },
+      { name: 'Role Positioning', score: clampResumeScore(currentScore + (jobTitle !== 'Target Role' ? 6 : 0)), note: `Position the summary and first project around ${jobTitle}.` },
+      { name: 'Evidence Strength', score: resumeText.match(/\d|%|\$/) ? 78 : 58, note: resumeText.match(/\d|%|\$/) ? 'Resume includes quantified evidence; keep the strongest metrics near the top.' : 'Add measurable outcomes such as scale, speed, revenue, accuracy, or user impact.' },
+      { name: 'ATS Readability', score: resumeText.length > 400 ? 76 : 54, note: 'Use standard section names, direct skill wording, and concise bullet structure.' },
+    ],
+    strengths: matchedKeywords.length ? [`Already reflects ${matchedKeywords.slice(0, 3).join(', ')} from the JD.`, 'Core background can be repositioned more directly for the target role.'] : ['Resume has enough raw material to tailor, but JD keywords need to be surfaced more clearly.'],
+    gaps: missingKeywords.length ? missingKeywords.slice(0, 5).map((keyword) => `Missing or under-emphasized keyword: ${keyword}.`) : ['No obvious priority keyword gaps found in the current heuristic pass.'],
+    suggestions: [
+      `Rewrite the first summary line to name ${jobTitle}${companyName ? ` at ${companyName}` : ''} directly.`,
+      'Move the most relevant project or work experience into the first half of the resume.',
+      recommendedKeywords.length ? `Add natural evidence for: ${recommendedKeywords.slice(0, 5).join(', ')}.` : 'Keep JD wording consistent with the resume while avoiding keyword stuffing.',
+      'Convert responsibilities into impact bullets with action, scope, and result.',
+    ],
+    optimizedResume: [
+      'SUMMARY',
+      `${jobTitle} candidate with experience aligned to ${possessiveCompany} role requirements, combining ${matchedKeywords.slice(0, 4).join(', ') || 'relevant technical and business skills'} with measurable delivery across projects.`,
+      '',
+      'SELECTED IMPACT',
+      `- Reframed prior experience around ${jobTitle} requirements, emphasizing ${recommendedKeywords.slice(0, 3).join(', ') || 'role-critical skills'} where supported by real evidence.`,
+      '- Built clearer ATS coverage by mirroring priority JD language and tying each skill to a concrete project, tool, or business result.',
+      '- Strengthened resume bullets with action verbs, scope, and measurable outcomes to improve recruiter scan speed.',
+      '',
+      'KEYWORDS TO WEAVE IN',
+      recommendedKeywords.length ? recommendedKeywords.join(' | ') : 'Current keyword coverage is healthy; focus on stronger evidence and metrics.',
+    ].join('\n'),
+    source: 'heuristic',
+    generatedAt: new Date().toISOString(),
+  };
+};
+
+const analyzeResumeTailorWithAi = async (ai: GoogleGenAI | null, body: any, fallback: ResumeTailorReport): Promise<ResumeTailorReport> => {
+  if (process.env.ENABLE_RESUME_TAILOR_AI !== 'true') return { ...fallback, fallbackReason: 'ai_disabled' };
+  if (!ai) return { ...fallback, fallbackReason: 'ai_not_configured' };
+  const timeoutMs = clampResumeTimeout(process.env.RESUME_TAILOR_AI_TIMEOUT_MS);
+  try {
+    const response = await withResumeTimeout(
+      ai.models.generateContent({
+        model: process.env.RESUME_TAILOR_AI_MODEL || 'gemini-2.5-flash',
+        contents: buildResumeTailorPrompt(body, fallback),
+        config: { responseMimeType: 'application/json' },
+      }),
+      timeoutMs,
+    );
+    return normalizeResumeAiReport(extractResumeJsonObject(response.text || ''), fallback);
+  } catch (error: any) {
+    console.error('Resume tailor AI fallback:', error?.message || error);
+    return { ...fallback, fallbackReason: error?.message || 'ai_failed' };
+  }
+};
+
+const parseResumeFile = async (file: Express.Multer.File): Promise<ParsedResumeFile> => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ext === '.txt') {
+    const resumeText = cleanExtractedText(file.buffer.toString('utf8'));
+    return { resume_name: file.originalname, resume_text: resumeText, file_type: 'txt', char_count: resumeText.length };
+  }
+  if (ext === '.pdf') {
+    const parser = new PDFParse({ data: file.buffer });
+    try {
+      const parsed = await parser.getText();
+      const resumeText = cleanExtractedText(parsed.text || '');
+      return { resume_name: file.originalname, resume_text: resumeText, file_type: 'pdf', char_count: resumeText.length };
+    } finally {
+      await parser.destroy();
+    }
+  }
+  if (ext === '.docx') {
+    const parsed = await mammoth.extractRawText({ buffer: file.buffer });
+    const resumeText = cleanExtractedText(parsed.value || '');
+    return { resume_name: file.originalname, resume_text: resumeText, file_type: 'docx', char_count: resumeText.length };
+  }
+  throw new Error('Unsupported resume file type.');
+};
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -302,6 +587,48 @@ async function startServer() {
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.post('/api/proxy/resume-tailor/parse-resume', (req, res) => {
+    resumeUpload.single('resume')(req, res, async (uploadError) => {
+      try {
+        if (uploadError) throw uploadError;
+        if (!req.file) {
+          return res.status(400).json({ message: 'Please upload a TXT, PDF, or DOCX resume file.' });
+        }
+        const parsed = await parseResumeFile(req.file);
+        if (parsed.char_count < 40) {
+          return res.status(422).json({
+            message: 'Could not extract enough resume text from this file. Please try another file or paste the resume text manually.',
+          });
+        }
+        res.json(parsed);
+      } catch (error: any) {
+        console.error('Resume parse error:', error);
+        const isSizeError = error?.code === 'LIMIT_FILE_SIZE';
+        res.status(isSizeError ? 413 : 400).json({
+          message: isSizeError ? 'Resume file must be 5MB or smaller.' : error.message || 'Failed to parse resume file.',
+        });
+      }
+    });
+  });
+
+  app.post('/api/proxy/resume-tailor/analyze', async (req, res) => {
+    try {
+      const { resume_text, job_description } = req.body || {};
+      if (!resume_text || String(resume_text).trim().length < 80) {
+        return res.status(400).json({ message: 'Please provide at least 80 characters of resume text.' });
+      }
+      if (!job_description || String(job_description).trim().length < 80) {
+        return res.status(400).json({ message: 'Please provide at least 80 characters of job description.' });
+      }
+      const fallback = analyzeResumeTailor(req.body);
+      const report = await analyzeResumeTailorWithAi(ai, req.body, fallback);
+      res.json(report);
+    } catch (error: any) {
+      console.error('Resume tailor analyze error:', error);
+      res.status(500).json({ message: error.message || 'Failed to analyze resume match.' });
+    }
   });
 
   // Proxy Campus Calendar Endpoint

@@ -62,6 +62,7 @@ export const navCategories = [
         title: '效率提升',
         icon: <Rocket className="w-5 h-5 text-primary" />,
         links: [
+          { name: 'AI 简历优化', href: '/resume-tailor', desc: '上传简历并根据目标 JD 生成 ATS 匹配报告', badge: 'NEW' },
           { name: '网申助手', href: '/application-assistant', desc: '根据 JD 生成网申回答、岗位匹配和投递建议' },
           { name: '我的简历', href: '/my-resume', desc: '管理简历版本，按目标岗位优化表达', badge: 'HOT' },
         ],

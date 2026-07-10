@@ -6,6 +6,7 @@ const InterviewPrep = lazy(() => import('../pages/InterviewPrep'));
 const AIInterview = lazy(() => import('../pages/AIInterview'));
 const SalaryInsights = lazy(() => import('../pages/SalaryInsights'));
 const MyResume = lazy(() => import('../pages/MyResume'));
+const ResumeTailor = lazy(() => import('../pages/ResumeTailor'));
 const ResumeEditor = lazy(() => import('../pages/ResumeEditor'));
 const JobDetail = lazy(() => import('../pages/JobDetail'));
 const CareerPlanning = lazy(() => import('../pages/CareerPlanning'));
@@ -42,6 +43,7 @@ export const appRoutes = [
   { path: '/interview-prep', element: <InterviewPrep /> },
   { path: '/ai-interview', element: <AIInterview /> },
   { path: '/salary-insights', element: <SalaryInsights /> },
+  { path: '/resume-tailor', element: <ResumeTailor /> },
   { path: '/my-resume', element: <MyResume /> },
   { path: '/my-resume/:id', element: <ResumeEditor /> },
   { path: '/career-planning', element: <CareerPlanning /> },
