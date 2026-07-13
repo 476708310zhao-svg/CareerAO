@@ -1,19 +1,26 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
   Briefcase,
   CheckCircle2,
   Clipboard,
+  Download,
   FileText,
+  History,
   Loader2,
+  Printer,
+  Save,
   Sparkles,
   Target,
+  Trash2,
   UploadCloud,
   Wand2,
 } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+
+import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
+import { API_BASE, apiFetch } from '../lib/api';
 
 type ResumeTailorReport = {
   schemaVersion?: string;
@@ -40,6 +47,20 @@ type ParsedResumeFile = {
   char_count: number;
 };
 
+type SavedRecord = {
+  id: string;
+  resumeName: string;
+  jobTitle: string;
+  companyName: string;
+  targetRegion: string;
+  resumeText: string;
+  jobDescription: string;
+  report: ResumeTailorReport;
+  createdAt: string;
+};
+
+const STORAGE_KEY = 'zhiyin_resume_tailor_records_v1';
+
 const sampleResume = `Data Analyst with 3 years of experience building SQL dashboards and reporting automation for operations teams.
 
 - Built executive KPI dashboards in Tableau and SQL, reducing weekly reporting time by 60%.
@@ -56,10 +77,24 @@ const scoreTone = (score: number) => {
 
 const sourceLabel = (report: ResumeTailorReport) => {
   if (report.source === 'ai') return 'AI 深度分析';
-  if (report.fallbackReason === 'ai_disabled') return '基础规则分析';
   if (report.fallbackReason === 'ai_not_configured') return '基础规则分析 · AI 未配置';
-  return report.fallbackReason ? '基础规则分析 · AI 已回退' : '基础规则分析';
+  if (report.fallbackReason && report.fallbackReason !== 'ai_disabled') return '基础规则分析 · AI 已回退';
+  return '基础规则分析';
 };
+
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+
+const safeFileName = (value: string) =>
+  (value || 'resume-tailor')
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .slice(0, 80);
 
 export default function ResumeTailor() {
   const { showToast } = useToast();
@@ -70,15 +105,30 @@ export default function ResumeTailor() {
   const [targetRegion, setTargetRegion] = useState('');
   const [resumeName, setResumeName] = useState('');
   const [report, setReport] = useState<ResumeTailorReport | null>(null);
+  const [records, setRecords] = useState<SavedRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [parseError, setParseError] = useState('');
 
-  const canAnalyze = resumeText.trim().length >= 80 && jobDescription.trim().length >= 80 && !isLoading;
-  const scoreDelta = useMemo(
-    () => (report ? Math.max(0, report.optimizedScore - report.currentScore) : 0),
-    [report],
-  );
+  const canAnalyze = resumeText.trim().length >= 80 && jobDescription.trim().length >= 80 && !isLoading && !isParsingResume;
+  const scoreDelta = useMemo(() => (report ? Math.max(0, report.optimizedScore - report.currentScore) : 0), [report]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) setRecords(parsed);
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  const persistRecords = (nextRecords: SavedRecord[]) => {
+    const limited = nextRecords.slice(0, 8);
+    setRecords(limited);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
+  };
 
   const loadSample = () => {
     setResumeText(sampleResume);
@@ -87,6 +137,7 @@ export default function ResumeTailor() {
     setCompanyName('GrowthWorks');
     setTargetRegion('US');
     setResumeName('sample-resume.txt');
+    setReport(null);
     setParseError('');
   };
 
@@ -97,20 +148,17 @@ export default function ResumeTailor() {
     setIsParsingResume(true);
     setParseError('');
     try {
-      const response = await fetch('/api/proxy/resume-tailor/parse-resume', {
+      const response = await fetch(`${API_BASE}/api/proxy/resume-tailor/parse-resume`, {
         method: 'POST',
         body: formData,
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || '解析失败，请换一个文件或手动粘贴简历正文');
-      }
+      if (!response.ok) throw new Error(data.message || '解析失败，请换一个文件或手动粘贴简历正文');
 
       const parsed = data as ParsedResumeFile;
       setResumeText(parsed.resume_text);
       setResumeName(parsed.resume_name);
+      setReport(null);
       showToast(`已解析 ${parsed.file_type.toUpperCase()} 简历，共 ${parsed.char_count} 字符`);
     } catch (error: any) {
       const message = error.message || '解析失败，请换一个文件或手动粘贴简历正文';
@@ -154,20 +202,113 @@ export default function ResumeTailor() {
     showToast('优化版简历已复制');
   };
 
+  const saveRecord = () => {
+    if (!report) {
+      showToast('请先生成报告再保存版本', 'info');
+      return;
+    }
+
+    const record: SavedRecord = {
+      id: `${Date.now()}`,
+      resumeName: resumeName || '手动粘贴简历',
+      jobTitle: jobTitle || '目标岗位',
+      companyName,
+      targetRegion,
+      resumeText,
+      jobDescription,
+      report,
+      createdAt: new Date().toISOString(),
+    };
+
+    persistRecords([record, ...records.filter((item) => item.id !== record.id)]);
+    showToast('版本已保存到本地历史');
+  };
+
+  const restoreRecord = (record: SavedRecord) => {
+    setResumeName(record.resumeName);
+    setJobTitle(record.jobTitle);
+    setCompanyName(record.companyName);
+    setTargetRegion(record.targetRegion);
+    setResumeText(record.resumeText);
+    setJobDescription(record.jobDescription);
+    setReport(record.report);
+    setParseError('');
+    showToast('已恢复历史版本');
+  };
+
+  const deleteRecord = (id: string) => {
+    persistRecords(records.filter((record) => record.id !== id));
+    showToast('历史版本已删除');
+  };
+
+  const downloadOptimizedResume = () => {
+    if (!report?.optimizedResume) return;
+    const blob = new Blob([report.optimizedResume], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeFileName(`${companyName || 'company'}-${jobTitle || 'resume'}`)}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const printOptimizedResume = () => {
+    if (!report?.optimizedResume) return;
+    const printWindow = window.open('', '_blank', 'width=900,height=1100');
+    if (!printWindow) {
+      showToast('浏览器阻止了打印窗口，请允许弹窗后重试', 'error');
+      return;
+    }
+
+    const escaped = report.optimizedResume
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${jobTitle || 'Optimized Resume'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.55; padding: 40px; color: #111827; }
+            h1 { font-size: 20px; margin-bottom: 8px; }
+            .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+            pre { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <h1>${jobTitle || 'Optimized Resume'}</h1>
+          <div class="meta">${companyName || 'Target Company'} · ATS ${report.currentScore} -> ${report.optimizedScore}</div>
+          <pre>${escaped}</pre>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-20">
+    <main className="min-h-screen bg-gray-50 pt-24 pb-20">
+      <SEO
+        title="AI 简历优化"
+        description="职引 AI 简历优化支持上传 TXT、PDF、DOCX 简历，结合目标 JD 生成 ATS 匹配分、关键词缺口、优化建议和英文简历草稿。"
+        keywords="AI简历优化,ATS匹配,简历改写,JD匹配,留学生求职"
+        canonical="https://www.zhiyincareer.com/resume-tailor"
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <section className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
           <div>
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-primary text-sm font-medium mb-4">
               <Sparkles className="w-4 h-4 mr-2" />
               AI Resume Tailor
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-deep tracking-tight mb-4">
+            <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
               把简历改到更匹配目标岗位
             </h1>
             <p className="text-gray-600 max-w-2xl leading-relaxed">
-              粘贴简历和 JD，生成 ATS 匹配分、关键词缺口、优化建议和可复制的英文改写草稿。
+              上传或粘贴简历，再粘贴目标 JD，生成 ATS 匹配分、关键词缺口、Gap Analysis、优化建议和可导出的英文简历草稿。
             </p>
           </div>
           <button
@@ -177,7 +318,7 @@ export default function ResumeTailor() {
             <FileText className="w-4 h-4 mr-2" />
             载入示例
           </button>
-        </div>
+        </section>
 
         <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6 items-start">
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-6">
@@ -192,11 +333,11 @@ export default function ResumeTailor() {
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-medium text-gray-700">公司</span>
+                <span className="text-sm font-medium text-gray-700">目标公司</span>
                 <input
                   value={companyName}
                   onChange={(event) => setCompanyName(event.target.value)}
-                  placeholder="Company"
+                  placeholder="GrowthWorks"
                   className="mt-2 w-full h-11 rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </label>
@@ -234,9 +375,7 @@ export default function ResumeTailor() {
                   disabled={isParsingResume}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) {
-                      void parseResumeFile(file);
-                    }
+                    if (file) void parseResumeFile(file);
                     event.currentTarget.value = '';
                   }}
                 />
@@ -295,13 +434,9 @@ export default function ResumeTailor() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">
-                        报告来源：{sourceLabel(report)}
-                      </p>
+                      <p className="text-sm text-gray-500 mb-1">报告来源：{sourceLabel(report)}</p>
                       {report.fallbackReason && report.fallbackReason !== 'ai_disabled' && (
-                        <p className="text-xs text-amber-600 mb-1">
-                          fallback: {report.fallbackReason}
-                        </p>
+                        <p className="text-xs text-amber-600 mb-1">fallback: {report.fallbackReason}</p>
                       )}
                       <h2 className="text-2xl font-bold text-deep">{report.level}</h2>
                     </div>
@@ -335,59 +470,15 @@ export default function ResumeTailor() {
                 </motion.div>
 
                 <div className="grid md:grid-cols-2 gap-5">
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h3 className="font-bold text-deep mb-4 flex items-center">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2" />
-                      已匹配关键词
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {(report.matchedKeywords.length ? report.matchedKeywords : ['待补充']).map((keyword) => (
-                        <span key={keyword} className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h3 className="font-bold text-deep mb-4 flex items-center">
-                      <Briefcase className="w-5 h-5 text-amber-500 mr-2" />
-                      建议补强关键词
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {(report.missingKeywords.length ? report.missingKeywords : ['暂无明显缺口']).map((keyword) => (
-                        <span key={keyword} className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  <KeywordPanel title="已匹配关键词" tone="green" icon={<CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2" />} items={report.matchedKeywords} emptyText="待补充" />
+                  <KeywordPanel title="建议补强关键词" tone="amber" icon={<Briefcase className="w-5 h-5 text-amber-500 mr-2" />} items={report.missingKeywords} emptyText="暂无明显缺口" />
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <h3 className="font-bold text-deep mb-4">Gap Analysis</h3>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">优势</p>
-                      <ul className="space-y-2">
-                        {report.strengths.map((item) => (
-                          <li key={item} className="text-sm text-gray-600 flex">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 mr-2 shrink-0" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">缺口</p>
-                      <ul className="space-y-2">
-                        {report.gaps.map((item) => (
-                          <li key={item} className="text-sm text-gray-600 flex">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 mr-2 shrink-0" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <BulletList title="优势" items={report.strengths} color="bg-emerald-500" />
+                    <BulletList title="缺口" items={report.gaps} color="bg-amber-500" />
                   </div>
                 </div>
 
@@ -396,9 +487,7 @@ export default function ResumeTailor() {
                   <div className="space-y-3">
                     {report.suggestions.map((item, index) => (
                       <div key={item} className="flex gap-3 text-sm text-gray-700">
-                        <span className="w-6 h-6 rounded-full bg-blue-50 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                          {index + 1}
-                        </span>
+                        <span className="w-6 h-6 rounded-full bg-blue-50 text-primary flex items-center justify-center text-xs font-bold shrink-0">{index + 1}</span>
                         <span>{item}</span>
                       </div>
                     ))}
@@ -406,15 +495,14 @@ export default function ResumeTailor() {
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                  <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                     <h3 className="font-bold text-deep">优化版英文简历草稿</h3>
-                    <button
-                      onClick={copyOptimizedResume}
-                      className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Clipboard className="w-4 h-4 mr-2" />
-                      复制
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <ActionButton onClick={copyOptimizedResume} icon={<Clipboard className="w-4 h-4" />} label="复制" />
+                      <ActionButton onClick={downloadOptimizedResume} icon={<Download className="w-4 h-4" />} label="下载 TXT" />
+                      <ActionButton onClick={printOptimizedResume} icon={<Printer className="w-4 h-4" />} label="打印 PDF" />
+                      <ActionButton onClick={saveRecord} icon={<Save className="w-4 h-4" />} label="保存版本" />
+                    </div>
                   </div>
                   <pre className="whitespace-pre-wrap rounded-xl bg-gray-950 text-gray-100 text-sm leading-6 p-4 overflow-auto max-h-[420px]">
                     {report.optimizedResume}
@@ -422,9 +510,91 @@ export default function ResumeTailor() {
                 </div>
               </>
             )}
+
+            {records.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 className="font-bold text-deep mb-4 flex items-center">
+                  <History className="w-5 h-5 mr-2 text-primary" />
+                  本地历史版本
+                </h3>
+                <div className="space-y-3">
+                  {records.map((record) => (
+                    <div key={record.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 p-3">
+                      <button onClick={() => restoreRecord(record)} className="min-w-0 flex-1 text-left">
+                        <p className="font-medium text-sm text-gray-900 truncate">{record.jobTitle} {record.companyName ? `· ${record.companyName}` : ''}</p>
+                        <p className="text-xs text-gray-500 mt-1">ATS {record.report.currentScore} / {record.report.optimizedScore} · {formatDate(record.createdAt)}</p>
+                      </button>
+                      <button onClick={() => deleteRecord(record.id)} className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>
+    </main>
+  );
+}
+
+function KeywordPanel({
+  title,
+  tone,
+  icon,
+  items,
+  emptyText,
+}: {
+  title: string;
+  tone: 'green' | 'amber';
+  icon: React.ReactNode;
+  items: string[];
+  emptyText: string;
+}) {
+  const colorClass = tone === 'green' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700';
+  const content = items.length ? items : [emptyText];
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <h3 className="font-bold text-deep mb-4 flex items-center">
+        {icon}
+        {title}
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {content.map((keyword) => (
+          <span key={keyword} className={`px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+            {keyword}
+          </span>
+        ))}
+      </div>
     </div>
+  );
+}
+
+function BulletList({ title, items, color }: { title: string; items: string[]; color: string }) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-700 mb-2">{title}</p>
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item} className="text-sm text-gray-600 flex">
+            <span className={`w-1.5 h-1.5 rounded-full ${color} mt-2 mr-2 shrink-0`} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ActionButton({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
