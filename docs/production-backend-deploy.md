@@ -40,12 +40,13 @@ Default port:
 3000
 ```
 
-## Nginx requirement
+## Nginx route
 
-The production domain must proxy API requests to the PM2 service:
+The backend deployment installs this exact API route automatically when Nginx config is discoverable.
+It intentionally only proxies the resume-tailor API prefix so existing production API routes can keep using the current backend.
 
 ```nginx
-location ^~ /api/ {
+location ^~ /api/proxy/resume-tailor/ {
   proxy_pass http://127.0.0.1:3000;
   proxy_http_version 1.1;
   proxy_set_header Host $host;

@@ -42,6 +42,7 @@ jobs:
             tsconfig.json \
             vite.config.ts \
             ecosystem.config.cjs \
+            scripts/install-nginx-resume-tailor-route.sh \
             dist
 
       - name: Setup SSH key
@@ -95,5 +96,6 @@ jobs:
 
           pm2 startOrReload ecosystem.config.cjs --update-env
           pm2 save
+          bash scripts/install-nginx-resume-tailor-route.sh
           rm -f /tmp/zhiyincareer-backend-release.tgz
           REMOTE
