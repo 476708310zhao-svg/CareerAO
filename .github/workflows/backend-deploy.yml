@@ -1,0 +1,99 @@
+name: Deploy Backend API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - server.ts
+      - package.json
+      - package-lock.json
+      - ecosystem.config.cjs
+      - .github/workflows/backend-deploy.yml
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --legacy-peer-deps
+
+      - name: Build frontend assets for Express
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://www.zhiyincareer.com
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Pack backend release
+        run: |
+          tar czf backend-release.tgz \
+            server.ts \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            vite.config.ts \
+            ecosystem.config.cjs \
+            dist
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy and reload PM2
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REAL_API_BASE_URL: ${{ secrets.REAL_API_BASE_URL }}
+          ENABLE_RESUME_TAILOR_AI: ${{ vars.ENABLE_RESUME_TAILOR_AI }}
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no backend-release.tgz "$SSH_USER@$SSH_HOST:/tmp/zhiyincareer-backend-release.tgz"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 "$SSH_USER@$SSH_HOST" \
+            "APP_DIR=/www/wwwroot/zhiyincareer-api \
+             RELEASE_ID=${GITHUB_SHA} \
+             GEMINI_API_KEY='$GEMINI_API_KEY' \
+             REAL_API_BASE_URL='$REAL_API_BASE_URL' \
+             ENABLE_RESUME_TAILOR_AI='$ENABLE_RESUME_TAILOR_AI' \
+             bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/www/wwwroot/zhiyincareer-api}"
+          RELEASE_ID="${RELEASE_ID:-manual}"
+          RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
+
+          mkdir -p "$RELEASE_DIR"
+          tar xzf /tmp/zhiyincareer-backend-release.tgz -C "$RELEASE_DIR"
+          cd "$RELEASE_DIR"
+
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --legacy-peer-deps
+
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm install -g pm2
+          fi
+
+          ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+          cd "$APP_DIR/current"
+
+          export NODE_ENV=production
+          export PORT="${PORT:-3000}"
+          export VITE_API_BASE_URL="https://www.zhiyincareer.com"
+          export GEMINI_API_KEY="${GEMINI_API_KEY:-}"
+          export REAL_API_BASE_URL="${REAL_API_BASE_URL:-}"
+          export ENABLE_RESUME_TAILOR_AI="${ENABLE_RESUME_TAILOR_AI:-false}"
+
+          pm2 startOrReload ecosystem.config.cjs --update-env
+          pm2 save
+          rm -f /tmp/zhiyincareer-backend-release.tgz
+          REMOTE
