@@ -44,6 +44,7 @@ Default port:
 
 The backend deployment installs this exact API route automatically when Nginx config is discoverable.
 It intentionally only proxies the resume-tailor API prefix so existing production API routes can keep using the current backend.
+The installer targets the `www.zhiyincareer.com` or `zhiyincareer.com` server block and removes stale copies from other vhost files.
 
 ```nginx
 location ^~ /api/proxy/resume-tailor/ {

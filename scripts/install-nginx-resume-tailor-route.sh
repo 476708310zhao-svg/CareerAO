@@ -26,7 +26,17 @@ find_nginx_conf() {
 
   for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
     if [ -d "$dir" ]; then
-      match="$(grep -RslE 'server_name[[:space:]].*zhiyincareer\.com' "$dir" 2>/dev/null | head -n 1 || true)"
+      match="$(grep -RslE 'server_name[[:space:]][^;]*(^|[[:space:]])www\.zhiyincareer\.com([[:space:];]|$)' "$dir" 2>/dev/null | head -n 1 || true)"
+      if [ -n "$match" ]; then
+        printf '%s\n' "$match"
+        return 0
+      fi
+    fi
+  done
+
+  for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+    if [ -d "$dir" ]; then
+      match="$(grep -RslE 'server_name[[:space:]][^;]*(^|[[:space:]])zhiyincareer\.com([[:space:];]|$)' "$dir" 2>/dev/null | head -n 1 || true)"
       if [ -n "$match" ]; then
         printf '%s\n' "$match"
         return 0
@@ -41,7 +51,19 @@ CONF="$(find_nginx_conf)"
 BACKUP="${CONF}.bak.$(date +%Y%m%d%H%M%S)"
 cp "$CONF" "$BACKUP"
 
-python3 - "$CONF" "$UPSTREAM" "$MARKER_BEGIN" "$MARKER_END" <<'PY'
+STALE_FILES=()
+for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+  if [ -d "$dir" ]; then
+    while IFS= read -r stale; do
+      if [ "$stale" != "$CONF" ]; then
+        STALE_FILES+=("$stale")
+        cp "$stale" "${stale}.bak.$(date +%Y%m%d%H%M%S)"
+      fi
+    done < <(grep -RslF "$MARKER_BEGIN" "$dir" 2>/dev/null || true)
+  fi
+done
+
+python3 - "$CONF" "$UPSTREAM" "$MARKER_BEGIN" "$MARKER_END" "${STALE_FILES[@]}" <<'PY'
 from pathlib import Path
 import sys
 
@@ -49,6 +71,7 @@ conf_path = Path(sys.argv[1])
 upstream = sys.argv[2]
 marker_begin = sys.argv[3]
 marker_end = sys.argv[4]
+stale_paths = [Path(value) for value in sys.argv[5:]]
 
 route = f"""
     {marker_begin}
@@ -83,11 +106,26 @@ else:
     text = text[:insert_at] + "\n" + route.rstrip("\n") + text[insert_at:]
 
 conf_path.write_text(text, encoding="utf-8")
+
+for stale_path in stale_paths:
+    stale_text = stale_path.read_text(encoding="utf-8")
+    if marker_begin not in stale_text or marker_end not in stale_text:
+        continue
+    start = stale_text.index(marker_begin)
+    line_start = stale_text.rfind("\n", 0, start) + 1
+    end = stale_text.index(marker_end, start) + len(marker_end)
+    line_end = stale_text.find("\n", end)
+    if line_end == -1:
+        line_end = len(stale_text)
+    stale_path.write_text(stale_text[:line_start] + stale_text[line_end + 1 :], encoding="utf-8")
 PY
 
 if nginx -t; then
   nginx -s reload || systemctl reload nginx
   echo "Installed resume-tailor nginx route in $CONF"
+  for stale in "${STALE_FILES[@]}"; do
+    echo "Removed stale resume-tailor nginx route from $stale"
+  done
 else
   cp "$BACKUP" "$CONF"
   nginx -t || true
