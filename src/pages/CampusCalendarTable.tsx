@@ -84,7 +84,7 @@ export default function CampusCalendarTable() {
   };
 
   return (
-    <div className="pt-24 pb-8 min-h-screen bg-gray-50 flex flex-col">
+    <div className="zy-page-shell flex min-h-screen flex-col bg-white pb-10 pt-28">
       <SEO
         title="校招日历表 (Campus Hiring Table)"
         description="校招职位表格视图。筛选适合你的岗位，一键跳转投递。"
@@ -98,7 +98,7 @@ export default function CampusCalendarTable() {
             <span className="font-medium text-sm">返回卡片视图</span>
           </Link>
           <div className="h-4 w-px bg-gray-300 mx-4"></div>
-          <h1 className="text-xl font-bold text-gray-900">校招日历表</h1>
+          <h1 className="zy-page-title text-xl">校招日历表</h1>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col flex-1 overflow-hidden">

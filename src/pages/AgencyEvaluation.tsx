@@ -306,7 +306,7 @@ export default function AgencyEvaluation() {
   };
 
   return (
-    <main className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col relative">
+    <main className="zy-page-shell relative flex min-h-screen flex-col bg-white pb-16 pt-28">
       <SEO
         title="求职机构测评"
         description="查看留学生求职机构真实评价、评分、服务范围和用户反馈，支持多机构对比与评价提交。"
@@ -324,7 +324,7 @@ export default function AgencyEvaluation() {
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>真实评价 · 多维评分 · 机构对比</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black mb-4 tracking-tight">求职机构测评</h1>
+            <h1 className="zy-page-title mb-4 text-3xl md:text-4xl">求职机构测评</h1>
             <p className="text-gray-300 text-lg mb-8">
               基于后端机构库和用户评价，集中展示机构服务范围、评分、优劣势和真实反馈，帮助你在签约前把风险看清楚。
             </p>

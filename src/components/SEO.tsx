@@ -43,15 +43,22 @@ const SEO: React.FC<SEOProps> = ({
       {canonical && <link rel="canonical" href={canonical} />}
 
       <meta property="og:type" content={ogType} />
+      <meta property="og:site_name" content="职引" />
+      <meta property="og:locale" content="zh_CN" />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={finalDescription} />
       <meta property="og:image" content={ogImage} />
+      <meta property="og:image:secure_url" content={ogImage} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={`${fullTitle} 分享封面`} />
       {canonical && <meta property="og:url" content={canonical} />}
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={finalDescription} />
       <meta name="twitter:image" content={ogImage} />
+      <meta name="twitter:image:alt" content={`${fullTitle} 分享封面`} />
 
       {structuredData.map((item, index) => (
         <script key={index} type="application/ld+json">

@@ -1,56 +1,56 @@
 import React from 'react';
 import {
-  BookOpen,
   Bot,
   Briefcase,
+  Calendar,
   Compass,
   Edit3,
   FileText,
-  Globe,
-  Info,
+  Gauge,
   Rocket,
-  ShieldCheck,
+  Target,
 } from 'lucide-react';
 
 export const navCategories = [
   {
-    title: '找工作',
+    title: 'AI简历',
     sections: [
       {
-        title: '核心求职模块',
-        icon: <Briefcase className="w-5 h-5 text-primary" />,
+        title: '匹配与优化',
+        icon: <FileText className="w-5 h-5 text-primary" />,
         links: [
-          { name: '职位搜索', href: '/jobs', desc: '聚合全职、实习和 New Grad 机会，支持快速筛选', badge: 'HOT' },
-          { name: '求职地图', href: '/job-map', desc: '按地区查看岗位分布、机会密度和热门公司' },
+          { name: 'AI Resume Tailor', href: '/resume-tailor', desc: '上传简历 + 粘贴 JD，生成 ATS 分数和定制版简历', badge: 'HOT' },
+          { name: 'ATS评分', href: '/resume-tailor', desc: '查看当前匹配分、预计提升分和评分维度' },
+          { name: 'JD Analyzer', href: '/jd-analyzer', desc: '先拆解岗位类型、难度、隐藏要求和准备重点', badge: 'NEW' },
         ],
       },
       {
-        title: '信息与规划',
-        icon: <Compass className="w-5 h-5 text-primary" />,
+        title: '简历资产',
+        icon: <Target className="w-5 h-5 text-primary" />,
         links: [
-          { name: '薪资查询', href: '/salary-insights', desc: '按岗位、地区和经验查看薪资参考' },
-          { name: '校招日历', href: '/campus-calendar', desc: '追踪大厂秋招、春招、实习和网申节点', badge: 'NEW' },
+          { name: '我的简历', href: '/my-resume', desc: '管理简历版本，沉淀不同岗位的改写记录' },
+          { name: '网申助手', href: '/application-assistant', desc: '基于 JD 生成网申回答和岗位匹配建议' },
         ],
       },
     ],
   },
   {
-    title: '面试备考',
+    title: 'AI面试',
     sections: [
-      {
-        title: '经验与复盘',
-        icon: <Edit3 className="w-5 h-5 text-primary" />,
-        links: [
-          { name: '笔经面经', href: '/interview-prep', desc: '沉淀真实笔试、面试经验和高频题' },
-          { name: '大厂面经库', href: '/interview-experiences', desc: '按公司、岗位和轮次查看面试复盘', badge: 'NEW' },
-          { name: '机构测评', href: '/agency-evaluation', desc: '查看求职机构评价、风险提示和避坑建议' },
-        ],
-      },
       {
         title: '实战模拟',
         icon: <Bot className="w-5 h-5 text-primary" />,
         links: [
-          { name: 'AI 面试', href: '/ai-interview', desc: '按目标岗位生成模拟面试、追问和改进建议', badge: 'NEW' },
+          { name: '模拟面试', href: '/ai-interview', desc: '按目标岗位生成追问、评分和改进建议', badge: 'NEW' },
+          { name: 'STAR案例', href: '/interview-prep', desc: '整理行为面试案例和高频问题' },
+        ],
+      },
+      {
+        title: '复盘与题库',
+        icon: <Edit3 className="w-5 h-5 text-primary" />,
+        links: [
+          { name: '面试复盘', href: '/interview-experiences', desc: '按公司、岗位和轮次查看真实面试复盘' },
+          { name: '面试题库', href: '/interview-prep', desc: '沉淀笔试、技术面、行为面高频题' },
         ],
       },
     ],
@@ -59,64 +59,31 @@ export const navCategories = [
     title: '求职工具',
     sections: [
       {
-        title: '效率提升',
+        title: '投递与信息',
         icon: <Rocket className="w-5 h-5 text-primary" />,
         links: [
-          { name: '网申助手', href: '/application-assistant', desc: '根据 JD 生成网申回答、岗位匹配和投递建议' },
-          { name: '我的简历', href: '/my-resume', desc: '管理简历版本，按目标岗位优化表达', badge: 'HOT' },
+          { name: '投递追踪', href: '/application-tracker', desc: '管理岗位收藏、投递状态和下一步动作' },
+          { name: '职位搜索', href: '/jobs', desc: '聚合全职、实习和 New Grad 机会' },
+          { name: '查薪资', href: '/salary-insights', desc: '按岗位、地区和经验查看薪资参考' },
         ],
       },
       {
-        title: '职业规划',
-        icon: <Globe className="w-5 h-5 text-primary" />,
+        title: '规划与校招',
+        icon: <Compass className="w-5 h-5 text-primary" />,
         links: [
+          { name: '校招日历', href: '/campus-calendar', desc: '追踪秋招、春招、暑期实习和截止时间' },
           { name: '求职规划', href: '/career-planning', desc: '生成 3 / 6 / 12 个月求职路线图' },
+          { name: '求职地图', href: '/job-map', desc: '按地区查看岗位分布和机会密度' },
         ],
       },
     ],
   },
-  {
-    title: '资源中心',
-    sections: [
-      {
-        title: '内容与资讯',
-        icon: <BookOpen className="w-5 h-5 text-primary" />,
-        links: [
-          { name: '求职干货博客', href: '/blog', desc: '系统化整理简历、投递和面试方法' },
-          { name: '求职资讯', href: '/news', desc: '关注雇主动态、招聘趋势和行业变化' },
-          { name: '大厂面经库', href: '/interview-experiences', desc: '按公司和岗位查看面经复盘' },
-        ],
-      },
-      {
-        title: '政策与帮助',
-        icon: <ShieldCheck className="w-5 h-5 text-primary" />,
-        links: [
-          { name: '签证政策解读', href: '/visa-policies', desc: '梳理 OPT、CPT、H-1B 等常见问题' },
-          { name: '帮助中心', href: '/help-center', desc: '查看产品使用、账号和服务说明' },
-        ],
-      },
-    ],
-  },
-  {
-    title: '关于我们',
-    sections: [
-      {
-        title: '了解平台',
-        icon: <Info className="w-5 h-5 text-primary" />,
-        links: [
-          { name: '团队介绍', href: '/team', desc: '了解职引团队和产品理念' },
-          { name: '联系我们', href: '/contact', desc: '提交商务合作、求职咨询和产品反馈' },
-        ],
-      },
-      {
-        title: '服务说明',
-        icon: <FileText className="w-5 h-5 text-primary" />,
-        links: [
-          { name: '隐私政策', href: '/privacy', desc: '了解个人信息收集、使用和保护方式' },
-          { name: '服务条款', href: '/terms', desc: '查看账号、内容和服务使用规则' },
-          { name: '会员权益', href: '/membership', desc: '解锁高级求职工具和会员服务', badge: 'PRO' },
-        ],
-      },
-    ],
-  },
+];
+
+export const directNavLinks = [
+  { name: '首页', href: '/' },
+  { name: '校招日历', href: '/campus-calendar', icon: Calendar },
+  { name: '岗位资讯', href: '/news', icon: Briefcase },
+  { name: '面经题库', href: '/interview-experiences', icon: Gauge },
+  { name: '会员', href: '/membership' },
 ];

@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 .tmp-backend/
+data/resume-tailor-records.json
+data/application-records.json

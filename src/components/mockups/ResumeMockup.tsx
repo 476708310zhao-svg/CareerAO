@@ -118,7 +118,7 @@ const ResumeMockup = () => (
       >
         {/* Resume Header */}
         <div className="text-center mb-3 shrink-0">
-          <h1 className="text-lg font-serif font-bold text-slate-900 tracking-tight">ALEX CHEN</h1>
+          <div className="text-lg font-serif font-bold text-slate-900 tracking-tight">ALEX CHEN</div>
           <div className="text-[8px] text-slate-500 mt-1 flex justify-center space-x-1.5">
             <span>alex.chen@email.com</span>
             <span>•</span>

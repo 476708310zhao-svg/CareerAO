@@ -249,7 +249,7 @@ export default function JobMap() {
   );
 
   return (
-    <main className="min-h-screen pt-24 pb-12 bg-gray-50 flex flex-col relative">
+    <main className="zy-page-shell relative flex min-h-screen flex-col bg-white pb-16 pt-28">
       <SEO
         title="求职地图"
         description="用地图查看热门城市职位分布、招聘公司、职位来源和薪资参考，帮助留学生规划投递城市。"
@@ -258,7 +258,7 @@ export default function JobMap() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col">
         <section className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-deep mb-2">求职地图</h1>
+            <h1 className="zy-page-title mb-2 text-3xl">求职地图</h1>
             <p className="text-gray-500">聚合真实职位源，按城市查看岗位密度、热门公司和投递入口。</p>
           </div>
           <div className="grid grid-cols-2 gap-3">

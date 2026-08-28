@@ -123,7 +123,7 @@ export default function ApplicationAssistant() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
       <SEO
         title="网申助手"
         description="职引网申助手帮助留学生解析 JD、生成开放题回答、提炼岗位关键词，并给出简历和投递优化建议。"
@@ -135,7 +135,7 @@ export default function ApplicationAssistant() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-primary mb-2">Application Assistant</p>
-              <h1 className="text-3xl md:text-4xl font-black text-gray-900 flex items-center">
+              <h1 className="zy-page-title flex items-center text-3xl md:text-4xl">
                 <Sparkles className="w-8 h-8 text-primary mr-3" />
                 网申助手
               </h1>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   Bookmark,
@@ -129,6 +129,8 @@ function normalizePost(article: any, index: number): BlogPost {
 }
 
 export default function Blog() {
+  const [searchParams] = useSearchParams();
+  const focusedArticleId = searchParams.get('article');
   const [activeCategory, setActiveCategory] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<BlogPost[]>(fallbackPosts);
@@ -162,6 +164,15 @@ export default function Blog() {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  useEffect(() => {
+    if (isLoading || !focusedArticleId || !posts.some((post) => String(post.id) === focusedArticleId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(`article-${focusedArticleId}`)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedArticleId, isLoading, posts]);
 
   const filteredPosts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -209,7 +220,7 @@ export default function Blog() {
   const recommendedPosts = posts.filter((post) => post.recommended).slice(0, 5);
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
       <SEO
         title="求职干货博客"
         description="职引求职博客聚合简历优化、面试技巧、薪资谈判、签证身份和职场发展内容，帮助留学生系统准备求职。"
@@ -223,7 +234,7 @@ export default function Blog() {
               <BookOpen className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-gray-900">求职干货博客</h1>
+              <h1 className="zy-page-title text-3xl">求职干货博客</h1>
               <p className="text-gray-500 mt-1">系统整理简历、面试、投递、offer 和身份规划方法。</p>
             </div>
           </div>
@@ -283,7 +294,7 @@ export default function Blog() {
               </div>
             ) : filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
-                <article key={post.id} className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-primary/30 transition-all shadow-sm hover:shadow-md cursor-pointer group">
+                <article id={`article-${post.id}`} key={post.id} className={`bg-white rounded-2xl p-6 transition-all cursor-pointer group ${String(post.id) === focusedArticleId ? 'border-2 border-primary shadow-[0_16px_40px_-24px_rgba(0,82,204,0.55)] ring-4 ring-primary/10' : 'border border-gray-100 hover:border-primary/30 shadow-sm hover:shadow-md'}`}>
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="relative w-full md:w-1/3 aspect-video md:h-40 rounded-xl overflow-hidden shrink-0">
                       <img src={post.imageUrl} alt={post.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

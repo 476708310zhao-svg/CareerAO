@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   Bookmark,
@@ -46,6 +46,9 @@ interface Job {
   postedAt?: string;
   viewCount?: number;
   applyCount?: number;
+  updatedAt?: string;
+  verifiedAt?: string;
+  source?: string;
   sourceLabel?: string;
 }
 
@@ -73,22 +76,59 @@ function sourceText(source?: string) {
   return source;
 }
 
+function validFilter(value: string | null, options: string[]) {
+  return value && options.includes(value) ? value : '全部';
+}
+
+function jobSourceLabel(job: Job, listSource: string) {
+  return job.sourceLabel || sourceText(job.source) || sourceText(listSource) || '职位源站';
+}
+
+function visaLabels(job: Job) {
+  const text = `${job.title} ${(job.requirements || []).join(' ')}`.toLowerCase();
+  const labels: string[] = [];
+  if (job.visaSponsored) labels.push('支持 Sponsorship');
+  if (/\bh-?1b\b/.test(text)) labels.push('H-1B');
+  if (/\bopt\b/.test(text)) labels.push('OPT');
+  if (/\bcpt\b/.test(text)) labels.push('CPT');
+  return [...new Set(labels)].slice(0, 2);
+}
+
 const Jobs = () => {
   const isPrerender = isReactSnapPrerender();
   const [isClientReady, setIsClientReady] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [inputValue, setInputValue] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchQuery = (searchParams.get('keyword') || '').trim();
+  const [inputValue, setInputValue] = useState(searchQuery);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
   const [totalPages, setTotalPages] = useState(1);
   const [dataSource, setDataSource] = useState('');
-  const [filters, setFilters] = useState({ region: '全部', industry: '全部', type: '全部' });
+  const filters = useMemo(() => ({
+    region: validFilter(searchParams.get('region'), FILTER_OPTIONS.regions),
+    industry: validFilter(searchParams.get('industry'), FILTER_OPTIONS.industries),
+    type: validFilter(searchParams.get('jobType'), FILTER_OPTIONS.types),
+  }), [searchParams]);
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  const updateSearch = useCallback((updates: Record<string, string | null>, resetPage = true) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value || value === '全部') next.delete(key);
+      else next.set(key, value);
+    });
+    if (resetPage) next.delete('page');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
+  const updatePage = useCallback((nextPage: number) => {
+    updateSearch({ page: nextPage > 1 ? String(nextPage) : null }, false);
+  }, [updateSearch]);
 
   const applyCuratedFallback = useCallback((message: string) => {
     const filtered = filterCuratedJobs({
@@ -101,13 +141,13 @@ const Jobs = () => {
     const safePage = Math.min(page, nextTotalPages);
     const start = (safePage - 1) * PAGE_SIZE;
 
-    if (safePage !== page) setPage(safePage);
+    if (safePage !== page) updatePage(safePage);
     setJobs(filtered.slice(start, start + PAGE_SIZE));
     setTotal(filtered.length);
     setTotalPages(nextTotalPages);
     setDataSource('client_fallback');
     setErrorMessage(filtered.length ? '' : message);
-  }, [page, searchQuery, filters]);
+  }, [page, searchQuery, filters, updatePage]);
 
   const fetchJobs = useCallback(async () => {
     if (isPrerender || !isClientReady) {
@@ -156,8 +196,8 @@ const Jobs = () => {
   }, [fetchJobs, isClientReady]);
 
   useEffect(() => {
-    setPage(1);
-  }, [searchQuery, filters]);
+    setInputValue(searchQuery);
+  }, [searchQuery]);
 
   const activeFilters = useMemo(
     () => [searchQuery, filters.region, filters.industry, filters.type].filter((item) => item && item !== '全部'),
@@ -169,14 +209,12 @@ const Jobs = () => {
   const submitSearch = () => {
     const nextValue = (searchInputRef.current?.value ?? inputValue).trim();
     setInputValue(nextValue);
-    setSearchQuery(nextValue);
+    updateSearch({ keyword: nextValue || null });
   };
 
   const resetFilters = () => {
     setInputValue('');
-    setSearchQuery('');
-    setFilters({ region: '全部', industry: '全部', type: '全部' });
-    setPage(1);
+    setSearchParams(new URLSearchParams());
   };
 
   const visiblePages = () => {
@@ -208,13 +246,13 @@ const Jobs = () => {
           description: '面向留学生的职位搜索与岗位筛选页面。',
         }}
       />
-      <main className="min-h-screen bg-gray-50 pt-24 pb-12">
+      <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <section className="mb-8">
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
               <div>
                 <p className="text-sm font-semibold text-primary mb-2">Job Search</p>
-                <h1 className="text-3xl md:text-4xl font-black text-deep">职位搜索</h1>
+                <h1 className="zy-page-title text-3xl md:text-4xl">职位搜索</h1>
                 <p className="text-gray-500 mt-3 max-w-2xl">
                   按地区、行业和岗位类型筛选机会，优先找到更适合留学生投递的职位。
                 </p>
@@ -265,7 +303,7 @@ const Jobs = () => {
                       {FILTER_OPTIONS.types.map((option) => (
                         <button
                           key={option}
-                          onClick={() => setFilters((current) => ({ ...current, type: option }))}
+                          onClick={() => updateSearch({ jobType: option })}
                           className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                             filters.type === option
                               ? 'bg-primary/10 text-primary font-medium border border-primary/20'
@@ -281,7 +319,7 @@ const Jobs = () => {
                     <span className="text-sm font-medium text-gray-900">地区</span>
                     <select
                       value={filters.region}
-                      onChange={(event) => setFilters((current) => ({ ...current, region: event.target.value }))}
+                      onChange={(event) => updateSearch({ region: event.target.value })}
                       className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
                     >
                       {FILTER_OPTIONS.regions.map((option) => (
@@ -293,7 +331,7 @@ const Jobs = () => {
                     <span className="text-sm font-medium text-gray-900">行业</span>
                     <select
                       value={filters.industry}
-                      onChange={(event) => setFilters((current) => ({ ...current, industry: event.target.value }))}
+                      onChange={(event) => updateSearch({ industry: event.target.value })}
                       className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
                     >
                       {FILTER_OPTIONS.industries.map((option) => (
@@ -392,15 +430,18 @@ const Jobs = () => {
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              {job.sourceLabel && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-semibold">{job.sourceLabel}</span>}
                               {job.jobType && <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">{job.jobType}</span>}
                               {job.industry && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">{job.industry}</span>}
-                              {job.visaSponsored && <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">签证友好</span>}
+                              {visaLabels(job).map((label) => <span key={label} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">{label}</span>)}
                               {(job.requirements || []).slice(0, 2).map((requirement) => (
                                 <span key={requirement} className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs">
                                   {requirement}
                                 </span>
                               ))}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 sm:hidden">
+                              <span>来源：{jobSourceLabel(job, dataSource)}</span>
+                              <span className="inline-flex items-center"><Clock className="mr-1 h-3 w-3" />核验 {formatDate(job.verifiedAt || job.updatedAt || job.postedAt)}</span>
                             </div>
                           </div>
                         </div>
@@ -419,8 +460,9 @@ const Jobs = () => {
                           >
                             {isFavorite(job.id) ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
                           </button>
-                          <span className="hidden sm:flex items-center text-xs text-gray-400">
-                            <Clock className="w-3 h-3 mr-1" />{formatDate(job.postedAt)}
+                          <span className="hidden max-w-44 text-right text-xs leading-5 text-gray-400 sm:block">
+                            <span className="block truncate">来源：{jobSourceLabel(job, dataSource)}</span>
+                            <span className="flex items-center justify-end"><Clock className="mr-1 h-3 w-3" />核验 {formatDate(job.verifiedAt || job.updatedAt || job.postedAt)}</span>
                           </span>
                         </div>
                       </div>
@@ -456,7 +498,7 @@ const Jobs = () => {
               {totalPages > 1 && (
                 <div className="mt-8 flex justify-center items-center space-x-2">
                   <button
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    onClick={() => updatePage(Math.max(1, page - 1))}
                     disabled={page === 1}
                     className="p-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="上一页"
@@ -469,7 +511,7 @@ const Jobs = () => {
                     ) : (
                       <button
                         key={item}
-                        onClick={() => setPage(item)}
+                        onClick={() => updatePage(item)}
                         className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                           page === item ? 'bg-primary text-white shadow-sm' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
@@ -479,7 +521,7 @@ const Jobs = () => {
                     ),
                   )}
                   <button
-                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                    onClick={() => updatePage(Math.min(totalPages, page + 1))}
                     disabled={page === totalPages}
                     className="p-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="下一页"

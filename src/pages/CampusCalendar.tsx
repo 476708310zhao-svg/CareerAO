@@ -13,7 +13,7 @@ import {
   MapPin,
   Search,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,6 +69,8 @@ const normalizeEvent = (event: any): CampusEvent => {
 };
 
 export default function CampusCalendar() {
+  const [searchParams] = useSearchParams();
+  const focusedEventId = searchParams.get('event');
   const { showToast } = useToast();
   const { isAuthenticated, openAuthModal } = useAuth();
   const { favorites: campusFavorites, isFavorite, toggleFavorite } = useCampusFavorites();
@@ -115,6 +117,15 @@ export default function CampusCalendar() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterRegion, filterType, filterRole, filterGradYear]);
+
+  useEffect(() => {
+    if (isLoading || !focusedEventId || !events.some((event) => String(event.id) === focusedEventId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(`campus-event-${focusedEventId}`)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [events, focusedEventId, isLoading]);
 
   const stats = useMemo(() => ({
     openCount: events.length,
@@ -172,7 +183,7 @@ export default function CampusCalendar() {
   };
 
   return (
-    <div className="pt-24 pb-16 min-h-screen bg-gray-50 flex flex-col">
+    <div className="zy-page-shell flex min-h-screen flex-col bg-white pb-16 pt-28">
       <SEO
         title="校招日历"
         description="全球名企校招动态实时追踪。网申开启、提前批、截止日期和官方申请入口一站查看。"
@@ -190,7 +201,7 @@ export default function CampusCalendar() {
                 <CalendarIcon className="w-4 h-4 text-orange-400" />
                 <span>实时追踪全球名企校招动态</span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">校招日历</h1>
+              <h1 className="zy-page-title mb-4 text-3xl md:text-4xl">校招日历</h1>
               <p className="text-gray-300 text-lg mb-6">
                 网申开启、提前批、截止日期和官方入口一站查看。筛选适合你的岗位，不错过关键投递窗口。
               </p>
@@ -258,7 +269,7 @@ export default function CampusCalendar() {
                 </div>
               ) : events.length ? (
                 events.map((event) => (
-                  <div key={event.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-5">
+                  <div id={`campus-event-${event.id}`} key={event.id} className={`bg-white rounded-2xl p-5 transition-shadow flex flex-col md:flex-row gap-5 ${String(event.id) === focusedEventId ? 'border-2 border-primary shadow-[0_16px_40px_-24px_rgba(0,82,204,0.55)] ring-4 ring-primary/10' : 'border border-gray-100 shadow-sm hover:shadow-md'}`}>
                     <div className="w-full md:w-32 bg-blue-50/50 rounded-xl flex flex-col items-center justify-center py-4 shrink-0 border border-blue-100/50">
                       <span className="text-xl font-bold text-blue-700 leading-none">{event.day}</span>
                       <span className={`text-[11px] font-bold mt-2 text-center w-full px-2 ${event.status === 'closing-soon' ? 'text-red-600 bg-red-100 py-1 rounded shadow-sm' : 'text-blue-500'}`}>

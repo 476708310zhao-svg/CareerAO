@@ -176,7 +176,7 @@ export default function JobNews() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
+    <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28 font-sans">
       <SEO
         title="求职资讯"
         description="聚合留学生求职资讯、行业动态、校招趋势、签证政策、简历面试干货和职场数据洞察。"
@@ -191,7 +191,7 @@ export default function JobNews() {
               <Newspaper className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-gray-900">求职资讯</h1>
+              <h1 className="zy-page-title text-3xl">求职资讯</h1>
               <p className="text-gray-500 mt-1">连接后端资讯源，持续追踪行业、校招、签证和求职方法。</p>
             </div>
           </div>

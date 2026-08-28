@@ -67,7 +67,7 @@ const CalendarMockup = () => (
     <div className="w-[70%] bg-slate-50 flex flex-col h-full overflow-hidden">
       <div className="p-3 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 shrink-0">
         <div>
-          <h1 className="text-sm font-bold text-slate-900">Upcoming Events (North America)</h1>
+          <div className="text-sm font-bold text-slate-900">Upcoming Events (North America)</div>
           <p className="text-[9px] text-slate-500 mt-0.5">Showing events for SWE New Grad roles.</p>
         </div>
         <button className="text-[9px] bg-orange-500 text-white px-2 py-1 rounded font-medium shadow-sm hover:bg-orange-600 transition-colors flex items-center">

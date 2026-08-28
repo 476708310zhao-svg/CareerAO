@@ -1,342 +1,119 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Bookmark, ChevronDown, FileText, LogOut, Menu, Search, User, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Bell, Bookmark, ChevronDown, FileText, LogOut, Menu, User, X } from 'lucide-react';
 
-import { navCategories } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { trackEvent } from '../../lib/analytics';
 import Logo from '../Logo';
 
-const isRouteActive = (pathname: string, href: string) => {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
+const toolGroups = [
+  { title: '准备', links: [{ label: '简历优化', href: '/resume-tailor' }, { label: '求职规划', href: '/career-planning' }, { label: '网申助手', href: '/application-assistant' }] },
+  { title: '面试', links: [{ label: 'AI 模拟面试', href: '/ai-interview' }, { label: '笔经面经', href: '/interview-experiences' }] },
+  { title: '决策', links: [{ label: '薪资查询', href: '/salary-insights' }, { label: '机构测评', href: '/agency-evaluation' }] },
+];
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [activeNavDropdown, setActiveNavDropdown] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+const resources = [
+  { label: '校招日历', description: '掌握申请开放与截止时间', href: '/campus-calendar' },
+  { label: '求职资讯', description: '近期校招与行业动态', href: '/news' },
+  { label: '求职攻略', description: '从投递到 Offer 的实用方法', href: '/blog' },
+  { label: '签证政策', description: '留学生身份与工作签证信息', href: '/visa-policies' },
+];
+
+const isRouteActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+export default function Navbar() {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'tools' | 'resources' | null>(null);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLDivElement>(null);
+  const navigationRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
   useEffect(() => {
-    setIsOpen(false);
-    setActiveNavDropdown(null);
+    setIsMobileOpen(false);
+    setOpenMenu(null);
+    setIsAccountOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setUnreadCount(0);
-      return;
-    }
+    if (!isMobileOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isMobileOpen]);
 
-    apiFetch('/api/proxy/messages/unread-count')
-      .then((response) => setUnreadCount(Number(response.data?.count) || 0))
-      .catch((error) => {
-        console.warn('Failed to load unread message count:', error);
-        setUnreadCount(0);
-      });
+  useEffect(() => {
+    if (!isAuthenticated) { setUnreadCount(0); return; }
+    apiFetch('/api/proxy/messages/unread-count').then((response) => setUnreadCount(Number(response.data?.count) || 0)).catch(() => setUnreadCount(0));
   }, [isAuthenticated, location.pathname]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setActiveNavDropdown(null);
-      }
+    const closeMenus = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (navigationRef.current && !navigationRef.current.contains(target)) setOpenMenu(null);
+      if (accountRef.current && !accountRef.current.contains(target)) setIsAccountOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', closeMenus);
+    return () => document.removeEventListener('mousedown', closeMenus);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    setIsDropdownOpen(false);
+  const handleLogout = async () => {
+    await logout();
+    setIsAccountOpen(false);
     showToast('已成功退出登录', 'success');
   };
 
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    const keyword = searchQuery.trim();
-    if (!keyword) return;
-    navigate(`/search?q=${encodeURIComponent(keyword)}`);
-    setSearchQuery('');
-  };
-
-  const accountMenu = (
+  const accountLinks = (
     <>
-      <Link to="/my-resume" onClick={() => setIsDropdownOpen(false)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-        <User className="w-4 h-4 mr-2" />
-        个人中心
-      </Link>
-      <Link to="/favorites" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-        <Bookmark className="w-4 h-4 mr-2" />
-        我的收藏
-      </Link>
-      <Link to="/messages" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-        <span className="flex items-center">
-          <Bell className="w-4 h-4 mr-2" />
-          消息中心
-        </span>
-        {unreadCount > 0 && (
-          <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </Link>
-      <Link to="/applications" onClick={() => setIsDropdownOpen(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-        <FileText className="w-4 h-4 mr-2" />
-        投递追踪
-      </Link>
+      <Link to="/my-resume" className="flex items-center rounded-lg px-3 py-2 text-sm text-[#606060] transition hover:bg-[#f7f7f5] hover:text-primary"><User className="mr-2 h-4 w-4" />个人中心</Link>
+      <Link to="/favorites" className="flex items-center rounded-lg px-3 py-2 text-sm text-[#606060] transition hover:bg-[#f7f7f5] hover:text-primary"><Bookmark className="mr-2 h-4 w-4" />我的收藏</Link>
+      <Link to="/messages" className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-[#606060] transition hover:bg-[#f7f7f5] hover:text-primary"><span className="flex items-center"><Bell className="mr-2 h-4 w-4" />消息中心</span>{unreadCount > 0 ? <span className="rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span> : null}</Link>
+      <Link to="/application-tracker" className="flex items-center rounded-lg px-3 py-2 text-sm text-[#606060] transition hover:bg-[#f7f7f5] hover:text-primary"><FileText className="mr-2 h-4 w-4" />投递追踪</Link>
     </>
   );
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2 shrink-0">
-            <Logo className="w-8 h-8" />
-            <span className="font-bold text-xl text-deep tracking-tight text-primary">职引</span>
-          </Link>
+    <nav onKeyDown={(event) => { if (event.key === 'Escape') { setOpenMenu(null); setIsAccountOpen(false); setIsMobileOpen(false); } }} className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.06] bg-white/95 backdrop-blur-lg" aria-label="主导航">
+      <div className="zy-container flex h-[72px] items-center justify-between">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="职引首页"><Logo className="h-8 w-8" /><span className="text-[18px] font-bold tracking-[-0.035em] text-[#111]">职引 Career</span></Link>
 
-          <div className="hidden lg:flex items-center space-x-8" ref={navRef}>
-            {navCategories.map((category) => {
-              const isActiveDropdown = activeNavDropdown === category.title;
-              const hasActiveLink = category.sections.some((section) =>
-                section.links.some((link) => isRouteActive(location.pathname, link.href)),
-              );
-
-              return (
-                <div
-                  key={category.title}
-                  className="static"
-                  onMouseEnter={() => setActiveNavDropdown(category.title)}
-                  onMouseLeave={() => setActiveNavDropdown(null)}
-                >
-                  <button
-                    onClick={() => setActiveNavDropdown(isActiveDropdown ? null : category.title)}
-                    className={`flex items-center space-x-1 transition-colors text-[15px] font-medium whitespace-nowrap py-5 relative ${
-                      hasActiveLink || isActiveDropdown ? 'text-primary' : 'text-gray-600 hover:text-primary'
-                    }`}
-                  >
-                    <span>{category.title}</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isActiveDropdown ? 'rotate-180' : ''}`} />
-                    {(hasActiveLink || isActiveDropdown) && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-sm" />
-                    )}
-                  </button>
-
-                  {isActiveDropdown && (
-                    <div className="absolute left-0 right-0 top-[64px] bg-white shadow-xl shadow-black/[0.03] border-t border-gray-100 pb-12 pt-10 z-40 animate-in slide-in-from-top-2 fade-in duration-200">
-                      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-start gap-x-16 gap-y-8">
-                          {category.sections.map((section) => (
-                            <div key={section.title} className="w-80">
-                              <div className="flex items-center space-x-2 text-primary font-bold text-[17px] mb-6 pb-4 border-b border-gray-100">
-                                {section.icon}
-                                <span>{section.title}</span>
-                              </div>
-                              <div className="flex flex-col space-y-6">
-                                {section.links.map((link) => {
-                                  const isLinkActive = isRouteActive(location.pathname, link.href);
-                                  return (
-                                    <Link key={link.href} to={link.href} className="group block">
-                                      <div className="flex items-center">
-                                        <span className={`font-bold text-base ${isLinkActive ? 'text-primary' : 'text-gray-900 group-hover:text-primary transition-colors'}`}>
-                                          {link.name}
-                                        </span>
-                                        {link.badge && (
-                                          <span
-                                            className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${
-                                              link.badge === 'HOT'
-                                                ? 'bg-red-50 text-red-500 border border-red-200/50'
-                                                : link.badge === 'PRO'
-                                                  ? 'bg-orange-50 text-orange-500 border border-orange-200/50'
-                                                  : 'bg-green-50 text-green-500 border border-green-200/50'
-                                            }`}
-                                          >
-                                            {link.badge}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="mt-1.5 text-sm text-gray-500 line-clamp-1 group-hover:text-gray-600 transition-colors">
-                                        {link.desc}
-                                      </p>
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        <div ref={navigationRef} className="hidden h-full items-center gap-8 lg:flex">
+          <Link to="/jobs" className={`text-sm font-semibold transition ${isRouteActive(location.pathname, '/jobs') ? 'text-primary' : 'text-[#606060] hover:text-[#111]'}`}>找工作</Link>
+          <div className="relative flex h-full items-center" onMouseEnter={() => setOpenMenu('tools')} onMouseLeave={() => setOpenMenu(null)}>
+            <button type="button" onClick={() => setOpenMenu((value) => value === 'tools' ? null : 'tools')} aria-expanded={openMenu === 'tools'} aria-controls="tools-menu" className={`flex h-full items-center gap-1 text-sm font-semibold transition ${toolGroups.some((group) => group.links.some((link) => isRouteActive(location.pathname, link.href))) ? 'text-primary' : 'text-[#606060] hover:text-[#111]'}`}>求职工具 <ChevronDown className={`h-3.5 w-3.5 transition ${openMenu === 'tools' ? 'rotate-180' : ''}`} /></button>
+            {openMenu === 'tools' ? <div id="tools-menu" className="absolute left-1/2 top-[68px] w-[620px] -translate-x-1/2 rounded-2xl border border-black/[0.08] bg-white p-5 shadow-[0_20px_60px_rgba(17,17,17,0.09)]"><div className="grid grid-cols-3 gap-5">{toolGroups.map((group) => <div key={group.title}><p className="mb-2 px-3 text-xs font-bold text-[#8a8a86]">{group.title}</p><div className="space-y-1">{group.links.map((link) => <Link key={link.href} to={link.href} className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] transition hover:bg-[#f7f7f5] hover:text-primary">{link.label}</Link>)}</div></div>)}</div></div> : null}
           </div>
-
-          <div className="hidden md:flex items-center space-x-4 shrink-0 pl-4">
-            <form onSubmit={handleSearch} className="relative hidden xl:block">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="搜索职位、公司..."
-                className="w-48 h-9 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-full text-sm focus:w-64 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </form>
-
-            {isAuthenticated && user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center space-x-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
-                    {user.nickname ? user.nickname.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">{user.nickname || 'User'}</span>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
-                    <div className="px-4 py-3 border-b border-gray-50">
-                      <p className="text-sm font-medium text-gray-900 truncate">{user.nickname}</p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{user.email || user.phone || '已登录'}</p>
-                    </div>
-                    <div className="py-1">{accountMenu}</div>
-                    <div className="py-1 border-t border-gray-50">
-                      <button onClick={handleLogout} className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                        <LogOut className="w-4 h-4 mr-2" />
-                        退出登录
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <button onClick={() => openAuthModal('login')} className="text-deep font-medium text-sm hover:text-primary transition-colors">
-                  登录
-                </button>
-                <button onClick={() => openAuthModal('register')} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">
-                  免费注册
-                </button>
-              </>
-            )}
+          <div className="relative flex h-full items-center" onMouseEnter={() => setOpenMenu('resources')} onMouseLeave={() => setOpenMenu(null)}>
+            <button type="button" onClick={() => setOpenMenu((value) => value === 'resources' ? null : 'resources')} aria-expanded={openMenu === 'resources'} aria-controls="resources-menu" className={`flex h-full items-center gap-1 text-sm font-semibold transition ${resources.some((link) => isRouteActive(location.pathname, link.href)) ? 'text-primary' : 'text-[#606060] hover:text-[#111]'}`}>资源 <ChevronDown className={`h-3.5 w-3.5 transition ${openMenu === 'resources' ? 'rotate-180' : ''}`} /></button>
+            {openMenu === 'resources' ? <div id="resources-menu" className="absolute left-1/2 top-[68px] w-[430px] -translate-x-1/2 rounded-2xl border border-black/[0.08] bg-white p-3 shadow-[0_20px_60px_rgba(17,17,17,0.09)]"><div className="grid grid-cols-2 gap-1">{resources.map((item) => <Link key={item.href} to={item.href} className="rounded-xl p-3 transition hover:bg-[#f7f7f5]"><span className="block text-sm font-bold text-[#111]">{item.label}</span><span className="mt-1 block text-xs leading-5 text-[#8a8a86]">{item.description}</span></Link>)}</div></div> : null}
           </div>
-
-          <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-600 hover:bg-gray-50" aria-label={isOpen ? '关闭导航' : '打开导航'}>
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
+
+        <div className="hidden items-center gap-2 md:flex">
+          {isAuthenticated && user ? (
+            <div ref={accountRef} className="relative">
+              <button type="button" onClick={() => setIsAccountOpen((open) => !open)} aria-expanded={isAccountOpen} className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[#606060] transition hover:bg-[#f7f7f5]"><span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-blue-50 text-primary">{user.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : <User className="h-4 w-4" />}</span><span className="max-w-24 truncate">{user.nickname}</span><ChevronDown className="h-3.5 w-3.5 text-[#8a8a86]" /></button>
+              {isAccountOpen ? <div className="absolute right-0 top-12 w-52 rounded-xl border border-black/[0.08] bg-white p-2 shadow-[0_16px_40px_rgba(17,17,17,0.1)]">{accountLinks}<div className="my-1 border-t border-black/[0.07]" /><button type="button" onClick={handleLogout} className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-red-600 transition hover:bg-red-50"><LogOut className="mr-2 h-4 w-4" />退出登录</button></div> : null}
+            </div>
+          ) : <><button type="button" onClick={() => { trackEvent('navbar_auth_click', { mode: 'login' }); openAuthModal('login'); }} className="zy-button h-10 min-h-10 bg-transparent px-4 text-[#606060] hover:bg-[#f5f6ff] hover:text-[#111]">登录</button><button type="button" onClick={() => { trackEvent('navbar_auth_click', { mode: 'register' }); openAuthModal('register', '/jobs'); }} className="zy-button zy-button-primary h-10 min-h-10 px-4">免费开始</button></>}
+        </div>
+
+        <button type="button" onClick={() => setIsMobileOpen((open) => !open)} aria-expanded={isMobileOpen} aria-controls="mobile-navigation" aria-label={isMobileOpen ? '关闭菜单' : '打开菜单'} className="flex h-10 w-10 items-center justify-center rounded-xl text-[#606060] transition hover:bg-[#f7f7f5] lg:hidden">{isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
       </div>
 
-      {isOpen && (
-        <div className="lg:hidden bg-white border-b border-gray-100 px-4 pt-4 pb-6 space-y-6 shadow-lg max-h-[80vh] overflow-y-auto">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="搜索职位、公司、面经..."
-              className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-16 text-sm outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
-            />
-            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white">
-              搜索
-            </button>
-          </form>
-
-          {navCategories.map((category) => (
-            <div key={category.title} className="space-y-3">
-              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-2">{category.title}</h3>
-              {category.sections.map((section) => (
-                <div key={section.title} className="space-y-1 mb-4 pl-2">
-                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{section.title}</h4>
-                  <div className="space-y-1">
-                    {section.links.map((link) => {
-                      const isLinkActive = isRouteActive(location.pathname, link.href);
-                      return (
-                        <Link key={link.href} to={link.href} className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${isLinkActive ? 'text-primary bg-primary/5' : 'text-gray-600 hover:text-primary hover:bg-gray-50'}`}>
-                          <div className="flex items-center">
-                            {link.name}
-                            {link.badge && (
-                              <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${link.badge === 'HOT' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                {link.badge}
-                              </span>
-                            )}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-
-          <div className="pt-4 border-t border-gray-100 flex flex-col space-y-3">
-            {isAuthenticated && user ? (
-              <>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg mb-2">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user.nickname}</p>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{user.email || user.phone || '已登录'}</p>
-                </div>
-                <Link to="/my-resume" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
-                  <User className="w-5 h-5 mr-3 text-gray-400" />
-                  个人中心
-                </Link>
-                <Link to="/favorites" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
-                  <Bookmark className="w-5 h-5 mr-3 text-gray-400" />
-                  我的收藏
-                </Link>
-                <Link to="/messages" className="w-full flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
-                  <span className="flex items-center">
-                    <Bell className="w-5 h-5 mr-3 text-gray-400" />
-                    消息中心
-                  </span>
-                  {unreadCount > 0 && (
-                    <span className="ml-2 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </Link>
-                <Link to="/applications" className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md font-medium">
-                  <FileText className="w-5 h-5 mr-3 text-gray-400" />
-                  投递追踪
-                </Link>
-                <button onClick={handleLogout} className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium">
-                  <LogOut className="w-5 h-5 mr-3 text-red-400" />
-                  退出登录
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => openAuthModal('login')} className="w-full text-center px-4 py-2 border border-gray-200 rounded-md text-deep font-medium bg-white">
-                  登录
-                </button>
-                <button onClick={() => openAuthModal('register')} className="w-full text-center px-4 py-2 rounded-md text-white font-medium bg-primary">
-                  免费注册
-                </button>
-              </>
-            )}
-          </div>
+      {isMobileOpen ? (
+        <div id="mobile-navigation" className="fixed inset-x-0 top-[72px] h-[calc(100dvh-72px)] overflow-y-auto border-t border-black/[0.06] bg-white px-5 py-6 lg:hidden">
+          <Link to="/jobs" className="block rounded-xl py-3 text-base font-bold text-[#111]">找工作</Link>
+          {toolGroups.map((group) => <div key={group.title} className="mt-6"><p className="text-xs font-bold text-[#8a8a86]">求职工具 · {group.title}</p><div className="mt-2 grid grid-cols-2 gap-1">{group.links.map((link) => <Link key={link.href} to={link.href} className="rounded-xl py-2.5 text-sm font-semibold text-[#606060]">{link.label}</Link>)}</div></div>)}
+          <div className="mt-6 border-t border-black/[0.07] pt-6"><p className="text-xs font-bold text-[#8a8a86]">资源</p><div className="mt-2 grid grid-cols-2 gap-1">{resources.map((link) => <Link key={link.href} to={link.href} className="rounded-xl py-2.5 text-sm font-semibold text-[#606060]">{link.label}</Link>)}</div></div>
+          <div className="mt-6 border-t border-black/[0.07] pt-6">{isAuthenticated && user ? <div className="space-y-1"><div className="mb-2 rounded-xl bg-[#f7f7f5] px-4 py-3"><p className="font-bold text-[#111]">{user.nickname}</p><p className="mt-0.5 truncate text-xs text-[#8a8a86]">{user.email || user.phone || '已登录'}</p></div>{accountLinks}<button type="button" onClick={handleLogout} className="flex w-full items-center rounded-xl px-3 py-3 font-bold text-red-600"><LogOut className="mr-3 h-4 w-4" />退出登录</button></div> : <div className="grid grid-cols-2 gap-3"><button type="button" onClick={() => openAuthModal('login')} className="zy-button zy-button-secondary">登录</button><button type="button" onClick={() => openAuthModal('register', '/jobs')} className="zy-button zy-button-primary">免费开始</button></div>}</div>
         </div>
-      )}
+      ) : null}
     </nav>
   );
-};
-
-export default Navbar;
+}

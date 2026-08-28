@@ -1,11 +1,12 @@
-import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Footer from './components/layout/Footer';
 import Navbar from './components/layout/Navbar';
 import { appRoutes } from './config/routes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { trackEvent } from './lib/analytics';
 
 const AuthModal = lazy(() => import('./components/AuthModal'));
 const FloatingConsultation = lazy(() => import('./components/FloatingConsultation'));
@@ -20,20 +21,31 @@ const RouteLoading = () => (
 );
 
 function AppLayout() {
-  const { isAuthModalOpen, closeAuthModal, authMode } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, authMode, authCompletionKey, consumeAuthRedirect } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authCompletionKey) return;
+    const redirect = consumeAuthRedirect();
+    trackEvent('auth_success', { mode: authMode, redirect: redirect?.split('?')[0] || 'none' });
+    if (redirect) navigate(redirect, { replace: true });
+  }, [authCompletionKey, authMode, consumeAuthRedirect, navigate]);
 
   return (
     <>
       <ScrollToTop />
+      <a href="#app-content" className="skip-link">跳到主要内容</a>
       <div className="min-h-screen bg-white font-sans text-deep selection:bg-primary/20 selection:text-primary overflow-x-hidden">
         <Navbar />
-        <Suspense fallback={<RouteLoading />}>
-          <Routes>
-            {appRoutes.map((route) => (
-              <Route key={route.path} path={route.path} element={route.element} />
-            ))}
-          </Routes>
-        </Suspense>
+        <div id="app-content" tabIndex={-1}>
+          <Suspense fallback={<RouteLoading />}>
+            <Routes>
+              {appRoutes.map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
+            </Routes>
+          </Suspense>
+        </div>
         <Footer />
       </div>
       

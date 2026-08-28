@@ -180,7 +180,7 @@ export default function VisaPolicies() {
   }, [activeCountry, policies, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12 font-sans">
+    <div className="zy-page-shell min-h-screen bg-white pb-16 pt-28 font-sans">
       <SEO
         title="签证政策解读"
         description="整理 OPT、H-1B、Graduate Route、PGWP、485 等留学生求职常见签证政策、申请材料、时间节点和官方资源。"
@@ -194,7 +194,7 @@ export default function VisaPolicies() {
               <Globe className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">签证政策解读</h1>
+              <h1 className="zy-page-title text-3xl">签证政策解读</h1>
               <p className="text-gray-500 mt-1">从后端政策接口读取常见工作签证清单，并保留官方核验入口。</p>
               <p className="text-xs text-gray-400 mt-1">{policies.length} 条政策 · {dataSource}</p>
             </div>

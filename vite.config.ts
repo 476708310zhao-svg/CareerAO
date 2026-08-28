@@ -5,6 +5,9 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const hmrEnabled = env.DISABLE_HMR !== 'true';
+  const hmrPort = Number(env.VITE_HMR_PORT || 24679);
+
   return {
     plugins: [react(), tailwindcss()],
     define: {
@@ -18,9 +21,10 @@ export default defineConfig(({ mode }) => {
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // File watching stays enabled locally unless the host disables HMR.
-      hmr: process.env.DISABLE_HMR !== 'true',
+      hmr: hmrEnabled ? { port: Number.isFinite(hmrPort) ? hmrPort : 24679 } : false,
     },
     build: {
+      target: 'es2019',
       rollupOptions: {
         output: {
           manualChunks(id) {

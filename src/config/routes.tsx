@@ -7,6 +7,8 @@ const AIInterview = lazy(() => import('../pages/AIInterview'));
 const SalaryInsights = lazy(() => import('../pages/SalaryInsights'));
 const MyResume = lazy(() => import('../pages/MyResume'));
 const ResumeEditor = lazy(() => import('../pages/ResumeEditor'));
+const ResumeTailor = lazy(() => import('../pages/ResumeTailor'));
+const JDAnalyzer = lazy(() => import('../pages/JDAnalyzer'));
 const JobDetail = lazy(() => import('../pages/JobDetail'));
 const CareerPlanning = lazy(() => import('../pages/CareerPlanning'));
 const AgencyEvaluation = lazy(() => import('../pages/AgencyEvaluation'));
@@ -44,6 +46,8 @@ export const appRoutes = [
   { path: '/salary-insights', element: <SalaryInsights /> },
   { path: '/my-resume', element: <MyResume /> },
   { path: '/my-resume/:id', element: <ResumeEditor /> },
+  { path: '/resume-tailor', element: <ResumeTailor /> },
+  { path: '/jd-analyzer', element: <JDAnalyzer /> },
   { path: '/career-planning', element: <CareerPlanning /> },
   { path: '/agency-evaluation', element: <AgencyEvaluation /> },
   { path: '/campus-calendar', element: <CampusCalendar /> },
@@ -51,6 +55,7 @@ export const appRoutes = [
   { path: '/membership', element: <Membership /> },
   { path: '/favorites', element: <Favorites /> },
   { path: '/messages', element: <Messages /> },
+  { path: '/application-tracker', element: <Applications /> },
   { path: '/applications', element: <Applications /> },
   { path: '/blog', element: <Blog /> },
   { path: '/news', element: <JobNews /> },

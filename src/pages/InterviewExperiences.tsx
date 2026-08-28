@@ -15,7 +15,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
@@ -90,6 +90,8 @@ const mapExperience = (item: any): Experience => ({
 
 export default function InterviewExperiences() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focusedExperienceId = searchParams.get('experience');
   const { showToast } = useToast();
   const [posts, setPosts] = useState<Experience[]>(fallbackExperiences);
   const [likedPosts, setLikedPosts] = useState<Set<Experience['id']>>(new Set());
@@ -150,6 +152,15 @@ export default function InterviewExperiences() {
       return matchesFilters && matchesSearch;
     });
   }, [activeCompany, activeRole, activeRound, posts, searchQuery]);
+
+  useEffect(() => {
+    if (isLoading || !focusedExperienceId || !posts.some((post) => String(post.id) === focusedExperienceId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(`experience-${focusedExperienceId}`)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedExperienceId, isLoading, posts]);
 
   const hasActiveFilters =
     activeCompany !== '全部' ||
@@ -243,7 +254,7 @@ export default function InterviewExperiences() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
       <SEO
         title="笔经面经"
         description="查看和分享真实面试经验，按公司、岗位和轮次筛选，帮助留学生准备技术面、行为面、Case 和 HR 面。"
@@ -257,7 +268,7 @@ export default function InterviewExperiences() {
               <Building2 className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-gray-900">大厂面经库</h1>
+              <h1 className="zy-page-title text-3xl">大厂面经库</h1>
               <p className="text-gray-500 mt-1">按公司、岗位和轮次筛选真实经验，快速摸清面试重点。</p>
               <p className="text-xs text-gray-400 mt-1">{posts.length} 条面经 · {dataSource}</p>
             </div>
@@ -343,7 +354,7 @@ export default function InterviewExperiences() {
             ) : filteredPosts.length > 0 ? (
               <div className="space-y-4">
                 {filteredPosts.map((post) => (
-                  <article key={post.id} className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 transition-all shadow-sm">
+                  <article id={`experience-${post.id}`} key={post.id} className={`bg-white rounded-2xl p-6 transition-all ${String(post.id) === focusedExperienceId ? 'border-2 border-blue-600 shadow-[0_16px_40px_-24px_rgba(37,99,235,0.55)] ring-4 ring-blue-100' : 'border border-gray-100 hover:border-blue-200 shadow-sm'}`}>
                     <div className="flex justify-between items-start mb-3 gap-4">
                       <h2 className="text-xl font-bold text-gray-900 leading-tight">{post.title}</h2>
                       <span className="text-sm text-gray-400 whitespace-nowrap flex items-center">

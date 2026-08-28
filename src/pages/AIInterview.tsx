@@ -169,12 +169,12 @@ export default function AIInterview() {
 
   if (isInterviewEnded) {
     return (
-      <main className="pt-24 pb-16 min-h-screen bg-gray-50">
+      <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
         <SEO title="AI 面试报告" canonical="https://www.zhiyincareer.com/ai-interview" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-black text-gray-900 mb-2">模拟面试已结束</h1>
+            <h1 className="zy-page-title mb-2 text-3xl">模拟面试已结束</h1>
             <p className="text-gray-500">{selectedCompany} · {selectedRole} · {activeType.name}</p>
           </div>
           <div className="grid lg:grid-cols-3 gap-6">

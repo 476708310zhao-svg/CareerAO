@@ -167,7 +167,11 @@ export default function FeatureShowcase() {
             {renderTabList(0, 4, activeIdx1, setActiveIdx1)}
           </div>
           <div className="w-full lg:w-7/12">
-            <div className="h-[550px] w-full rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex relative">
+            <div
+              className="h-[550px] w-full rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex relative pointer-events-none select-none"
+              aria-hidden="true"
+              inert
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeIdx1}
@@ -194,7 +198,11 @@ export default function FeatureShowcase() {
             {renderTabList(4, 8, activeIdx2, setActiveIdx2)}
           </div>
           <div className="w-full lg:w-7/12">
-            <div className="h-[550px] w-full rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex relative">
+            <div
+              className="h-[550px] w-full rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex relative pointer-events-none select-none"
+              aria-hidden="true"
+              inert
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeIdx2}

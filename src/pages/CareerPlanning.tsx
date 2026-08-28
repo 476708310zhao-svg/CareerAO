@@ -109,7 +109,7 @@ export default function CareerPlanning() {
   };
 
   return (
-    <main className="pt-24 pb-16 min-h-screen bg-gray-50">
+    <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
       <SEO
         title="AI 求职规划"
         description="输入目标岗位、准备周期和背景，职引为留学生生成求职路线图、技能差距分析和阶段任务清单。"
@@ -124,7 +124,7 @@ export default function CareerPlanning() {
                 <Compass className="w-4 h-4 text-primary" />
                 AI 求职路线图
               </div>
-              <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight">把求职目标拆成每周行动</h1>
+              <h1 className="zy-page-title mb-4 text-3xl md:text-5xl">把求职目标拆成每周行动</h1>
               <p className="text-gray-300 text-lg max-w-2xl">
                 根据目标岗位、准备周期和当前背景，生成技能差距、阶段任务和复盘重点，让求职不再靠临时焦虑推进。
               </p>

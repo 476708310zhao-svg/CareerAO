@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,8 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const { loginWithPassword, registerWithPassword } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
   const [agreed, setAgreed] = useState(false);
@@ -34,6 +36,43 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
       setShowPassword(false);
     }
   }, [defaultMode, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const frame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>('input, button, a[href]')?.focus();
+    });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href]'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen, onClose]);
 
   const ensureAgreement = () => {
     if (agreed) return true;
@@ -75,10 +114,15 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100]" />
+          <motion.div aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100]" />
 
           <div className="fixed inset-0 flex items-center justify-center z-[101] p-4 pointer-events-none">
             <motion.div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-dialog-title"
+              aria-describedby="auth-dialog-description"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -91,10 +135,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
 
               <div className="p-6 sm:p-8">
                 <div className="text-center mb-7">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  <h2 id="auth-dialog-title" className="text-2xl font-bold text-gray-900 mb-2">
                     {mode === 'login' ? '登录职引' : '创建职引账号'}
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p id="auth-dialog-description" className="text-sm text-gray-500">
                     登录后可保存简历、提交评价、同步反馈和使用更多求职工具
                   </p>
                 </div>
@@ -105,7 +149,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                 </div>
 
                 {apiError && (
-                  <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                  <div role="alert" className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
                     {apiError}
                   </div>
                 )}
@@ -180,6 +224,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                       agreed ? 'bg-primary border-primary text-white' : showAgreementError ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'
                     }`}
                     aria-label="同意用户协议"
+                    role="checkbox"
+                    aria-checked={agreed}
                   >
                     {agreed && <Check className="w-3 h-3" />}
                   </button>
@@ -191,7 +237,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
                   </div>
                 </div>
                 {showAgreementError && !agreed && (
-                  <p className="text-xs text-red-500 mt-1 ml-6">请先阅读并同意相关协议</p>
+                  <p role="alert" className="text-xs text-red-500 mt-1 ml-6">请先阅读并同意相关协议</p>
                 )}
               </div>
             </motion.div>

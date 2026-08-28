@@ -1,13 +1,194 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0052CC;
-  --color-primary-hover: #0043A6;
+  --color-primary: #5B6CFF;
+  --color-primary-hover: #4F5DE8;
   --color-deep: #172B4D;
   --color-success: #36B37E;
   --color-warning: #FF5630;
 }
 
+:root {
+  color-scheme: light;
+  --zy-bg: #ffffff;
+  --zy-surface: #f8f9ff;
+  --zy-surface-strong: #eef1ff;
+  --zy-text: #111111;
+  --zy-muted: #606060;
+  --zy-subtle: #8a8a86;
+  --zy-border: rgb(17 17 17 / 9%);
+  --zy-border-strong: rgb(17 17 17 / 16%);
+  --zy-brand: #5b6cff;
+  --zy-brand-hover: #4f5de8;
+  --zy-purple: #8b5cf6;
+  --zy-cyan: #22d3ee;
+  --zy-sky: #38bdf8;
+  --zy-pink: #f472b6;
+  --zy-orange: #fb923c;
+  --zy-green: #34d399;
+  --zy-radius-control: 12px;
+  --zy-radius-card: 22px;
+  --zy-shadow-card: 0 18px 50px rgb(17 17 17 / 6%);
+  --zy-container: 1240px;
+  --zy-section-space: clamp(4rem, 6vw, 6.5rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--zy-bg);
+  color: var(--zy-text);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.zy-container {
+  width: min(calc(100% - 2rem), var(--zy-container));
+  margin-inline: auto;
+}
+
+.zy-section {
+  padding-block: var(--zy-section-space);
+}
+
+.zy-card {
+  border: 1px solid var(--zy-border);
+  border-radius: var(--zy-radius-card);
+  background: var(--zy-bg);
+  box-shadow: var(--zy-shadow-card);
+}
+
+.zy-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--zy-radius-control);
+  padding-inline: 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.zy-button:hover {
+  transform: translateY(-1px);
+}
+
+.zy-button-primary {
+  background: linear-gradient(110deg, var(--zy-brand), var(--zy-purple));
+  color: white;
+  box-shadow: 0 10px 24px rgb(91 108 255 / 22%);
+}
+
+.zy-button-primary:hover {
+  background: linear-gradient(110deg, var(--zy-brand-hover), #7c4ee7);
+  box-shadow: 0 14px 28px rgb(91 108 255 / 28%);
+}
+
+.zy-button-secondary {
+  border: 1px solid var(--zy-border-strong);
+  background: white;
+  color: var(--zy-text);
+}
+
+.zy-button-secondary:hover {
+  border-color: var(--zy-text);
+  background: var(--zy-surface);
+}
+
+.zy-page-shell {
+  min-height: 100vh;
+  background: var(--zy-bg);
+  color: var(--zy-text);
+}
+
+.zy-page-title {
+  color: var(--zy-text);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.zy-gradient-text {
+  background: linear-gradient(100deg, #5b6cff 0%, #8b5cf6 55%, #b64ee5 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.zy-color-shadow {
+  box-shadow: 0 24px 70px rgb(91 108 255 / 12%), 0 18px 50px rgb(139 92 246 / 9%);
+}
+
 html {
   scroll-behavior: smooth;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 55%, white);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: 0.75rem;
+  z-index: 200;
+  transform: translateY(-160%);
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.65rem 1rem;
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+#app-content:focus-visible {
+  outline: none;
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--color-primary) 55%, white);
+}
+
+@supports (content-visibility: auto) {
+  /* 首页模块数量有限，保持真实高度，避免预留占位造成大片空白。 */
+  [data-home-section] {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .zy-container {
+    width: min(calc(100% - 3rem), var(--zy-container));
+  }
+}
+
+@media (min-width: 1024px) {
+  .zy-container {
+    width: min(calc(100% - 5rem), var(--zy-container));
+  }
 }

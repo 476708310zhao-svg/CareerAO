@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { apiFetch } from '../lib/api';
 
@@ -23,13 +23,23 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
   authMode: AuthMode;
-  openAuthModal: (mode?: AuthMode) => void;
+  authCompletionKey: number;
+  openAuthModal: (mode?: AuthMode, redirectTo?: string) => void;
   closeAuthModal: () => void;
+  consumeAuthRedirect: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_STORAGE_KEY = 'token';
 const USER_STORAGE_KEY = 'careerai_user';
+
+const getSafeRedirect = (redirectTo?: string) => {
+  const currentLocation = typeof window === 'undefined'
+    ? '/'
+    : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const candidate = redirectTo || currentLocation;
+  return candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : '/';
+};
 
 const getErrorMessage = (error: any, fallback: string) => {
   if (error?.message) return error.message;
@@ -71,6 +81,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+  const [authCompletionKey, setAuthCompletionKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -110,14 +122,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const openAuthModal = (mode: AuthMode = 'login') => {
+  const openAuthModal = useCallback((mode: AuthMode = 'login', redirectTo?: string) => {
     setAuthMode(mode);
+    setPendingRedirect(getSafeRedirect(redirectTo));
     setIsAuthModalOpen(true);
-  };
+  }, []);
 
-  const closeAuthModal = () => {
+  const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false);
-  };
+  }, []);
+
+  const consumeAuthRedirect = useCallback(() => {
+    const redirect = pendingRedirect;
+    setPendingRedirect(null);
+    return redirect;
+  }, [pendingRedirect]);
 
   const applyBackendSession = (response: any) => {
     const nextToken = response.data?.token;
@@ -130,6 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(nextToken);
     setUser(nextUser);
     closeAuthModal();
+    setAuthCompletionKey((key) => key + 1);
   };
 
   const loginWithPassword = async (account: string, password: string) => {
@@ -198,6 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setToken(firebaseToken);
       setUser(firebaseProfile);
       closeAuthModal();
+      setAuthCompletionKey((key) => key + 1);
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
       throw error;
@@ -209,6 +230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearSession();
       setToken(null);
       setUser(null);
+      setPendingRedirect(null);
       const { auth, signOut } = await loadFirebaseAuthModules();
       await signOut(auth).catch(() => undefined);
     } catch (error: any) {
@@ -227,8 +249,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated: !!token,
       isAuthModalOpen,
       authMode,
+      authCompletionKey,
       openAuthModal,
       closeAuthModal,
+      consumeAuthRedirect,
     }}>
       {children}
     </AuthContext.Provider>

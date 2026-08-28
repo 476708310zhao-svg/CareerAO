@@ -18,6 +18,7 @@ import {
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { findCuratedJob } from '../data/curatedJobs';
 import { apiFetch } from '../lib/api';
 import { useFavorites } from '../utils/favorites';
 
@@ -101,19 +102,31 @@ export default function JobDetail() {
       setIsLoading(true);
       setErrorMessage('');
 
+      const applyCuratedFallback = () => {
+        const fallbackJob = findCuratedJob(id);
+        if (!fallbackJob) return false;
+        setJob(normalizeJob(fallbackJob));
+        setErrorMessage('');
+        return true;
+      };
+
       try {
         const response = await apiFetch(`/api/proxy/jobs/${encodeURIComponent(id)}`);
         if (!cancelled && response.code === 0 && response.data) {
           setJob(normalizeJob(response.data));
         } else if (!cancelled) {
-          setJob(null);
-          setErrorMessage(response.message || '职位数据暂时不可用。');
+          if (!applyCuratedFallback()) {
+            setJob(null);
+            setErrorMessage(response.message || '职位数据暂时不可用。');
+          }
         }
       } catch (error) {
         console.error('Failed to fetch job:', error);
         if (!cancelled) {
-          setJob(null);
-          setErrorMessage('职位详情加载失败，请稍后重试。');
+          if (!applyCuratedFallback()) {
+            setJob(null);
+            setErrorMessage('职位详情加载失败，请稍后重试。');
+          }
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -198,18 +211,21 @@ export default function JobDetail() {
     }
   };
 
-  const trackApplicationAndOpen = async () => {
+  const trackApplicationAndOpen = async (event?: React.MouseEvent<HTMLAnchorElement>) => {
     if (!job?.applyUrl) {
+      event?.preventDefault();
       showToast('该职位暂未提供官网投递链接', 'info');
       return;
     }
 
     if (!isAuthenticated) {
+      event?.preventDefault();
       openAuthModal('login');
       showToast('请先登录，再记录投递进度。', 'info');
       return;
     }
 
+    event?.preventDefault();
     setIsApplying(true);
     try {
       await apiFetch('/api/proxy/applications', {
@@ -237,7 +253,7 @@ export default function JobDetail() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen pt-24 pb-16 bg-gray-50 flex items-center justify-center">
+      <main className="zy-page-shell flex min-h-screen items-center justify-center bg-white pb-16 pt-28">
         <div className="text-sm font-medium text-gray-500">职位详情加载中...</div>
       </main>
     );
@@ -245,7 +261,7 @@ export default function JobDetail() {
 
   if (!job) {
     return (
-      <main className="min-h-screen pt-24 pb-16 bg-gray-50 flex items-center justify-center px-4">
+      <main className="zy-page-shell flex min-h-screen items-center justify-center bg-white px-4 pb-16 pt-28">
         <div className="bg-white border border-gray-100 rounded-2xl p-8 text-center max-w-md">
           <Briefcase className="w-10 h-10 text-gray-300 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-gray-900 mb-2">职位不存在或已下线</h1>
@@ -271,7 +287,7 @@ export default function JobDetail() {
         canonical={`https://www.zhiyincareer.com/jobs/${job.id}`}
         jsonLd={jsonLd}
       />
-      <main className="pt-24 pb-16 min-h-screen bg-gray-50">
+      <main className="zy-page-shell min-h-screen bg-white pb-16 pt-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <button onClick={() => navigate(-1)} className="flex items-center text-gray-500 hover:text-primary transition-colors mb-6 font-medium">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -328,16 +344,23 @@ export default function JobDetail() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button
+                  <a
+                    href={job.applyUrl || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={trackApplicationAndOpen}
-                    disabled={!job.applyUrl || isApplying}
+                    aria-disabled={!job.applyUrl || isApplying}
                     className={`flex-1 py-3 rounded-xl font-bold transition-colors shadow-sm flex items-center justify-center ${
-                      job.applyUrl ? 'bg-primary hover:bg-primary-hover text-white disabled:bg-primary/60' : 'bg-gray-100 text-gray-400'
+                      job.applyUrl
+                        ? isApplying
+                          ? 'bg-primary/60 text-white pointer-events-none'
+                          : 'bg-primary hover:bg-primary-hover text-white'
+                        : 'bg-gray-100 text-gray-400 pointer-events-none'
                     }`}
                   >
                     {isApplying ? '正在记录投递...' : job.applyUrl ? '记录投递并打开官网' : '暂无官网投递链接'}
                     <ExternalLink className="w-4 h-4 ml-2 opacity-80" />
-                  </button>
+                  </a>
                   <button onClick={startInterview} className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
                     <Bot className="w-5 h-5 mr-2" />
                     用此 JD 模拟面试
