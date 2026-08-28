@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "start": "node server.ts",
+    "start": "tsx server.ts",
     "build": "vite build",
     "prerender": "react-snap",
     "preview": "vite preview",
@@ -57,6 +57,8 @@
   "dependencies": {
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@types/multer": "^2.2.0",
+    "@types/pdf-parse": "^1.1.5",
     "@vitejs/plugin-react": "^5.0.4",
     "d3-geo": "^3.1.1",
     "docx": "^9.7.1",

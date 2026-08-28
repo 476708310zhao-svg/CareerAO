@@ -14,6 +14,17 @@ import PlanningMockup from './mockups/PlanningMockup';
 import AgencyMockup from './mockups/AgencyMockup';
 import CalendarMockup from './mockups/CalendarMockup';
 
+const colorMap: Record<string, { activeBg: string; activeText: string; check: string }> = {
+  blue:    { activeBg: 'bg-blue-100',    activeText: 'text-blue-600',    check: 'text-blue-500' },
+  indigo:  { activeBg: 'bg-indigo-100',  activeText: 'text-indigo-600',  check: 'text-indigo-500' },
+  purple:  { activeBg: 'bg-purple-100',  activeText: 'text-purple-600',  check: 'text-purple-500' },
+  emerald: { activeBg: 'bg-emerald-100', activeText: 'text-emerald-600', check: 'text-emerald-500' },
+  amber:   { activeBg: 'bg-amber-100',   activeText: 'text-amber-600',   check: 'text-amber-500' },
+  rose:    { activeBg: 'bg-rose-100',    activeText: 'text-rose-600',    check: 'text-rose-500' },
+  cyan:    { activeBg: 'bg-cyan-100',    activeText: 'text-cyan-600',    check: 'text-cyan-500' },
+  orange:  { activeBg: 'bg-orange-100',  activeText: 'text-orange-600',  check: 'text-orange-500' },
+};
+
 const featuresData = [
   {
     id: 'application',
@@ -97,19 +108,20 @@ export default function FeatureShowcase() {
     return featuresData.slice(startIndex, endIndex).map((feature, i) => {
       const actualIdx = startIndex + i;
       const isActive = activeIdx === actualIdx;
+      const colors = colorMap[feature.color];
       return (
-        <div 
+        <div
           key={feature.id}
           onClick={() => setActiveIdx(actualIdx)}
           className={`p-5 rounded-2xl cursor-pointer transition-all duration-300 border ${
-            isActive 
-              ? 'bg-white shadow-xl border-gray-200 ring-1 ring-gray-900/5' 
+            isActive
+              ? 'bg-white shadow-xl border-gray-200 ring-1 ring-gray-900/5'
               : 'bg-gray-50/50 border-transparent hover:bg-gray-100'
           }`}
         >
           <div className="flex items-center space-x-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-              isActive ? `bg-${feature.color}-100 text-${feature.color}-600` : 'bg-white text-gray-400 shadow-sm'
+              isActive ? `${colors.activeBg} ${colors.activeText}` : 'bg-white text-gray-400 shadow-sm'
             }`}>
               {feature.icon}
             </div>
@@ -135,7 +147,7 @@ export default function FeatureShowcase() {
                   <ul className="space-y-2.5">
                     {feature.bullets.map((bullet, idx) => (
                       <li key={idx} className="flex items-start text-sm text-gray-600">
-                        <CheckCircle2 className={`w-4 h-4 text-${feature.color}-500 mr-2 shrink-0 mt-0.5`} />
+                        <CheckCircle2 className={`w-4 h-4 ${colors.check} mr-2 shrink-0 mt-0.5`} />
                         <span>{bullet}</span>
                       </li>
                     ))}

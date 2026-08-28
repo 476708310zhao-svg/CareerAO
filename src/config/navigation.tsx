@@ -65,6 +65,9 @@ export const navCategories = [
           { name: '投递追踪', href: '/application-tracker', desc: '管理岗位收藏、投递状态和下一步动作' },
           { name: '职位搜索', href: '/jobs', desc: '聚合全职、实习和 New Grad 机会' },
           { name: '查薪资', href: '/salary-insights', desc: '按岗位、地区和经验查看薪资参考' },
+          { name: 'AI 简历优化', href: '/resume-tailor', desc: '上传简历并根据目标 JD 生成 ATS 匹配报告', badge: 'NEW' },
+          { name: '网申助手', href: '/application-assistant', desc: '根据 JD 生成网申回答、岗位匹配和投递建议' },
+          { name: '我的简历', href: '/my-resume', desc: '管理简历版本，按目标岗位优化表达', badge: 'HOT' },
         ],
       },
       {
