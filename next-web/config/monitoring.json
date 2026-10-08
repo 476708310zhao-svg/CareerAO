@@ -1,0 +1,10 @@
+{
+  "errors": { "provider": "adapter_required", "sampleRate": 1, "redactFields": ["email", "phone", "id_number", "resume_content"] },
+  "alerts": [
+    { "name": "api_error_rate", "condition": "5xx_rate > 1% for 5m", "severity": "critical" },
+    { "name": "ai_timeout_rate", "condition": "ai_timeout_rate > 5% for 10m", "severity": "warning" },
+    { "name": "quota_deduction_failure", "condition": "quota_errors > 10 in 5m", "severity": "critical" },
+    { "name": "slow_query", "condition": "db_query_p95 > 500ms for 10m", "severity": "warning" }
+  ],
+  "channels": ["on_call_webhook", "operations_email"]
+}

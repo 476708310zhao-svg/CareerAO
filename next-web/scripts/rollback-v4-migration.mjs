@@ -1,0 +1,4 @@
+import fs from "node:fs";
+const input = process.argv[2]; const write = process.argv.includes("--write");
+if (!input || !fs.existsSync(input)) { console.log("Usage: npm run migrate:rollback -- <v4-migration-artifact.json> [--write]\nDry-run is the default."); process.exit(0); }
+const artifact = JSON.parse(fs.readFileSync(input, "utf8")); const rollback = { generatedAt: new Date().toISOString(), sourceVersion: artifact.version, deleteInOrder: { applicationIds: artifact.manifest?.applicationIds || [], resumeIds: artifact.manifest?.resumeIds || [], userMigrationMarkers: artifact.manifest?.userIds || [] }, safety: "Review IDs and take a database snapshot before execution" }; console.log(JSON.stringify({ dryRun: !write, counts: Object.fromEntries(Object.entries(rollback.deleteInOrder).map(([key, value]) => [key, value.length])) }, null, 2)); if (write) fs.writeFileSync(`v4-rollback-${Date.now()}.json`, JSON.stringify(rollback, null, 2));

@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Zhiyin Career V4 API
+  version: 4.0.0
+  description: Phase 1–4 development contract. Authentication and production persistence adapters are required before launch.
+servers:
+  - url: https://zhiyincareer.com/api
+paths:
+  /jobs:
+    get:
+      summary: List jobs
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: region, in: query, schema: { type: string } }
+      responses: { "200": { description: Job list } }
+  /jobs/{id}:
+    get:
+      summary: Get a job
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { "200": { description: Job }, "404": { description: Not found } }
+  /resumes/analyze:
+    post:
+      summary: Generate source-grounded resume suggestions
+      responses: { "200": { description: Suggestions with model and prompt audit fields } }
+  /application-materials/generate:
+    post:
+      summary: Generate application material from verified experience
+      responses: { "200": { description: Confirmable material draft } }
+  /tasks/reminders:
+    post:
+      summary: Schedule deduplicated WeChat subscription reminders
+      responses: { "200": { description: Reminder schedule } }
+  /ai/agents:
+    post:
+      summary: Run one of four redacted AI Career agents
+      responses: { "200": { description: Result or pending write confirmation } }
+  /quota:
+    get:
+      summary: Query plan quota
+      responses: { "200": { description: Limits and usage } }
+    post:
+      summary: Validate and deduct quota
+      responses: { "200": { description: Deduction accepted }, "429": { description: Quota exceeded } }

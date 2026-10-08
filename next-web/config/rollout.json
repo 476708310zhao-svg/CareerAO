@@ -1,0 +1,11 @@
+{
+  "feature": "zhiyin-v4",
+  "strategy": "stable-user-hash",
+  "stages": [
+    { "percentage": 5, "minimumHours": 24, "required": ["error_rate_below_1_percent", "p95_api_below_1500ms"] },
+    { "percentage": 20, "minimumHours": 24, "required": ["no_p0_incidents", "ai_timeout_below_5_percent"] },
+    { "percentage": 50, "minimumHours": 48, "required": ["retention_not_degraded", "conversion_not_degraded"] },
+    { "percentage": 100, "minimumHours": 0, "required": ["release_owner_approval"] }
+  ],
+  "rollback": { "automaticOnP0": true, "targetPercentage": 0 }
+}

@@ -1,0 +1,21 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, BriefcaseBusiness, CalendarDays, ExternalLink, Loader2, MapPin, ShieldCheck } from "lucide-react";
+import { ApiError, apiRequest, jsonBody } from "@/lib/api-client";
+import { useAuth } from "./auth-provider";
+
+type Job = { id: string; title: string; company: string; location?: string; region?: string; salary?: string; jobType?: string; industry?: string; description?: string; requirements?: string[]; tags?: string[]; postedAt?: string; deadline?: string; applyUrl?: string; sourceLabel?: string; dataMeta?: { freshnessLabel?: string; sourceLabel?: string; degraded?: boolean; fallbackReason?: string } };
+
+function plain(value = "") { return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); }
+
+export function JobDetailLive({ id }: { id: string }) {
+  const { token } = useAuth(); const [job, setJob] = useState<Job | null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
+  useEffect(() => { const controller = new AbortController(); apiRequest<Job>(`/api/jobs/${encodeURIComponent(id)}`, { signal: controller.signal }).then(setJob).catch(err => { if(!controller.signal.aborted)setError(err instanceof Error?err.message:"职位加载失败"); }).finally(()=>{if(!controller.signal.aborted)setLoading(false);}); return()=>controller.abort(); },[id]);
+  async function add() { if(!job)return; if(!token){window.location.href=`/login?next=${encodeURIComponent(`/jobs/${id}`)}`;return;} if(busy)return; setBusy(true);setError("");try{const app=await apiRequest<{id:number}>("/api/v4/applications",{method:"POST",body:jsonBody({jobId:String(job.id),status:"interested",jobSnapshot:job})});window.location.href=`/applications?open=${app.id}`;}catch(err){if(err instanceof ApiError&&err.status===409&&typeof err.data==="object"&&err.data&&"applicationId" in err.data)window.location.href=`/applications?open=${(err.data as {applicationId:number}).applicationId}`;else setError(err instanceof Error?err.message:"加入申请失败");}finally{setBusy(false);}}
+  if(loading)return <main className="zy-page"><div className="shell zy-state-card"><Loader2 className="spin"/>正在读取职位详情…</div></main>;
+  if(!job)return <main className="zy-page"><div className="shell zy-state-card"><p className="zy-alert">{error||"职位不存在或已下线。"}</p><Link className="zy-button zy-button-secondary" href="/jobs">返回职位列表</Link></div></main>;
+  const requirements=(job.requirements||job.tags||[]).filter(Boolean).slice(0,10);
+  return <main className="zy-job-detail"><section className="zy-job-detail-head"><div className="shell"><Link href="/jobs" className="zy-back"><ArrowLeft size={15}/>返回职位列表</Link><div className="zy-job-title-row"><span className="zy-job-logo">{(job.company||"职").slice(0,1)}</span><div><span className="zy-job-company">{job.company}</span><h1>{job.title}</h1><ul>{job.location&&<li><MapPin size={14}/>{job.location}</li>}{job.jobType&&<li><BriefcaseBusiness size={14}/>{job.jobType}</li>}{job.postedAt&&<li><CalendarDays size={14}/>{job.postedAt}</li>}</ul></div></div></div></section><div className="shell zy-job-detail-layout"><article className="zy-content-panel"><h2>职位介绍</h2><p>{plain(job.description)||"该职位暂未提供完整说明，请打开企业官网核对职责与任职要求。"}</p>{requirements.length>0&&<><h2>任职要求</h2><ul>{requirements.map(item=><li key={item}>{plain(item)}</li>)}</ul></>}<section className="zy-source-panel"><ShieldCheck size={19}/><div><b>信息来源与专业边界</b><p>{job.dataMeta?.sourceLabel||job.sourceLabel||"职位数据源已记录"}{job.dataMeta?.freshnessLabel?` · ${job.dataMeta.freshnessLabel}`:""}。岗位状态、截止日期与申请要求请以企业官网为准。</p></div></section></article><aside className="zy-apply-panel"><h2>准备推进这份申请</h2>{job.salary&&<p><b>薪资信息</b>{job.salary}</p>}{job.deadline&&<p><b>截止日期</b>{job.deadline}</p>}{job.industry&&<p><b>行业</b>{job.industry}</p>}{error&&<div className="zy-alert">{error}</div>}<button className="zy-button zy-button-primary" onClick={add} disabled={busy}>{busy?"正在加入…":"加入申请管线"}<ArrowRight size={14}/></button>{job.applyUrl&&<a className="zy-button zy-button-secondary" href={job.applyUrl} target="_blank" rel="noreferrer">前往企业官网<ExternalLink size={14}/></a>}<small>加入后可关联简历版本、记录截止日期与下一步任务。</small></aside></div></main>;
+}

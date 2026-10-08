@@ -1,0 +1,97 @@
+name: Deploy Next Website Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/next-web-preview]
+    paths:
+      - next-web/**
+      - .github/workflows/deploy-next-preview.yml
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: next-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: next-web
+        run: npm ci
+
+      - name: Run tests
+        working-directory: next-web
+        run: npm test
+
+      - name: Build production preview
+        working-directory: next-web
+        env:
+          NEXT_PUBLIC_BASE_PATH: /next-preview
+          NEXT_PUBLIC_SITE_URL: https://www.zhiyincareer.com/next-preview
+          NEXT_PUBLIC_API_BASE_URL: https://www.zhiyincareer.com
+          BACKEND_API_URL: https://www.zhiyincareer.com
+          WECHAT_PAYMENT_ENABLED: "false"
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
+      - name: Pack standalone release
+        working-directory: next-web
+        run: |
+          mkdir -p release/.next
+          cp -a .next/standalone/. release/
+          cp -a .next/static release/.next/static
+          cp -a public release/public
+          cp deploy/ecosystem.preview.cjs release/ecosystem.preview.cjs
+          tar czf next-preview-release.tgz -C release .
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy preview service and route
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no next-web/next-preview-release.tgz "$SSH_USER@$SSH_HOST:/tmp/zhiyincareer-next-preview.tgz"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no next-web/deploy/install-nginx-preview-route.sh "$SSH_USER@$SSH_HOST:/tmp/install-nginx-preview-route.sh"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 "$SSH_USER@$SSH_HOST" \
+            "APP_DIR=/www/wwwroot/zhiyincareer-next-preview RELEASE_ID=${GITHUB_SHA} bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/www/wwwroot/zhiyincareer-next-preview}"
+          RELEASE_ID="${RELEASE_ID:-manual}"
+          RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
+
+          mkdir -p "$RELEASE_DIR"
+          tar xzf /tmp/zhiyincareer-next-preview.tgz -C "$RELEASE_DIR"
+          ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+          cd "$APP_DIR/current"
+
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm install -g pm2
+          fi
+
+          pm2 startOrReload ecosystem.preview.cjs --update-env
+          pm2 save
+          bash /tmp/install-nginx-preview-route.sh
+
+          curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3101/next-preview/ >/dev/null
+          rm -f /tmp/zhiyincareer-next-preview.tgz /tmp/install-nginx-preview-route.sh
+          REMOTE
+
+      - name: Verify public preview
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/next-preview/ | grep -q "把大学生求职"
+          curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/next-preview/interview-experiences >/dev/null
