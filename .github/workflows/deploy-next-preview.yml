@@ -135,13 +135,33 @@ jobs:
 
           timeout 90 bash /tmp/install-nginx-preview-route.sh
 
-          curl --location --fail --silent --show-error --max-time 20 \
-            http://127.0.0.1:3101/next-preview -o /tmp/next-preview-internal.html
-          grep -q "/next-preview/_next/" /tmp/next-preview-internal.html
-          curl --fail --silent --show-error --insecure --max-time 20 \
-            --resolve www.zhiyincareer.com:443:127.0.0.1 \
-            https://www.zhiyincareer.com/next-preview -o /tmp/next-preview-origin.html
-          grep -q "/next-preview/_next/" /tmp/next-preview-origin.html
+          internal_ready=0
+          for attempt in $(seq 1 20); do
+            if curl --location --fail --silent --show-error --max-time 10 \
+              http://127.0.0.1:3101/next-preview -o /tmp/next-preview-internal.html \
+              && grep -q "/next-preview/_next/" /tmp/next-preview-internal.html; then
+              internal_ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$internal_ready" != "1" ]; then
+            pm2 logs zhiyincareer-next-preview --lines 40 --nostream || true
+            exit 1
+          fi
+
+          origin_ready=0
+          for attempt in $(seq 1 10); do
+            if curl --fail --silent --show-error --insecure --max-time 10 \
+              --resolve www.zhiyincareer.com:443:127.0.0.1 \
+              https://www.zhiyincareer.com/next-preview -o /tmp/next-preview-origin.html \
+              && grep -q "/next-preview/_next/" /tmp/next-preview-origin.html; then
+              origin_ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$origin_ready" = "1"
           rm -f /tmp/next-preview-internal.html /tmp/next-preview-origin.html \
             /tmp/zhiyincareer-next-preview.tgz /tmp/zhiyincareer-next-preview.part.* \
             /tmp/install-nginx-preview-route.sh
