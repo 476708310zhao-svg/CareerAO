@@ -5,6 +5,7 @@ on:
   push:
     branches: [codex/next-web-preview]
     paths:
+      - next-web/**
       - .github/workflows/deploy-next-production.yml
       - .github/scripts/install-nginx-next-production-route.sh
 
