@@ -64,9 +64,32 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no next-web/next-preview-release.tgz "$SSH_USER@$SSH_HOST:/tmp/zhiyincareer-next-preview.tgz"
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no next-web/deploy/install-nginx-preview-route.sh "$SSH_USER@$SSH_HOST:/tmp/install-nginx-preview-route.sh"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 "$SSH_USER@$SSH_HOST" \
+          SSH_OPTIONS=(
+            -i ~/.ssh/deploy_key
+            -o StrictHostKeyChecking=no
+            -o ConnectTimeout=20
+            -o ServerAliveInterval=20
+            -o ServerAliveCountMax=6
+          )
+
+          echo "Splitting release for resilient parallel upload"
+          split -b 6M next-web/next-preview-release.tgz /tmp/zhiyincareer-next-preview.part.
+
+          echo "Uploading release chunks"
+          pids=()
+          for part in /tmp/zhiyincareer-next-preview.part.*; do
+            timeout 900 scp "${SSH_OPTIONS[@]}" "$part" "$SSH_USER@$SSH_HOST:/tmp/$(basename "$part")" &
+            pids+=("$!")
+          done
+          for pid in "${pids[@]}"; do
+            wait "$pid"
+          done
+
+          echo "Uploading route installer"
+          timeout 120 scp "${SSH_OPTIONS[@]}" next-web/deploy/install-nginx-preview-route.sh "$SSH_USER@$SSH_HOST:/tmp/install-nginx-preview-route.sh"
+
+          echo "Activating release"
+          timeout 300 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
             "APP_DIR=/www/wwwroot/zhiyincareer-next-preview RELEASE_ID=${GITHUB_SHA} bash -s" <<'REMOTE'
           set -euo pipefail
 
@@ -74,21 +97,30 @@ jobs:
           RELEASE_ID="${RELEASE_ID:-manual}"
           RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
 
+          cat /tmp/zhiyincareer-next-preview.part.* > /tmp/zhiyincareer-next-preview.tgz
           mkdir -p "$RELEASE_DIR"
           tar xzf /tmp/zhiyincareer-next-preview.tgz -C "$RELEASE_DIR"
           ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
           cd "$APP_DIR/current"
 
-          if ! command -v pm2 >/dev/null 2>&1; then
-            npm install -g pm2
+          if command -v pm2 >/dev/null 2>&1; then
+            timeout 60 pm2 startOrReload ecosystem.preview.cjs --update-env
+            timeout 30 pm2 save
+          else
+            PID_FILE="$APP_DIR/preview.pid"
+            if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+              kill "$(cat "$PID_FILE")"
+              sleep 2
+            fi
+            nohup env NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
+              node server.js > "$APP_DIR/preview.log" 2>&1 < /dev/null &
+            echo "$!" > "$PID_FILE"
           fi
 
-          pm2 startOrReload ecosystem.preview.cjs --update-env
-          pm2 save
-          bash /tmp/install-nginx-preview-route.sh
+          timeout 90 bash /tmp/install-nginx-preview-route.sh
 
           curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3101/next-preview/ >/dev/null
-          rm -f /tmp/zhiyincareer-next-preview.tgz /tmp/install-nginx-preview-route.sh
+          rm -f /tmp/zhiyincareer-next-preview.tgz /tmp/zhiyincareer-next-preview.part.* /tmp/install-nginx-preview-route.sh
           REMOTE
 
       - name: Verify public preview
