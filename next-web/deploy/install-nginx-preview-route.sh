@@ -72,6 +72,10 @@ route = f"""
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 90s;
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
     }}
 
     location ^~ /next-preview/ {{
@@ -84,6 +88,10 @@ route = f"""
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 90s;
+        proxy_cache_bypass 1;
+        proxy_no_cache 1;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
     }}
     {marker_end}
 """
