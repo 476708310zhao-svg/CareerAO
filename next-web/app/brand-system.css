@@ -372,25 +372,38 @@ body { color: var(--zy-ink); overflow-x: clip; }
 .zy-qr-card b { font-size: 13px; }
 .zy-qr-card span { color: var(--zy-muted); font-size: 10px; }
 
-.zy-floating-tools { position: fixed; right: 0; top: 50%; z-index: 95; display: flex; overflow: hidden; flex-direction: column; transform: translateY(-50%); border: 1px solid var(--zy-line); border-right: 0; border-radius: 18px 0 0 18px; background: #fff; box-shadow: 0 18px 50px rgba(25, 24, 48, .14); }
+.zy-floating-consultation { position: fixed; right: 0; top: 50%; z-index: 95; display: flex; align-items: center; flex-direction: row-reverse; gap: 12px; transform: translateY(-50%); }
+.zy-floating-tools { display: flex; overflow: hidden; flex-direction: column; border: 1px solid var(--zy-line); border-right: 0; border-radius: 18px 0 0 18px; background: #fff; box-shadow: 0 18px 50px rgba(25, 24, 48, .14); }
 .zy-floating-tools > button { width: 84px; min-height: 106px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; border: 0; padding: 14px 8px; color: #545967; background: #fff; transition: color .18s ease, background-color .18s ease; }
 .zy-floating-tools > button + button { border-top: 1px solid var(--zy-line); }
-.zy-floating-tools > button:hover { color: var(--zy-indigo); background: #f7f6ff; }
+.zy-floating-tools > button:hover, .zy-floating-tools > button:focus-visible, .zy-floating-tools > button[aria-expanded="true"] { color: var(--zy-indigo); background: #f7f6ff; }
 .zy-floating-tools b { font-size: 12px; font-weight: 700; }
 .zy-floating-icon { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #e5e6eb; border-radius: 50%; color: #333743; background: #fafafd; }
-.zy-floating-tools > button:hover .zy-floating-icon { color: var(--zy-indigo); border-color: #cbc7f4; background: #eeecff; }
+.zy-floating-tools > button:hover .zy-floating-icon, .zy-floating-tools > button:focus-visible .zy-floating-icon, .zy-floating-tools > button[aria-expanded="true"] .zy-floating-icon { color: var(--zy-indigo); border-color: #cbc7f4; background: #eeecff; }
+.zy-consultation-popover { position: relative; width: 390px; border: 1px solid #dedfe7; border-radius: 20px; background: #fff; box-shadow: 0 24px 64px rgba(19, 20, 35, .18); animation: zy-consultation-enter .18s cubic-bezier(.2,.8,.2,1); }
+.zy-consultation-popover:after { content: ""; position: absolute; right: -7px; top: 50%; width: 12px; height: 12px; border-top: 1px solid #dedfe7; border-right: 1px solid #dedfe7; background: #fff; transform: translateY(-50%) rotate(45deg); }
 .zy-consultation-overlay { position: fixed; inset: 0; z-index: 220; display: grid; place-items: center; padding: 20px; }
 .zy-consultation-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(16, 17, 24, .52); backdrop-filter: blur(4px); }
-.zy-consultation-dialog { position: relative; width: min(390px, 100%); border-radius: 22px; padding: 34px; background: #fff; box-shadow: 0 34px 90px rgba(10, 11, 20, .28); text-align: center; }
+.zy-consultation-dialog { position: relative; width: min(390px, 100%); overflow: hidden; border-radius: 22px; background: #fff; box-shadow: 0 34px 90px rgba(10, 11, 20, .28); animation: zy-consultation-enter .18s cubic-bezier(.2,.8,.2,1); }
+.zy-consultation-card { position: relative; padding: 26px; }
 .zy-consultation-close { position: absolute; right: 15px; top: 15px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 50%; color: #737987; background: #f5f5f7; }
-.zy-consultation-mark { width: 62px; height: 62px; display: grid; place-items: center; margin: 0 auto 20px; border-radius: 18px; }
+.zy-consultation-close:hover { color: var(--zy-indigo); background: #eeecff; }
+.zy-consultation-heading { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 14px; align-items: start; padding-right: 38px; }
+.zy-consultation-mark { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 15px; }
 .zy-consultation-mark.wechat { color: #078c49; background: #e7f8ef; }
 .zy-consultation-mark.mini { color: var(--zy-indigo); background: #efedff; }
-.zy-consultation-dialog h2 { margin: 0 0 9px; font-size: 24px; letter-spacing: -.025em; }
-.zy-consultation-dialog > p { margin: 0 auto 22px; color: var(--zy-muted); font-size: 13px; line-height: 1.7; }
-.zy-consultation-qr { width: 220px; height: 220px; display: grid; place-items: center; margin: 0 auto 18px; overflow: hidden; border: 1px solid var(--zy-line); border-radius: 15px; padding: 6px; background: #fff; }
+.zy-consultation-heading h2 { margin: 1px 0 5px; font-size: 19px; letter-spacing: -.025em; }
+.zy-consultation-heading p { margin: 0; color: var(--zy-muted); font-size: 12px; line-height: 1.65; }
+.zy-consultation-body { display: grid; grid-template-columns: 176px minmax(0,1fr); gap: 18px; align-items: center; margin-top: 22px; border-top: 1px solid var(--zy-line); padding-top: 22px; }
+.zy-consultation-qr { width: 176px; height: 176px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--zy-line); border-radius: 14px; padding: 6px; background: #fff; }
 .zy-consultation-qr img { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; }
-.zy-consultation-dialog > small { display: block; border-radius: 10px; padding: 11px 12px; color: #5f6573; background: #f6f6f8; font-size: 11px; }
+.zy-consultation-details { align-self: stretch; display: flex; flex-direction: column; min-width: 0; }
+.zy-consultation-details > strong { color: #30343e; font-size: 12px; }
+.zy-consultation-details ul { display: grid; gap: 10px; margin: 14px 0; padding: 0; list-style: none; }
+.zy-consultation-details li { display: flex; align-items: flex-start; gap: 6px; color: #616774; font-size: 11px; line-height: 1.45; }
+.zy-consultation-details li svg { flex: 0 0 auto; margin-top: 1px; color: #078c63; }
+.zy-consultation-details small { margin-top: auto; border-radius: 9px; padding: 9px 10px; color: #5f6573; background: #f6f6f8; font-size: 9px; line-height: 1.5; }
+@keyframes zy-consultation-enter { from { opacity: 0; transform: translateX(7px); } to { opacity: 1; transform: translateX(0); } }
 
 @media (max-width: 820px) {
   .zy-board { margin-right: calc((100vw - 100%) / -2); padding-right: 20px; grid-template-columns: repeat(5, minmax(270px, 78vw)); }
@@ -448,7 +461,8 @@ body { color: var(--zy-ink); overflow-x: clip; }
 }
 
 @media (max-width: 1160px) {
-  .zy-floating-tools { right: 16px; top: auto; bottom: max(18px, env(safe-area-inset-bottom)); flex-direction: row; transform: none; border-right: 1px solid var(--zy-line); border-radius: 16px; }
+  .zy-floating-consultation { right: 16px; top: auto; bottom: max(18px, env(safe-area-inset-bottom)); transform: none; }
+  .zy-floating-tools { flex-direction: row; border-right: 1px solid var(--zy-line); border-radius: 16px; }
   .zy-floating-tools > button { width: 52px; min-height: 52px; padding: 4px; }
   .zy-floating-tools > button + button { border-top: 0; border-left: 1px solid var(--zy-line); }
   .zy-floating-tools b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
@@ -486,12 +500,18 @@ body { color: var(--zy-ink); overflow-x: clip; }
   .zy-auth-intro h1 { font-size: 36px; }
   .zy-auth-intro ul { margin-top: 28px; }
   .zy-auth-panel { padding: 34px 24px; }
-  .zy-consultation-dialog { padding: 30px 22px 22px; }
-  .zy-consultation-qr { width: min(210px, 66vw); height: min(210px, 66vw); }
+  .zy-consultation-card { padding: 24px 20px 20px; }
+  .zy-consultation-heading { grid-template-columns: 46px minmax(0,1fr); gap: 12px; padding-right: 32px; }
+  .zy-consultation-mark { width: 46px; height: 46px; border-radius: 13px; }
+  .zy-consultation-body { grid-template-columns: 1fr; justify-items: center; gap: 16px; }
+  .zy-consultation-qr { width: min(206px, 61vw); height: min(206px, 61vw); }
+  .zy-consultation-details { width: 100%; }
+  .zy-consultation-details ul { grid-template-columns: repeat(2,minmax(0,1fr)); margin: 12px 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .zy-floating-tools > button, .zy-floating-icon { transition: none; }
+  .zy-consultation-popover, .zy-consultation-dialog { animation: none; }
 }
 
 /* Public data pages: local 3100 workbench system */
