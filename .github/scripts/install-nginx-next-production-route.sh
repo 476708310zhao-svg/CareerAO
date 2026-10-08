@@ -5,43 +5,49 @@ MARKER_BEGIN="# BEGIN CareerAO Next production route"
 MARKER_END="# END CareerAO Next production route"
 UPSTREAM="${NEXT_PRODUCTION_UPSTREAM:-http://127.0.0.1:3102}"
 
-find_nginx_conf() {
+find_nginx_confs() {
   if [ -n "${NGINX_CONF:-}" ] && [ -f "$NGINX_CONF" ]; then
     printf '%s\n' "$NGINX_CONF"
     return 0
   fi
 
-  for candidate in \
-    /www/server/panel/vhost/nginx/www.zhiyincareer.com.conf \
-    /www/server/panel/vhost/nginx/zhiyincareer.com.conf \
-    /www/server/nginx/conf/vhost/www.zhiyincareer.com.conf \
-    /www/server/nginx/conf/vhost/zhiyincareer.com.conf \
-    /etc/nginx/sites-enabled/www.zhiyincareer.com \
-    /etc/nginx/sites-enabled/zhiyincareer.com; do
-    if [ -f "$candidate" ]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
   for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
     if [ -d "$dir" ]; then
-      match="$(grep -RslE 'server_name[[:space:]][^;]*(www\.)?zhiyincareer\.com([[:space:];]|$)' "$dir" 2>/dev/null | head -n 1 || true)"
-      if [ -n "$match" ]; then
+      while IFS= read -r match; do
+        case "$match" in
+          *.bak.*|*.backup*|*.old*) continue ;;
+        esac
         printf '%s\n' "$match"
-        return 0
-      fi
+      done < <(grep -RPsl 'server_name\s+(?:[^;]*\s)?(?:www\.)?zhiyincareer\.com(?=[\s;])' "$dir" 2>/dev/null || true)
     fi
   done
 
-  return 1
+  return 0
 }
 
-CONF="$(find_nginx_conf)"
-BACKUP="${CONF}.bak.$(date +%Y%m%d%H%M%S)"
-cp "$CONF" "$BACKUP"
+mapfile -t CONFS < <(find_nginx_confs | awk '!seen[$0]++')
+if [ "${#CONFS[@]}" -eq 0 ]; then
+  echo "Could not find an Nginx configuration for zhiyincareer.com" >&2
+  exit 1
+fi
 
-python3 - "$CONF" "$UPSTREAM" "$MARKER_BEGIN" "$MARKER_END" <<'PY'
+STAMP="$(date +%Y%m%d%H%M%S)"
+BACKUPS=()
+
+restore_configs() {
+  for entry in "${BACKUPS[@]}"; do
+    conf="${entry%%|*}"
+    backup="${entry#*|}"
+    cp "$backup" "$conf"
+  done
+}
+
+for CONF in "${CONFS[@]}"; do
+  BACKUP="${CONF}.bak.${STAMP}"
+  cp "$CONF" "$BACKUP"
+  BACKUPS+=("${CONF}|${BACKUP}")
+
+  if ! python3 - "$CONF" "$UPSTREAM" "$MARKER_BEGIN" "$MARKER_END" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -53,7 +59,7 @@ marker_end = sys.argv[4]
 
 route = f"""
     {marker_begin}
-    location / {{
+    location ^~ / {{
         proxy_pass {upstream};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -178,11 +184,14 @@ def remove_direct_root_locations(block: str) -> str:
 targets = []
 for start, end in server_blocks(text):
     block = text[start:end + 1]
-    if re.search(r"server_name\s+[^;]*\b(?:www\.)?zhiyincareer\.com\b[^;]*;", block):
+    if re.search(
+        r"server_name\s+[^;]*(?<![\w.-])(?:www\.)?zhiyincareer\.com(?=[\s;])[^;]*;",
+        block,
+    ):
         targets.append((start, end))
 
 if not targets:
-    raise SystemExit("Could not find a zhiyincareer.com server block")
+    raise SystemExit(f"Could not find an exact zhiyincareer.com server block in {conf_path}")
 
 for start, end in reversed(targets):
     block = text[start:end + 1]
@@ -194,13 +203,18 @@ for start, end in reversed(targets):
 
 conf_path.write_text(text, encoding="utf-8")
 PY
+  then
+    restore_configs
+    exit 1
+  fi
+done
 
 if nginx -t; then
   nginx -s reload || systemctl reload nginx
-  echo "Installed Next production route in $CONF"
+  printf 'Installed Next production route in %s\n' "${CONFS[@]}"
 else
-  cp "$BACKUP" "$CONF"
+  restore_configs
   nginx -t || true
-  echo "Nginx production route install failed; restored $BACKUP" >&2
+  echo "Nginx production route install failed; restored all changed files" >&2
   exit 1
 fi
