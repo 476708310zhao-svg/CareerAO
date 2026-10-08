@@ -1,0 +1,157 @@
+name: Deploy Next Website Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/next-web-preview]
+    paths:
+      - .github/workflows/deploy-next-production.yml
+      - .github/scripts/install-nginx-next-production-route.sh
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: next-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: next-web
+        run: npm ci
+
+      - name: Run verification
+        working-directory: next-web
+        run: |
+          npm run typecheck
+          npm test
+          npm run lint
+
+      - name: Build production website
+        working-directory: next-web
+        env:
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_SITE_URL: https://www.zhiyincareer.com
+          NEXT_PUBLIC_API_BASE_URL: https://www.zhiyincareer.com
+          BACKEND_API_URL: https://www.zhiyincareer.com
+          WECHAT_PAYMENT_ENABLED: "false"
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
+      - name: Pack standalone release
+        working-directory: next-web
+        run: |
+          mkdir -p release/.next
+          cp -a .next/standalone/. release/
+          cp -a .next/static release/.next/static
+          cp -a public release/public
+          tar czf next-production-release.tgz -C release .
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy production service and root route
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          SSH_OPTIONS=(
+            -i ~/.ssh/deploy_key
+            -o StrictHostKeyChecking=no
+            -o ConnectTimeout=20
+            -o ServerAliveInterval=20
+            -o ServerAliveCountMax=6
+          )
+          REMOTE_PREFIX="/tmp/zhiyincareer-next-production-${GITHUB_SHA}"
+
+          timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" "rm -f '${REMOTE_PREFIX}.tgz' '${REMOTE_PREFIX}.part.'*"
+
+          split -b 6M next-web/next-production-release.tgz "/tmp/zhiyincareer-next-production-${GITHUB_SHA}.part."
+          pids=()
+          for part in "/tmp/zhiyincareer-next-production-${GITHUB_SHA}.part."*; do
+            timeout 900 scp "${SSH_OPTIONS[@]}" "$part" "$SSH_USER@$SSH_HOST:/tmp/$(basename "$part")" &
+            pids+=("$!")
+          done
+          for pid in "${pids[@]}"; do
+            wait "$pid"
+          done
+
+          timeout 90 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
+            "cat '${REMOTE_PREFIX}.part.'* > '${REMOTE_PREFIX}.tgz' && tar tzf '${REMOTE_PREFIX}.tgz' >/dev/null"
+
+          timeout 120 scp "${SSH_OPTIONS[@]}" .github/scripts/install-nginx-next-production-route.sh "$SSH_USER@$SSH_HOST:/tmp/install-nginx-next-production-route.sh"
+
+          timeout 360 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
+            "APP_DIR=/www/wwwroot/zhiyincareer-next-production RELEASE_ID=${GITHUB_SHA} RELEASE_ARCHIVE='${REMOTE_PREFIX}.tgz' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/www/wwwroot/zhiyincareer-next-production}"
+          RELEASE_ID="${RELEASE_ID:-manual}"
+          RELEASE_ARCHIVE="${RELEASE_ARCHIVE:?Release archive is required}"
+          RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
+
+          mkdir -p "$RELEASE_DIR"
+          tar xzf "$RELEASE_ARCHIVE" -C "$RELEASE_DIR"
+
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm install -g pm2
+          fi
+
+          pm2 delete zhiyincareer-next-production >/dev/null 2>&1 || true
+          NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3102 \
+            timeout 60 pm2 start server.js --name zhiyincareer-next-production --cwd "$RELEASE_DIR" --update-env
+
+          internal_ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3102/ -o /tmp/next-production-internal.html \
+              && grep -q 'src="/_next/' /tmp/next-production-internal.html; then
+              internal_ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$internal_ready" != "1" ]; then
+            pm2 logs zhiyincareer-next-production --lines 60 --nostream || true
+            exit 1
+          fi
+
+          ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+          timeout 90 bash /tmp/install-nginx-next-production-route.sh
+          timeout 30 pm2 save
+
+          origin_ready=0
+          for attempt in $(seq 1 15); do
+            if curl --fail --silent --show-error --insecure --max-time 12 \
+              --resolve www.zhiyincareer.com:443:127.0.0.1 \
+              https://www.zhiyincareer.com/ -o /tmp/next-production-origin.html \
+              && grep -q 'src="/_next/' /tmp/next-production-origin.html; then
+              origin_ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$origin_ready" = "1"
+
+          rm -f /tmp/next-production-internal.html /tmp/next-production-origin.html \
+            "$RELEASE_ARCHIVE" "${RELEASE_ARCHIVE%.tgz}.part."* \
+            /tmp/install-nginx-next-production-route.sh
+          REMOTE
+
+      - name: Verify public production website
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/ -o /tmp/next-production-public.html
+          grep -q 'src="/_next/' /tmp/next-production-public.html
+          grep -q '把大学生求职' /tmp/next-production-public.html
+          curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/job-map >/dev/null
+          curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/interview-experiences >/dev/null
