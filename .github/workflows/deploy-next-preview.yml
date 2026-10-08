@@ -72,18 +72,26 @@ jobs:
             -o ServerAliveCountMax=6
           )
 
-          echo "Splitting release for resilient parallel upload"
-          split -b 6M next-web/next-preview-release.tgz /tmp/zhiyincareer-next-preview.part.
+          if timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
+            "test -s /tmp/zhiyincareer-next-preview.tgz && tar tzf /tmp/zhiyincareer-next-preview.tgz >/dev/null"; then
+            echo "Reusing validated release package already on server"
+          else
+            echo "Splitting release for resilient parallel upload"
+            split -b 6M next-web/next-preview-release.tgz /tmp/zhiyincareer-next-preview.part.
 
-          echo "Uploading release chunks"
-          pids=()
-          for part in /tmp/zhiyincareer-next-preview.part.*; do
-            timeout 900 scp "${SSH_OPTIONS[@]}" "$part" "$SSH_USER@$SSH_HOST:/tmp/$(basename "$part")" &
-            pids+=("$!")
-          done
-          for pid in "${pids[@]}"; do
-            wait "$pid"
-          done
+            echo "Uploading release chunks"
+            pids=()
+            for part in /tmp/zhiyincareer-next-preview.part.*; do
+              timeout 900 scp "${SSH_OPTIONS[@]}" "$part" "$SSH_USER@$SSH_HOST:/tmp/$(basename "$part")" &
+              pids+=("$!")
+            done
+            for pid in "${pids[@]}"; do
+              wait "$pid"
+            done
+
+            timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
+              "cat /tmp/zhiyincareer-next-preview.part.* > /tmp/zhiyincareer-next-preview.tgz && tar tzf /tmp/zhiyincareer-next-preview.tgz >/dev/null"
+          fi
 
           echo "Uploading route installer"
           timeout 120 scp "${SSH_OPTIONS[@]}" next-web/deploy/install-nginx-preview-route.sh "$SSH_USER@$SSH_HOST:/tmp/install-nginx-preview-route.sh"
@@ -97,14 +105,15 @@ jobs:
           RELEASE_ID="${RELEASE_ID:-manual}"
           RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
 
-          cat /tmp/zhiyincareer-next-preview.part.* > /tmp/zhiyincareer-next-preview.tgz
           mkdir -p "$RELEASE_DIR"
           tar xzf /tmp/zhiyincareer-next-preview.tgz -C "$RELEASE_DIR"
           ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
           cd "$APP_DIR/current"
 
           if command -v pm2 >/dev/null 2>&1; then
-            timeout 60 pm2 startOrReload ecosystem.preview.cjs --update-env
+            pm2 delete zhiyincareer-next-preview >/dev/null 2>&1 || true
+            NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
+              timeout 60 pm2 start server.js --name zhiyincareer-next-preview --cwd "$APP_DIR/current" --update-env
             timeout 30 pm2 save
           else
             PID_FILE="$APP_DIR/preview.pid"
