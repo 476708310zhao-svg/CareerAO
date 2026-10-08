@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, CalendarDays, ExternalLink, Loader2, MapPin, ShieldCheck } from "lucide-react";
-import { ApiError, apiRequest, jsonBody } from "@/lib/api-client";
+import { ApiError, apiRequest, jsonBody, localApiRequest } from "@/lib/api-client";
 import { useAuth } from "./auth-provider";
 
 type Job = { id: string; title: string; company: string; location?: string; region?: string; salary?: string; jobType?: string; industry?: string; description?: string; requirements?: string[]; tags?: string[]; postedAt?: string; deadline?: string; applyUrl?: string; sourceLabel?: string; dataMeta?: { freshnessLabel?: string; sourceLabel?: string; degraded?: boolean; fallbackReason?: string } };
@@ -12,7 +12,7 @@ function plain(value = "") { return value.replace(/<[^>]+>/g, " ").replace(/\s+/
 
 export function JobDetailLive({ id }: { id: string }) {
   const { token } = useAuth(); const [job, setJob] = useState<Job | null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
-  useEffect(() => { const controller = new AbortController(); apiRequest<Job>(`/api/jobs/${encodeURIComponent(id)}`, { signal: controller.signal }).then(setJob).catch(err => { if(!controller.signal.aborted)setError(err instanceof Error?err.message:"职位加载失败"); }).finally(()=>{if(!controller.signal.aborted)setLoading(false);}); return()=>controller.abort(); },[id]);
+  useEffect(() => { const controller = new AbortController(); apiRequest<Job>(`/api/jobs/${encodeURIComponent(id)}`, { signal: controller.signal }).catch(() => localApiRequest<Job>(`/api/jobs/${encodeURIComponent(id)}`, { signal: controller.signal })).then(setJob).catch(err => { if(!controller.signal.aborted)setError(err instanceof Error?err.message:"职位加载失败"); }).finally(()=>{if(!controller.signal.aborted)setLoading(false);}); return()=>controller.abort(); },[id]);
   async function add() { if(!job)return; if(!token){window.location.href=`/login?next=${encodeURIComponent(`/jobs/${id}`)}`;return;} if(busy)return; setBusy(true);setError("");try{const app=await apiRequest<{id:number}>("/api/v4/applications",{method:"POST",body:jsonBody({jobId:String(job.id),status:"interested",jobSnapshot:job})});window.location.href=`/applications?open=${app.id}`;}catch(err){if(err instanceof ApiError&&err.status===409&&typeof err.data==="object"&&err.data&&"applicationId" in err.data)window.location.href=`/applications?open=${(err.data as {applicationId:number}).applicationId}`;else setError(err instanceof Error?err.message:"加入申请失败");}finally{setBusy(false);}}
   if(loading)return <main className="zy-page"><div className="shell zy-state-card"><Loader2 className="spin"/>正在读取职位详情…</div></main>;
   if(!job)return <main className="zy-page"><div className="shell zy-state-card"><p className="zy-alert">{error||"职位不存在或已下线。"}</p><Link className="zy-button zy-button-secondary" href="/jobs">返回职位列表</Link></div></main>;

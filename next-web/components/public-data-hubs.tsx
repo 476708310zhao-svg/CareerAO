@@ -8,7 +8,7 @@ import {
   Globe2, Landmark, Loader2, MapPin, Newspaper, RefreshCw, Search, ShieldCheck,
   SlidersHorizontal, Sparkles, Star, WalletCards, X,
 } from "lucide-react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest, localApiRequest } from "@/lib/api-client";
 
 type DataStateProps = { loading?: boolean; error?: string; empty?: boolean; emptyTitle?: string; emptyText?: string; onRetry?: () => void };
 
@@ -39,7 +39,14 @@ type JobResult = { list: Job[]; total: number; source?: string; dataMeta?: { sou
 export function JobMapHub() {
   const [data, setData] = useState<JobResult | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
   const [query, setQuery] = useState(""); const [region, setRegion] = useState("全部地区");
-  function load() { setLoading(true); setError(""); apiRequest<JobResult>("/api/jobs/map?pageSize=100").then(setData).catch((err) => setError(err instanceof Error ? err.message : "职位数据加载失败")).finally(() => setLoading(false)); }
+  function load() {
+    setLoading(true); setError("");
+    apiRequest<JobResult>("/api/jobs/map?pageSize=100")
+      .catch(() => localApiRequest<JobResult>("/api/jobs?pageSize=100"))
+      .then(setData)
+      .catch((err) => setError(err instanceof Error ? err.message : "职位数据加载失败"))
+      .finally(() => setLoading(false));
+  }
   useEffect(load, []);
   const jobs = useMemo(() => data?.list || [], [data]);
   const regions = useMemo(() => uniq(jobs.map(jobRegion)), [jobs]);

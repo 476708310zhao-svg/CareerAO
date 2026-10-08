@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, BriefcaseBusiness, CalendarDays, ExternalLink, Filter, Loader2, MapPin, Search, ShieldCheck } from "lucide-react";
-import { ApiError, apiRequest, jsonBody } from "@/lib/api-client";
+import { ApiError, apiRequest, jsonBody, localApiRequest } from "@/lib/api-client";
 import { useAuth } from "./auth-provider";
 
 type Job = { id: string; title: string; company: string; location?: string; region?: string; salary?: string; jobType?: string; industry?: string; description?: string; requirements?: string[]; tags?: string[]; postedAt?: string; applyUrl?: string; sourceLabel?: string; dataMeta?: { freshnessLabel?: string; sourceLabel?: string; degraded?: boolean } };
@@ -32,9 +32,18 @@ export function JobsExplorerLive() {
       setData(localData);
       hasLocalData = true;
       setLoading(false);
-    } catch (err) {
+    } catch {
       if (controller.signal.aborted) return;
-      setError(err instanceof Error ? err.message : "职位加载失败");
+      try {
+        const fallbackData = await localApiRequest<JobsResult>(`/api/jobs?${localParams.toString()}`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setData(fallbackData);
+        hasLocalData = true;
+        setMessage("真实职位服务暂未开放，当前展示演示数据。");
+        setLoading(false);
+      } catch (fallbackError) {
+        if (!controller.signal.aborted) setError(fallbackError instanceof Error ? fallbackError.message : "职位加载失败");
+      }
     }
 
     const liveController = new AbortController();
@@ -50,7 +59,7 @@ export function JobsExplorerLive() {
       }
     } catch (err) {
       if (!controller.signal.aborted && !hasLocalData) setError(err instanceof Error ? err.message : "职位加载失败");
-      if (!controller.signal.aborted && hasLocalData) setMessage("实时职位更新较慢，当前先展示已核对的职位库。");
+      if (!controller.signal.aborted && hasLocalData) setMessage("真实职位服务暂未开放，当前展示演示数据。");
     } finally {
       window.clearTimeout(timeout);
       controller.signal.removeEventListener("abort", abortLive);

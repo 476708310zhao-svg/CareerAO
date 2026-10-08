@@ -1,3 +1,5 @@
+import { publicAsset } from "@/lib/base-path";
+
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "/backend").replace(/\/$/, "");
 
 export const AUTH_TOKEN_KEY = "zhiyin_web_token";
@@ -33,7 +35,7 @@ export function clearSessionStorage() {
   window.sessionStorage.clear();
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function requestUrl<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = readToken();
   const isForm = options.body instanceof FormData;
   const headers = new Headers(options.headers);
@@ -42,7 +44,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(url, {
       ...options,
       headers,
       cache: "no-store",
@@ -60,6 +62,14 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     throw new ApiError(payload.message || `请求失败（${response.status}）`, response.status, payload.data);
   }
   return (payload.data ?? payload) as T;
+}
+
+export function apiRequest<T>(path: string, options: RequestInit = {}) {
+  return requestUrl<T>(`${API_BASE_URL}${path}`, options);
+}
+
+export function localApiRequest<T>(path: string, options: RequestInit = {}) {
+  return requestUrl<T>(publicAsset(path), options);
 }
 
 export function jsonBody(value: unknown) {
