@@ -74,8 +74,8 @@ jobs:
 
           ROUTE_ONLY=0
           if timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
-            "curl --location --fail --silent --max-time 15 http://127.0.0.1:3101/next-preview | grep -q '/next-preview/_next/'"; then
-            echo "Preview service is already healthy; only the Nginx route needs repair"
+            "test \"\$(basename \"\$(readlink -f /www/wwwroot/zhiyincareer-next-preview/current)\")\" = '${GITHUB_SHA}' && curl --location --fail --silent --max-time 15 http://127.0.0.1:3101/next-preview | grep -q '/next-preview/_next/'"; then
+            echo "This exact release is already healthy; only the Nginx route needs repair"
             ROUTE_ONLY=1
           elif timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
             "test -s /tmp/zhiyincareer-next-preview.tgz && tar tzf /tmp/zhiyincareer-next-preview.tgz >/dev/null"; then
