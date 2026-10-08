@@ -72,7 +72,12 @@ jobs:
             -o ServerAliveCountMax=6
           )
 
+          ROUTE_ONLY=0
           if timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
+            "curl --fail --silent --max-time 15 http://127.0.0.1:3101/next-preview/ | grep -q '把大学生求职'"; then
+            echo "Preview service is already healthy; only the Nginx route needs repair"
+            ROUTE_ONLY=1
+          elif timeout 60 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
             "test -s /tmp/zhiyincareer-next-preview.tgz && tar tzf /tmp/zhiyincareer-next-preview.tgz >/dev/null"; then
             echo "Reusing validated release package already on server"
           else
@@ -98,37 +103,42 @@ jobs:
 
           echo "Activating release"
           timeout 300 ssh "${SSH_OPTIONS[@]}" "$SSH_USER@$SSH_HOST" \
-            "APP_DIR=/www/wwwroot/zhiyincareer-next-preview RELEASE_ID=${GITHUB_SHA} bash -s" <<'REMOTE'
+            "APP_DIR=/www/wwwroot/zhiyincareer-next-preview RELEASE_ID=${GITHUB_SHA} ROUTE_ONLY=${ROUTE_ONLY} bash -s" <<'REMOTE'
           set -euo pipefail
 
           APP_DIR="${APP_DIR:-/www/wwwroot/zhiyincareer-next-preview}"
           RELEASE_ID="${RELEASE_ID:-manual}"
           RELEASE_DIR="$APP_DIR/releases/$RELEASE_ID"
 
-          mkdir -p "$RELEASE_DIR"
-          tar xzf /tmp/zhiyincareer-next-preview.tgz -C "$RELEASE_DIR"
-          ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
-          cd "$APP_DIR/current"
+          if [ "${ROUTE_ONLY:-0}" != "1" ]; then
+            mkdir -p "$RELEASE_DIR"
+            tar xzf /tmp/zhiyincareer-next-preview.tgz -C "$RELEASE_DIR"
+            ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+            cd "$APP_DIR/current"
 
-          if command -v pm2 >/dev/null 2>&1; then
-            pm2 delete zhiyincareer-next-preview >/dev/null 2>&1 || true
-            NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
-              timeout 60 pm2 start server.js --name zhiyincareer-next-preview --cwd "$APP_DIR/current" --update-env
-            timeout 30 pm2 save
-          else
-            PID_FILE="$APP_DIR/preview.pid"
-            if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-              kill "$(cat "$PID_FILE")"
-              sleep 2
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 delete zhiyincareer-next-preview >/dev/null 2>&1 || true
+              NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
+                timeout 60 pm2 start server.js --name zhiyincareer-next-preview --cwd "$APP_DIR/current" --update-env
+              timeout 30 pm2 save
+            else
+              PID_FILE="$APP_DIR/preview.pid"
+              if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+                kill "$(cat "$PID_FILE")"
+                sleep 2
+              fi
+              nohup env NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
+                node server.js > "$APP_DIR/preview.log" 2>&1 < /dev/null &
+              echo "$!" > "$PID_FILE"
             fi
-            nohup env NODE_ENV=production HOSTNAME=127.0.0.1 PORT=3101 \
-              node server.js > "$APP_DIR/preview.log" 2>&1 < /dev/null &
-            echo "$!" > "$PID_FILE"
           fi
 
           timeout 90 bash /tmp/install-nginx-preview-route.sh
 
           curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3101/next-preview/ >/dev/null
+          curl --fail --silent --show-error --insecure --max-time 20 \
+            --resolve www.zhiyincareer.com:443:127.0.0.1 \
+            https://www.zhiyincareer.com/next-preview/ | grep -q "把大学生求职"
           rm -f /tmp/zhiyincareer-next-preview.tgz /tmp/zhiyincareer-next-preview.part.* /tmp/install-nginx-preview-route.sh
           REMOTE
 

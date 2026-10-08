@@ -26,6 +26,16 @@ find_nginx_conf() {
 
   for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
     if [ -d "$dir" ]; then
+      match="$(grep -RslF '/www/wwwroot/zhiyincareer-web' "$dir" 2>/dev/null | head -n 1 || true)"
+      if [ -n "$match" ]; then
+        printf '%s\n' "$match"
+        return 0
+      fi
+    fi
+  done
+
+  for dir in /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+    if [ -d "$dir" ]; then
       match="$(grep -RslE 'server_name[[:space:]][^;]*(www\.)?zhiyincareer\.com([[:space:];]|$)' "$dir" 2>/dev/null | head -n 1 || true)"
       if [ -n "$match" ]; then
         printf '%s\n' "$match"
@@ -71,19 +81,66 @@ route = f"""
 """
 
 text = conf_path.read_text(encoding="utf-8")
-if marker_begin in text and marker_end in text:
+
+while marker_begin in text and marker_end in text:
     start = text.index(marker_begin)
     line_start = text.rfind("\n", 0, start) + 1
     end = text.index(marker_end, start) + len(marker_end)
     line_end = text.find("\n", end)
     if line_end == -1:
         line_end = len(text)
-    text = text[:line_start] + route.strip("\n") + text[line_end:]
-else:
-    insert_at = text.rfind("\n}")
-    if insert_at == -1:
-        raise SystemExit("Could not find the end of the nginx server block.")
-    text = text[:insert_at] + "\n" + route.rstrip("\n") + text[insert_at:]
+    text = text[:line_start] + text[line_end + (line_end < len(text)):]
+
+def server_blocks(source: str):
+    blocks = []
+    cursor = 0
+    while True:
+        match = __import__("re").search(r"\bserver\s*\{", source[cursor:])
+        if not match:
+            break
+        start = cursor + match.start()
+        brace = source.find("{", start)
+        depth = 0
+        quote = None
+        escaped = False
+        for index in range(brace, len(source)):
+            char = source[index]
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
+            if quote:
+                if char == quote:
+                    quote = None
+                continue
+            if char in ('"', "'"):
+                quote = char
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    blocks.append((start, index))
+                    cursor = index + 1
+                    break
+        else:
+            raise SystemExit("Unbalanced braces in nginx configuration.")
+    return blocks
+
+import re
+targets = []
+for start, end in server_blocks(text):
+    block = text[start:end + 1]
+    if re.search(r"server_name\s+[^;]*\b(?:www\.)?zhiyincareer\.com\b[^;]*;", block):
+        targets.append((start, end))
+
+if not targets:
+    raise SystemExit("Could not find a zhiyincareer.com server block.")
+
+for _, end in reversed(targets):
+    text = text[:end] + "\n" + route.rstrip("\n") + "\n" + text[end:]
 
 conf_path.write_text(text, encoding="utf-8")
 PY
