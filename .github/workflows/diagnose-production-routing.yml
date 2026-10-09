@@ -1,0 +1,45 @@
+name: Diagnose Production Routing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Inspect routes and local services
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "=== matching nginx files ==="
+          grep -RslE 'server_name[[:space:]][^;]*zhiyincareer\.com' \
+            /www/server/panel/vhost/nginx /www/server/nginx/conf/vhost /etc/nginx/sites-enabled /etc/nginx/conf.d \
+            2>/dev/null | grep -Ev '\.bak\.|\.backup|\.old' | sort -u | while IFS= read -r file; do
+              echo "--- $file"
+              grep -nE 'server_name|location|proxy_pass|root |listen ' "$file" || true
+            done
+
+          echo "=== listening node ports ==="
+          ss -ltnp 2>/dev/null | grep -E 'node|:3000|:3001|:3100|:3101|:3102|:4000|:4400|:5000|:8080' || true
+
+          echo "=== local endpoint probes ==="
+          payload='{"account":"codex-connectivity-check-invalid","password":"invalid-check-only"}'
+          for port in 3000 3001 3100 3101 3102 4000 4400 5000 8080; do
+            jobs_code="$(curl -sS -o /tmp/diag-jobs -w '%{http_code}' --max-time 3 "http://127.0.0.1:${port}/api/jobs?page=1&pageSize=1" || true)"
+            login_code="$(curl -sS -o /tmp/diag-login -w '%{http_code}' --max-time 3 -H 'Content-Type: application/json' -d "$payload" "http://127.0.0.1:${port}/api/users/web-login" || true)"
+            jobs_type="$(file -b --mime-type /tmp/diag-jobs 2>/dev/null || true)"
+            login_type="$(file -b --mime-type /tmp/diag-login 2>/dev/null || true)"
+            echo "port=$port jobs=$jobs_code/$jobs_type login=$login_code/$login_type"
+          done
+          rm -f /tmp/diag-jobs /tmp/diag-login
+          REMOTE
