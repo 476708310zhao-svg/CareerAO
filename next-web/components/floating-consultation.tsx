@@ -86,7 +86,7 @@ export function FloatingConsultation() {
   }, [cancelClose]);
 
   useEffect(() => {
-    const query = window.matchMedia("(min-width: 821px) and (hover: hover) and (pointer: fine)");
+    const query = window.matchMedia("(min-width: 821px)");
     const updateMode = () => setUsesDesktopPopover(query.matches);
     updateMode();
     query.addEventListener("change", updateMode);
