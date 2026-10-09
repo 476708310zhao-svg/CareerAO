@@ -155,6 +155,8 @@ export function FloatingConsultation() {
           <button
             type="button"
             onMouseEnter={() => usesDesktopPopover && open("wechat")}
+            onMouseMove={() => usesDesktopPopover && open("wechat")}
+            onPointerEnter={(event) => event.pointerType !== "touch" && usesDesktopPopover && open("wechat")}
             onFocus={() => open("wechat")}
             onClick={() => open("wechat")}
             aria-label="打开微信咨询"
@@ -168,6 +170,8 @@ export function FloatingConsultation() {
           <button
             type="button"
             onMouseEnter={() => usesDesktopPopover && open("mini")}
+            onMouseMove={() => usesDesktopPopover && open("mini")}
+            onPointerEnter={(event) => event.pointerType !== "touch" && usesDesktopPopover && open("mini")}
             onFocus={() => open("mini")}
             onClick={() => open("mini")}
             aria-label="打开职引小程序码"
