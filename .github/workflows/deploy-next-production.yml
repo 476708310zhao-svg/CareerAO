@@ -40,8 +40,8 @@ jobs:
         env:
           NEXT_PUBLIC_BASE_PATH: ""
           NEXT_PUBLIC_SITE_URL: https://www.zhiyincareer.com
-          NEXT_PUBLIC_API_BASE_URL: https://www.zhiyincareer.com
-          BACKEND_API_URL: https://www.zhiyincareer.com
+          NEXT_PUBLIC_API_BASE_URL: /backend
+          BACKEND_API_URL: http://127.0.0.1:4400
           WECHAT_PAYMENT_ENABLED: "false"
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
@@ -156,3 +156,10 @@ jobs:
           grep -q '把大学生求职' /tmp/next-production-public.html
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/job-map >/dev/null
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/interview-experiences >/dev/null
+          login_status="$(curl --silent --show-error --max-time 30 \
+            --output /tmp/next-production-login.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"account":"codex-connectivity-check-invalid","password":"invalid-check-only"}' \
+            https://www.zhiyincareer.com/backend/api/users/web-login)"
+          test "$login_status" = "401"
+          grep -q '账号或密码错误' /tmp/next-production-login.json

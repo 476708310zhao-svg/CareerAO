@@ -36,8 +36,8 @@ jobs:
         env:
           NEXT_PUBLIC_BASE_PATH: /next-preview
           NEXT_PUBLIC_SITE_URL: https://www.zhiyincareer.com/next-preview
-          NEXT_PUBLIC_API_BASE_URL: https://www.zhiyincareer.com
-          BACKEND_API_URL: https://www.zhiyincareer.com
+          NEXT_PUBLIC_API_BASE_URL: /backend
+          BACKEND_API_URL: http://127.0.0.1:4400
           WECHAT_PAYMENT_ENABLED: "false"
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
