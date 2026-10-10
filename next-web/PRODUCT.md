@@ -27,7 +27,7 @@ web
 - 当前技术栈为 Next.js 15 App Router、React 19、TypeScript 与 CSS，图标来自 Lucide React。
 - 已有可运行路由包括 Today、Jobs、Applications、Resume、Interviews、AI Career、Profile、Pricing 与管理分析页。
 - AI Career 中的敏感邮箱、手机号和证件号会在发送前脱敏；写操作需要用户确认。
-- 官网改版先在 `/preview` 独立路由验证，不替换正式首页或改变已有业务逻辑。
+- 官网新版已发布到正式首页；后续视觉优化继续保持现有业务逻辑、真实内容与功能入口。
 - 真实客户数量、使用成效、评价、资质、安全认证与商业成果尚未提供，不能自行补充。
 
 ## Brand Commitments

@@ -5,6 +5,10 @@ colors:
   brand-indigo: "#5b4ce2"
   brand-indigo-strong: "#4334c8"
   brand-indigo-soft: "#efedff"
+  homepage-blue: "#1769e0"
+  homepage-blue-deep: "#12315f"
+  homepage-blue-soft: "#eaf2ff"
+  homepage-ground: "#f7fbff"
   career-aqua: "#20b8b0"
   ink: "#171924"
   muted: "#62697a"
@@ -114,7 +118,7 @@ components:
 
 Zhiyin Career is a focused operating environment for continuous job-search work. It uses strong indigo for action, near-black workbench fields for orientation, white cards on a faint cool ground, and compact controls that keep real application data, documents, tasks, and AI context easy to scan. The system feels capable and calm rather than promotional.
 
-The same visual language now spans global navigation and footer, authentication, Jobs, Applications, Resume, Application Assistant, AI Career, Today, Profile, and the Web-to-mini-program interview handoff. Each workflow can change its information architecture while keeping the same tokens, control states, card construction, and responsive logic. The `/preview` editorial evidence sheet remains a route-scoped marketing extension governed by its surface brief; its Smiley Sans headings, warm paper, registration marks, and proof narrative are not global product defaults.
+The same visual language now spans global navigation and footer, authentication, Jobs, Applications, Resume, Application Assistant, AI Career, Today, Profile, and the Web-to-mini-program interview handoff. Each workflow can change its information architecture while keeping the same tokens, control states, card construction, and responsive logic. The public homepage is a route-scoped marketing extension: bold system sans headings, a blue-and-white split hero, and a product-evidence narrative. Those expressive display rules are not global product defaults.
 
 **Key Characteristics:**
 
@@ -202,7 +206,7 @@ The global system is flat by default. White surfaces separate from the cool page
 
 The global radius scale is deliberately narrow: compact controls use the small radius, recurring cards use the medium radius, and authentication containers or major state panels use the large radius. Small tags and task checks may use 5–9px corners; avatars, counters, and status dots may be circular when their meaning benefits from it.
 
-The Z brand mark is a compact indigo square with a slight skew and no shadow. Chat bubbles may use one reduced corner to establish speaker direction. The `/preview` proof stamp and registration marks remain route-specific shapes.
+The Z brand mark uses the supplied blue-and-orange image asset without added shadow. Chat bubbles may use one reduced corner to establish speaker direction. The public homepage keeps its product screenshot inside a restrained bordered frame rather than adding decorative stamps or floating ornaments.
 
 ## Components
 
@@ -255,7 +259,7 @@ Loading and empty states preserve the surrounding layout instead of collapsing i
 
 ### Don't:
 
-- **Don't** reuse the `/preview` editorial composition, Smiley Sans display treatment, registration marks, or proof narrative as a default product template.
+- **Don't** reuse the homepage display scale, split hero, or marketing proof narrative as a default product template.
 - **Don't** turn aqua into a decorative secondary brand color or an alternative primary CTA.
 - **Don't** add card shadows at rest when a surface shift and hairline border already establish hierarchy.
 - **Don't** shrink product metadata until it becomes illegible; remove or reflow secondary information at compact widths.

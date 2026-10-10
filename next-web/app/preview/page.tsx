@@ -22,9 +22,9 @@ import {
 import "./preview.css";
 
 export const metadata: Metadata = {
-  title: "职引官网预览｜一条完整的大学生求职路径",
+  title: "职引官网预览｜求职路径更清楚",
   description:
-    "职引将岗位发现、简历准备、申请管理与面试训练连接为一条可执行的大学生求职路径。",
+    "职引用一份 Career Profile 串起找岗位、简历准备、投递跟进和面试训练。",
   robots: { index: false, follow: false },
 };
 
@@ -92,13 +92,12 @@ export default function PreviewPage() {
           <div className="pv-shell pv-hero-grid">
             <div className="pv-hero-copy">
               <h1>
-                <span>把大学生求职，</span>
-                <span>变成一条清楚</span>
-                <span>可执行的路径。</span>
+                <span>求职路径更清楚</span>
+                <span className="pv-title-accent">每一步更好执行</span>
               </h1>
               <p className="pv-hero-lead">
-                面向所有大学生与应届毕业生，把岗位判断、简历准备、投递跟进和面试训练
-                放进同一份 Career Profile；留学生还可以继续使用签证与海外求职信息。
+                从找岗位、改简历到投递跟进和面试训练，
+                用一份 Career Profile 串起全过程。
               </p>
               <div className="pv-hero-actions">
                 <Link href="/profile" className="pv-button pv-button-primary">
@@ -110,7 +109,7 @@ export default function PreviewPage() {
               </div>
               <div className="pv-honesty-note">
                 <BadgeCheck size={18} aria-hidden="true" />
-                <p><b>先验证，再决定。</b> 本页产品入口均可直接打开；界面示例均标注为演示数据。</p>
+                <p><b>真实入口，可直接体验。</b> 界面示例均标注为演示数据。</p>
               </div>
             </div>
 
@@ -131,7 +130,7 @@ export default function PreviewPage() {
         <section className="pv-problem">
           <div className="pv-shell pv-problem-grid">
             <div>
-              <h2><span className="pv-title-line">真正消耗时间的，</span><span className="pv-title-line">往往不是投递本身。</span></h2>
+              <h2>求职难，难在<span className="pv-title-accent">下一步</span>不清楚。</h2>
               <p>机会判断、材料版本、身份限制和面试准备分散在不同地方，下一步自然变得模糊。</p>
             </div>
             <div className="pv-change-list">
@@ -157,7 +156,7 @@ export default function PreviewPage() {
         <section id="workflow" className="pv-workflow">
           <div className="pv-shell">
             <div className="pv-section-heading">
-              <h2>一份 Career Profile，贯穿整个求职过程。</h2>
+              <h2><span className="pv-title-accent">一份画像</span>，贯穿求职全程。</h2>
               <p>每个工具都围绕同一份目标、经历、申请记录和待办工作，而不是让你重复提供背景。</p>
             </div>
             <div className="pv-workflow-grid">
@@ -195,7 +194,7 @@ export default function PreviewPage() {
         <section id="proof" className="pv-proof">
           <div className="pv-shell">
             <div className="pv-proof-heading">
-              <h2>别只听介绍，<br />直接打开产品看。</h2>
+              <h2>真实产品，<span className="pv-title-accent">直接打开看。</span></h2>
               <p>下面不是客户评价或概念图，而是当前项目中已经存在的产品页面。</p>
             </div>
             <div className="pv-proof-links">
@@ -216,7 +215,7 @@ export default function PreviewPage() {
         <section id="scenarios" className="pv-scenarios">
           <div className="pv-shell">
             <div className="pv-section-heading pv-heading-narrow">
-              <h2>在不同阶段，只看此刻最重要的事。</h2>
+              <h2>不同阶段，<span className="pv-title-accent">专注当下。</span></h2>
             </div>
             <div className="pv-scenario-layout">
               <article className="pv-scenario-primary">
@@ -254,7 +253,7 @@ export default function PreviewPage() {
         <section className="pv-onboarding">
           <div className="pv-shell pv-onboarding-grid">
             <div>
-              <h2><span className="pv-title-line">从资料整理</span><span className="pv-title-line">到开始行动，</span><span className="pv-title-line">只需要三步。</span></h2>
+              <h2><span className="pv-title-accent">三步</span>开始行动。</h2>
               <p>先用已有信息建立基础，再在真实申请过程中逐步补全。</p>
             </div>
             <ol>
@@ -268,7 +267,7 @@ export default function PreviewPage() {
         <section id="trust" className="pv-trust">
           <div className="pv-shell">
             <div className="pv-trust-head">
-              <h2>AI 可以参与判断，<br />但不替你做最终决定。</h2>
+              <h2>AI 提建议，<span className="pv-title-accent">决定权在你。</span></h2>
               <p>产品把可控性放在流程里，而不是写在一句笼统的安全承诺里。</p>
             </div>
             <div className="pv-boundaries">
@@ -299,7 +298,7 @@ export default function PreviewPage() {
         <section className="pv-final-cta">
           <div className="pv-shell pv-final-grid">
             <div>
-              <h2>先把下一步看清，<br />再开始投递。</h2>
+              <h2>看清下一步，<span className="pv-title-accent">开始行动。</span></h2>
               <p>建立你的 Career Profile，让岗位、材料、申请和训练围绕同一份职业上下文工作。</p>
             </div>
             <div>
