@@ -1,5 +1,6 @@
 export type Job = {
   id: string;
+  sourceType: "demo" | "verified";
   company: string;
   companyInitials: string;
   companyColor: string;
@@ -27,6 +28,7 @@ export type Job = {
 export const jobs: Job[] = [
   {
     id: "nvidia-ai-engineer-new-grad",
+    sourceType: "demo",
     company: "NVIDIA",
     companyInitials: "NV",
     companyColor: "#76b900",
@@ -52,6 +54,7 @@ export const jobs: Job[] = [
   },
   {
     id: "stripe-software-engineer-intern",
+    sourceType: "demo",
     company: "Stripe",
     companyInitials: "ST",
     companyColor: "#635bff",
@@ -77,6 +80,7 @@ export const jobs: Job[] = [
   },
   {
     id: "shopify-data-scientist",
+    sourceType: "demo",
     company: "Shopify",
     companyInitials: "SH",
     companyColor: "#008060",
@@ -102,6 +106,7 @@ export const jobs: Job[] = [
   },
   {
     id: "anthropic-ml-research-intern",
+    sourceType: "demo",
     company: "Anthropic",
     companyInitials: "AN",
     companyColor: "#d97757",
@@ -127,6 +132,7 @@ export const jobs: Job[] = [
   },
   {
     id: "grab-cybersecurity-engineer",
+    sourceType: "demo",
     company: "Grab",
     companyInitials: "GR",
     companyColor: "#00b14f",
@@ -152,6 +158,7 @@ export const jobs: Job[] = [
   },
   {
     id: "tesla-hardware-engineer-coop",
+    sourceType: "demo",
     company: "Tesla",
     companyInitials: "TS",
     companyColor: "#e82127",
@@ -179,4 +186,51 @@ export const jobs: Job[] = [
 
 export function getJob(id: string) {
   return jobs.find((job) => job.id === id);
+}
+
+const publicRegionNames: Record<Job["region"], string> = {
+  USA: "美国",
+  Canada: "加拿大",
+  UK: "英国",
+  Singapore: "新加坡",
+};
+
+const publicJobTypeNames: Record<Job["type"], string> = {
+  Intern: "实习",
+  "New Grad": "应届生",
+  "Full Time": "全职",
+  Research: "研究",
+  "Co-op": "校企合作",
+};
+
+export function toPublicJob(job: Job) {
+  const sourceLabel = job.sourceType === "demo" ? "产品演示职位（演示数据）" : "企业公开招聘信息";
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    region: publicRegionNames[job.region],
+    salary: job.salary,
+    jobType: publicJobTypeNames[job.type],
+    industry: job.track,
+    description: job.description,
+    requirements: job.qualifications,
+    tags: job.skills,
+    postedAt: job.posted,
+    deadline: job.deadline,
+    applyUrl: job.officialUrl,
+    sourceLabel,
+    dataMeta: {
+      sourceLabel,
+      freshnessLabel: job.sourceType === "demo" ? "演示数据" : "已核验",
+      degraded: job.sourceType === "demo",
+    },
+  };
+}
+
+export function isJobIndexable(job: Job, now = new Date()) {
+  if (job.sourceType !== "verified") return false;
+  const deadline = Date.parse(job.deadline);
+  return Number.isNaN(deadline) || deadline >= now.getTime();
 }

@@ -170,6 +170,13 @@ jobs:
           grep -q '走好下一步' /tmp/next-production-public.html
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/job-map >/dev/null
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/interview-experiences >/dev/null
+          curl --fail --silent --show-error --max-time 30 \
+            'https://www.zhiyincareer.com/backend/api/jobs?pageSize=1' -o /tmp/next-production-jobs.json
+          job_id="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/next-production-jobs.json", "utf8")).data.list[0].id')"
+          curl --fail --silent --show-error --max-time 30 \
+            "https://www.zhiyincareer.com/jobs/$job_id" -o /tmp/next-production-job-detail.html
+          grep -q '<h1' /tmp/next-production-job-detail.html
+          grep -Fq "$job_id" /tmp/next-production-job-detail.html
           login_status="$(curl --silent --show-error --max-time 30 \
             --output /tmp/next-production-login.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \

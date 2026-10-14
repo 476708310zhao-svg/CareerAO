@@ -8,7 +8,7 @@ import {
   Globe2, Landmark, Loader2, MapPin, Newspaper, RefreshCw, Search, ShieldCheck,
   SlidersHorizontal, Sparkles, Star, WalletCards, X,
 } from "lucide-react";
-import { ApiError, apiRequest, localApiRequest } from "@/lib/api-client";
+import { ApiError, apiRequest } from "@/lib/api-client";
 
 type DataStateProps = { loading?: boolean; error?: string; empty?: boolean; emptyTitle?: string; emptyText?: string; onRetry?: () => void };
 
@@ -42,7 +42,6 @@ export function JobMapHub() {
   function load() {
     setLoading(true); setError("");
     apiRequest<JobResult>("/api/jobs/map?pageSize=100")
-      .catch(() => localApiRequest<JobResult>("/api/jobs?pageSize=100"))
       .then(setData)
       .catch((err) => setError(err instanceof Error ? err.message : "职位数据加载失败"))
       .finally(() => setLoading(false));
