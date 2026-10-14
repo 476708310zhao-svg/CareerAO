@@ -62,6 +62,19 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: Inspect active production release
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" '
+            printf "Current release: "
+            readlink -f /www/wwwroot/zhiyincareer-next-production/current || true
+            pm2 describe zhiyincareer-next-production | grep -E "status|script path|exec cwd|uptime" || true
+            printf "Internal homepage: "
+            curl --silent --max-time 10 http://127.0.0.1:3102/ | grep -oE "大学生与应届生求职|求职路径更清楚|找准机会" | head -1 || true
+          '
+
       - name: Deploy production service and root route
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -153,7 +166,8 @@ jobs:
         run: |
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/ -o /tmp/next-production-public.html
           grep -q 'src="/_next/' /tmp/next-production-public.html
-          grep -q '求职路径更清楚' /tmp/next-production-public.html
+          grep -q '找准机会' /tmp/next-production-public.html
+          grep -q '走好下一步' /tmp/next-production-public.html
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/job-map >/dev/null
           curl --fail --silent --show-error --max-time 30 https://www.zhiyincareer.com/interview-experiences >/dev/null
           login_status="$(curl --silent --show-error --max-time 30 \

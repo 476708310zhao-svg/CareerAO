@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import Link from "next/link";
 import Image from "next/image";
 import { publicAsset } from "@/lib/base-path";
@@ -22,11 +23,17 @@ import {
 import "./preview.css";
 
 export const metadata: Metadata = {
-  title: "职引官网预览｜求职路径更清楚",
+  title: "职引官网预览｜找准机会，走好下一步",
   description:
-    "职引用一份 Career Profile 串起找岗位、简历准备、投递跟进和面试训练。",
+    "职引帮助大学生串起找岗位、简历准备、投递跟进和面试训练。",
   robots: { index: false, follow: false },
 };
+
+const heroDisplay = localFont({
+  src: "../../public/fonts/smiley-sans-v2.0.1.woff2",
+  display: "swap",
+  variable: "--font-hero-display",
+});
 
 const workflow = [
   {
@@ -91,13 +98,12 @@ export default function PreviewPage() {
         <section className="pv-hero">
           <div className="pv-shell pv-hero-grid">
             <div className="pv-hero-copy">
-              <h1>
-                <span>求职路径更清楚</span>
-                <span className="pv-title-accent">每一步更好执行</span>
+              <h1 className={heroDisplay.variable}>
+                <span>找准机会</span>
+                <span className="pv-title-accent">走好下一步</span>
               </h1>
               <p className="pv-hero-lead">
-                从找岗位、改简历到投递跟进和面试训练，
-                用一份 Career Profile 串起全过程。
+                面向大学生，把找岗位、改简历、投递跟进和面试训练串成一条清晰的求职路径。
               </p>
               <div className="pv-hero-actions">
                 <Link href="/profile" className="pv-button pv-button-primary">

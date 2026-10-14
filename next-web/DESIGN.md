@@ -8,7 +8,7 @@ colors:
   homepage-blue: "#1769e0"
   homepage-blue-deep: "#12315f"
   homepage-blue-soft: "#eaf2ff"
-  homepage-ground: "#f7fbff"
+  homepage-ground: "#ffffff"
   career-aqua: "#20b8b0"
   ink: "#171924"
   muted: "#62697a"
@@ -118,7 +118,7 @@ components:
 
 Zhiyin Career is a focused operating environment for continuous job-search work. It uses strong indigo for action, near-black workbench fields for orientation, white cards on a faint cool ground, and compact controls that keep real application data, documents, tasks, and AI context easy to scan. The system feels capable and calm rather than promotional.
 
-The same visual language now spans global navigation and footer, authentication, Jobs, Applications, Resume, Application Assistant, AI Career, Today, Profile, and the Web-to-mini-program interview handoff. Each workflow can change its information architecture while keeping the same tokens, control states, card construction, and responsive logic. The public homepage is a route-scoped marketing extension: bold system sans headings, a blue-and-white split hero, and a product-evidence narrative. Those expressive display rules are not global product defaults.
+The same visual language now spans global navigation and footer, authentication, Jobs, Applications, Resume, Application Assistant, AI Career, Today, Profile, and the Web-to-mini-program interview handoff. Each workflow can change its information architecture while keeping the same tokens, control states, card construction, and responsive logic. The public homepage is a route-scoped marketing extension: a short Smiley Sans display headline, a pure white hero, blue emphasis, and a product-evidence narrative. Those expressive display rules are not global product defaults.
 
 **Key Characteristics:**
 

@@ -1,7 +1,7 @@
 .preview-site{
   --pv-ink:#102a43;
   --pv-ink-soft:#486581;
-  --pv-paper:#f7fbff;
+  --pv-paper:#ffffff;
   --pv-sheet:#ffffff;
   --pv-violet:#1769e0;
   --pv-violet-deep:#12315f;
@@ -28,7 +28,7 @@
 .pv-skip{position:fixed;z-index:200;top:12px;left:12px;padding:11px 15px;color:#fff;background:var(--pv-ink);transform:translateY(-160%);transition:transform .18s ease}
 .pv-skip:focus{transform:translateY(0)}
 
-.pv-header{position:sticky;z-index:80;top:0;height:76px;background:#f8f7fb;border-bottom:1px solid var(--pv-line)}
+.pv-header{position:sticky;z-index:80;top:0;height:76px;background:#fff;border-bottom:1px solid var(--pv-line)}
 .pv-header-inner{height:100%;display:flex;align-items:center;justify-content:space-between;gap:24px}
 .pv-brand{display:inline-flex;align-items:center;gap:10px;color:var(--pv-ink);font-size:18px;font-weight:760;letter-spacing:-.02em;white-space:nowrap}
 .pv-brand b{color:#6b6879;font-size:13px;font-weight:600;letter-spacing:.01em}
@@ -55,12 +55,10 @@
 .pv-mobile-nav nav a{min-height:46px;display:flex;align-items:center;padding:0 13px;color:var(--pv-ink);border-radius:8px;font-size:14px;font-weight:650}
 .pv-mobile-nav nav a:hover{background:var(--pv-violet-soft)}
 
-.pv-hero{position:relative;padding:86px 0 102px;background:var(--pv-paper);border-bottom:1px solid var(--pv-line)}
-.pv-hero:before{content:"";position:absolute;inset:0 0 0 auto;width:45%;background:#edf5ff;pointer-events:none}
-.pv-hero:after{display:none}
+.pv-hero{position:relative;padding:86px 0 102px;background:#fff;border-bottom:1px solid var(--pv-line)}
 .pv-hero-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(520px,1.1fr);gap:72px;align-items:center}
 .pv-hero-copy{position:relative;z-index:1;min-width:0}
-.pv-hero h1{max-width:650px;margin:0;color:var(--pv-ink);font-family:system-ui,"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:clamp(48px,5vw,72px);font-weight:900;line-height:1.06;letter-spacing:-.055em;text-wrap:balance}
+.pv-hero h1{max-width:650px;margin:0;color:var(--pv-ink);font-family:var(--font-hero-display),"Microsoft YaHei","PingFang SC",sans-serif;font-size:clamp(50px,5vw,72px);font-weight:400;line-height:1.12;letter-spacing:-.035em;text-wrap:balance}
 .pv-hero h1 span{display:block;white-space:nowrap}
 .pv-title-accent{color:var(--pv-violet)}
 .pv-hero-lead{max-width:560px;margin:26px 0 0;color:var(--pv-ink-soft);font-size:17px;line-height:1.8}
