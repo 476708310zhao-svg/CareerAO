@@ -18,8 +18,11 @@ export function JobsExplorerLive() {
   const [message, setMessage] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const lastSearchRef = useRef(new URLSearchParams({ pageSize: "20" }));
 
-  async function search(params = new URLSearchParams()) {
+  async function search(params = lastSearchRef.current) {
+    lastSearchRef.current = new URLSearchParams(params);
     requestRef.current?.abort(); const controller = new AbortController(); requestRef.current = controller;
     setLoading(true); setRefreshing(false); setError(""); setMessage("");
 
@@ -59,11 +62,31 @@ export function JobsExplorerLive() {
       if (!controller.signal.aborted) { setLoading(false); setRefreshing(false); }
     }
   }
-  useEffect(() => { search(new URLSearchParams({ pageSize: "20" })); return () => requestRef.current?.abort(); }, []);
+  useEffect(() => {
+    const shared = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams({ pageSize: "20" });
+    const keyword = (shared.get("keyword") || "").trim().slice(0, 80);
+    const jobType = shared.get("jobType") || "";
+    const region = shared.get("region") || "";
+    if (keyword) params.set("keyword", keyword);
+    if (["全职", "实习", "兼职"].includes(jobType)) params.set("jobType", jobType);
+    if (["中国", "香港", "英国", "加拿大", "美国", "新加坡"].includes(region)) params.set("region", region);
+    const form = formRef.current;
+    if (form) {
+      (form.elements.namedItem("keyword") as HTMLInputElement).value = keyword;
+      (form.elements.namedItem("jobType") as HTMLSelectElement).value = params.get("jobType") || "";
+      (form.elements.namedItem("region") as HTMLSelectElement).value = params.get("region") || "";
+    }
+    search(params);
+    return () => requestRef.current?.abort();
+  }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); const params = new URLSearchParams({ pageSize: "20" });
     for (const [key, value] of form.entries()) if (String(value).trim()) params.set(key, String(value).trim());
+    const shareParams = new URLSearchParams(params);
+    shareParams.delete("pageSize");
+    window.history.replaceState(window.history.state, "", shareParams.size ? `/jobs?${shareParams.toString()}` : "/jobs");
     search(params);
   }
 
@@ -79,5 +102,5 @@ export function JobsExplorerLive() {
     } finally { setAdding(null); }
   }
 
-  return <div className="zy-jobs-page"><section className="zy-jobs-hero"><div className="shell"><h1>找到值得投入时间的机会。</h1><p>面向所有大学生与应届毕业生；需要海外求职时，可继续按地区、岗位类型与签证相关信息筛选。</p><form onSubmit={submit} className="zy-job-search"><div><Search size={19} /><input name="keyword" placeholder="搜索岗位、公司或关键词" aria-label="搜索职位" /></div><select name="jobType" aria-label="工作类型"><option value="">全部类型</option><option value="全职">全职</option><option value="实习">实习</option><option value="兼职">兼职</option></select><select name="region" aria-label="地区"><option value="">全部地区</option><option>中国</option><option>美国</option><option>英国</option><option>新加坡</option><option>加拿大</option><option>香港</option></select><button type="submit"><Filter size={16} />筛选职位</button></form></div></section><main className="shell zy-jobs-main"><div className="zy-jobs-summary"><div><h2>{data ? `${data.total} 个可浏览职位` : "职位列表"}</h2><p>{data?.dataMeta?.sourceLabel || (data?.source === "local_fallback" ? "当前展示已核对的历史职位库" : "职位信息持续更新")}</p></div><span>{refreshing ? <><Loader2 className="spin" size={14} />实时职位更新中</> : <><ShieldCheck size={14} />申请前请以企业官网信息为准</>}</span></div>{message && <p className="zy-alert" role="status">{message}</p>}{error && <div className="zy-state-card"><p className="zy-alert">{error}</p><button className="zy-button zy-button-secondary" onClick={() => search(new URLSearchParams({ pageSize: "20" }))}>重新加载</button></div>}{loading ? <div className="zy-state-card"><Loader2 className="spin" size={20} />正在读取职位数据…</div> : <div className="zy-job-list">{data?.list.map((job) => <article key={job.id}><div className="zy-job-logo">{(job.company || "职").slice(0,1)}</div><div className="zy-job-copy"><div><span>{job.jobType || "岗位"}</span>{job.industry && <span>{job.industry}</span>}{job.dataMeta?.freshnessLabel && <span>{job.dataMeta.freshnessLabel}</span>}</div><h2>{job.title}</h2><p>{job.company}</p><ul>{job.location && <li><MapPin size={13} />{job.location}</li>}{job.postedAt && <li><CalendarDays size={13} />{job.postedAt}</li>}{job.sourceLabel && <li><ShieldCheck size={13} />{job.sourceLabel}</li>}</ul>{job.requirements?.length ? <div className="zy-job-tags">{job.requirements.slice(0,4).map((item) => <span key={item}>{item}</span>)}</div> : null}</div><div className="zy-job-actions"><button className="zy-button zy-button-primary" type="button" onClick={() => add(job)} disabled={adding === job.id}>{adding === job.id ? "正在加入…" : "加入申请"}<ArrowRight size={14} /></button><Link className="zy-button zy-button-secondary" href={`/jobs/${encodeURIComponent(job.id)}`}>查看详情</Link>{job.applyUrl && <a href={job.applyUrl} target="_blank" rel="noreferrer">企业官网 <ExternalLink size={12} /></a>}</div></article>)}{!data?.list.length && <div className="zy-empty"><BriefcaseBusiness size={28} /><h2>没有找到匹配职位</h2><p>试试减少筛选条件或更换关键词。</p></div>}</div>}</main></div>;
+  return <div className="zy-jobs-page"><section className="zy-jobs-hero"><div className="shell"><h1>找到值得投入时间的机会。</h1><p>面向所有大学生与应届毕业生；需要海外求职时，可继续按地区、岗位类型与签证相关信息筛选。</p><form ref={formRef} onSubmit={submit} className="zy-job-search"><div><Search size={19} /><input name="keyword" placeholder="搜索岗位、公司或关键词" aria-label="搜索职位" /></div><select name="jobType" aria-label="工作类型"><option value="">全部类型</option><option value="全职">全职</option><option value="实习">实习</option><option value="兼职">兼职</option></select><select name="region" aria-label="地区"><option value="">全部地区</option><option>中国</option><option>美国</option><option>英国</option><option>新加坡</option><option>加拿大</option><option>香港</option></select><button type="submit"><Filter size={16} />筛选职位</button></form></div></section><main className="shell zy-jobs-main"><div className="zy-jobs-summary"><div><h2>{data ? `${data.total} 个可浏览职位` : "职位列表"}</h2><p>{data?.dataMeta?.sourceLabel || (data?.source === "local_fallback" ? "当前展示已核对的历史职位库" : "职位信息持续更新")}</p></div><span>{refreshing ? <><Loader2 className="spin" size={14} />实时职位更新中</> : <><ShieldCheck size={14} />申请前请以企业官网信息为准</>}</span></div>{message && <p className="zy-alert" role="status">{message}</p>}{error && <div className="zy-state-card"><p className="zy-alert">{error}</p><button className="zy-button zy-button-secondary" onClick={() => search()}>重新加载</button></div>}{loading ? <div className="zy-state-card"><Loader2 className="spin" size={20} />正在读取职位数据…</div> : <div className="zy-job-list">{data?.list.map((job) => <article key={job.id}><div className="zy-job-logo">{(job.company || "职").slice(0,1)}</div><div className="zy-job-copy"><div><span>{job.jobType || "岗位"}</span>{job.industry && <span>{job.industry}</span>}{job.dataMeta?.freshnessLabel && <span>{job.dataMeta.freshnessLabel}</span>}</div><h2>{job.title}</h2><p>{job.company}</p><ul>{job.location && <li><MapPin size={13} />{job.location}</li>}{job.postedAt && <li><CalendarDays size={13} />{job.postedAt}</li>}{job.sourceLabel && <li><ShieldCheck size={13} />{job.sourceLabel}</li>}</ul>{job.requirements?.length ? <div className="zy-job-tags">{job.requirements.slice(0,4).map((item) => <span key={item}>{item}</span>)}</div> : null}</div><div className="zy-job-actions"><button className="zy-button zy-button-primary" type="button" onClick={() => add(job)} disabled={adding === job.id}>{adding === job.id ? "正在加入…" : "加入申请"}<ArrowRight size={14} /></button><Link className="zy-button zy-button-secondary" href={`/jobs/${encodeURIComponent(job.id)}`}>查看详情</Link>{job.applyUrl && <a href={job.applyUrl} target="_blank" rel="noreferrer">企业官网 <ExternalLink size={12} /></a>}</div></article>)}{!data?.list.length && <div className="zy-empty"><BriefcaseBusiness size={28} /><h2>没有找到匹配职位</h2><p>试试减少筛选条件或更换关键词。</p></div>}</div>}</main></div>;
 }

@@ -10,9 +10,10 @@ import { SiteFooter } from "@/components/site-footer";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { FloatingConsultation } from "@/components/floating-consultation";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zhiyincareer.com"),
+  metadataBase: new URL(SITE_URL),
   title: { default: "职引 Career｜大学生求职，从这里开始", template: "%s｜职引 Career" },
   description: "面向大学生与留学生的求职工作台，连接职位发现、简历准备、申请管理与面试训练。",
   openGraph: { type: "website", locale: "zh_CN", siteName: "职引 Zhiyin Career" },

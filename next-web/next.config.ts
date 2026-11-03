@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   basePath,
   outputFileTracingRoot: path.resolve(process.cwd()),
+  async redirects() {
+    return [{
+      source: "/:path*",
+      has: [{ type: "host", value: "zhiyincareer.com" }],
+      destination: "https://www.zhiyincareer.com/:path*",
+      permanent: true,
+    }];
+  },
   async rewrites() {
     const backend = (process.env.BACKEND_API_URL || "http://127.0.0.1:4400").replace(/\/$/, "");
     return [{ source: "/backend/:path*", destination: `${backend}/:path*` }];
