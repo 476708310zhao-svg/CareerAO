@@ -324,7 +324,7 @@ export default function AgencyEvaluation() {
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>真实评价 · 多维评分 · 机构对比</span>
             </div>
-            <h1 className="zy-page-title mb-4 text-3xl md:text-4xl">求职机构测评</h1>
+            <h1 className="zy-page-title mb-4 text-3xl md:text-4xl" style={{ color: '#fff' }}>求职机构测评</h1>
             <p className="text-gray-300 text-lg mb-8">
               基于后端机构库和用户评价，集中展示机构服务范围、评分、优劣势和真实反馈，帮助你在签约前把风险看清楚。
             </p>
